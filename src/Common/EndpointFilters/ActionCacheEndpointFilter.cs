@@ -9,12 +9,12 @@ using ActionCache.MinimalApi.Extensions.Internal;
 namespace ActionCache.Filters;
 
 /// <summary>
-/// Represents a filter to cache action results for improving performance.
+/// Represents a filter to cache results for improving performance.
 /// </summary>
 public class ActionCacheEndpointFilter : ActionCacheFilterBase, IEndpointFilter
 {
     /// <summary>
-    /// Initializes a new instance of the <see cref="ActionCacheFilter"/> class.
+    /// Initializes a new instance of the <see cref="ActionCacheEndpointFilter"/> class.
     /// </summary>
     /// <param name="cache">The cache implementation to use.</param>
     /// <param name="binderFactory">The binder used for namespaces with route templates.</param>
@@ -26,11 +26,12 @@ public class ActionCacheEndpointFilter : ActionCacheFilterBase, IEndpointFilter
     }
 
     /// <summary>
-    /// Called asynchronously before the action, after model binding is complete.
+    /// Executes the cache filter logic. Attempts to retrieve the response from cache; if not found, proceeds to the next filter or endpoint,
+    /// caches the result if available, and returns it.
     /// </summary>
-    /// <param name="context">The action executing context.</param>
-    /// <param name="next">The action execution delegate. Invoked to execute the next action filter or the action itself.</param>
-    /// <returns>A task that represents the asynchronous operation.</returns>
+    /// <param name="context">The <see cref="EndpointFilterInvocationContext"/> for the current request.</param>
+    /// <param name="next">The delegate to invoke the next filter or endpoint in the pipeline.</param>
+    /// <returns>The cached or newly generated response.</returns>
     public async ValueTask<object?> InvokeAsync(EndpointFilterInvocationContext context, EndpointFilterDelegate next)
     {
         AttachRouteValues(context.HttpContext.GetRouteData().Values);
@@ -55,7 +56,7 @@ public class ActionCacheEndpointFilter : ActionCacheFilterBase, IEndpointFilter
                 {
                     context.AddCacheStatus(CacheStatus.None);
                 }
-                
+
                 return result;
             }
         }

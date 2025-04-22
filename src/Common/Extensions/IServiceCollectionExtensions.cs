@@ -5,6 +5,8 @@ using ActionCache.Common.Filters;
 using ActionCache.Memory.Extensions;
 using ActionCache.Redis.Extensions;
 using ActionCache.SqlServer.Extensions;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace ActionCache.Common.Extensions;
@@ -68,7 +70,8 @@ public static class IServiceCollectionExtensions
     ) => services
             .AddControllerInfo()
             .AddSingleton<ActionCacheDescriptorProviderFactory>()
-            .AddScoped<IActionCacheFilterAbstractFactory, ActionCacheFilterAbstractFactory>()
+            .AddScoped<IActionCacheFilterAbstractFactory<IFilterMetadata>, ActionCacheFilterAbstractFactory>()
+            .AddScoped<IActionCacheFilterAbstractFactory<IEndpointFilter>, ActionCacheEndpointFilterAbstractFactory>()
             .AddScoped<IActionCacheRefreshProvider, ActionCacheRefreshProvider>()
             .AddScoped(serviceProvider => serviceProvider
                 .GetRequiredService<ActionCacheDescriptorProviderFactory>()

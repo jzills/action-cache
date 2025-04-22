@@ -29,7 +29,7 @@ public class Test_ActionCacheEndpointFilter_Hit
                 app.UseRouting();
                 app.UseEndpoints(options =>
                 {
-                    options.MapGet("/teams", () => new { Id = 1, Value = "Joshua" })
+                    options.MapGet("/teams/{id}", () => new { Id = 1, Value = "Joshua" })
                         .WithActionCache("Teams");
                 });
             });

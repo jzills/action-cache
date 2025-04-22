@@ -2,7 +2,7 @@ using System.Diagnostics.CodeAnalysis;
 using ActionCache.Common;
 using ActionCache.Common.Enums;
 using ActionCache.Common.Filters;
-using Microsoft.AspNetCore.Mvc.Filters;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace ActionCache.Filters;
@@ -10,7 +10,7 @@ namespace ActionCache.Filters;
 /// <summary>
 /// Provides a base factory for creating instances of action cache filters.
 /// </summary>
-public abstract class ActionCacheFilterFactoryBase : Attribute, IFilterFactory
+public abstract class ActionCacheEndpointFilterFactoryBase : Attribute
 {
     /// <summary>
     /// Gets or sets the namespace used to identify the related action caches.
@@ -24,7 +24,7 @@ public abstract class ActionCacheFilterFactoryBase : Attribute, IFilterFactory
     public bool IsReusable => false;
 
     /// <inheritdoc/>
-    public abstract IFilterMetadata CreateInstance(IServiceProvider serviceProvider);
+    public abstract IEndpointFilter CreateInstance(IServiceProvider serviceProvider);
 
     /// <summary>
     /// 
@@ -34,7 +34,7 @@ public abstract class ActionCacheFilterFactoryBase : Attribute, IFilterFactory
     /// <param name="absoluteExpiration">The absolute expiration in milliseconds for a cache entry.</param>
     /// <param name="slidingExpiration">The sliding expiration in milliseconds for a cache entry.</param>
     /// <returns>An instance of a cache filter.</returns>
-    protected IFilterMetadata CreateInstance(IServiceProvider serviceProvider, 
+    protected IEndpointFilter CreateInstance(IServiceProvider serviceProvider, 
         FilterType type,
         TimeSpan? absoluteExpiration = null, 
         TimeSpan? slidingExpiration = null 
@@ -52,7 +52,7 @@ public abstract class ActionCacheFilterFactoryBase : Attribute, IFilterFactory
             slidingExpiration = null;
         }
 
-        return serviceProvider.GetRequiredService<IActionCacheFilterAbstractFactory<IFilterMetadata>>()
+        return serviceProvider.GetRequiredService<IActionCacheFilterAbstractFactory<IEndpointFilter>>()
             .CreateInstance(Namespace, 
                 absoluteExpiration, 
                 slidingExpiration, 

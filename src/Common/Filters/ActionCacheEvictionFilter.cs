@@ -34,7 +34,7 @@ public class ActionCacheEvictionFilter : ActionCacheFilterBase, IAsyncActionFilt
         var actionExecutedContext = await next();
         
         // Cache eviction logic after a successful response.
-        if (actionExecutedContext.HttpContext.Response.StatusCode == StatusCodes.Status200OK)
+        if (actionExecutedContext.HttpContext.Response.IsSuccessStatusCode())
         {
             AttachRouteValues(context.RouteData.Values);
 

@@ -1,10 +1,11 @@
 using ActionCache.Common.Caching;
 using ActionCache.Common.Enums;
 using ActionCache.Common.Extensions.Internal;
+using ActionCache.EndpointFilters;
 using ActionCache.Exceptions;
 using ActionCache.Filters;
 using ActionCache.Utilities;
-using Microsoft.AspNetCore.Mvc.Filters;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing.Template;
 
 namespace ActionCache.Common.Filters;
@@ -12,7 +13,7 @@ namespace ActionCache.Common.Filters;
 /// <summary>
 /// The abstract factory for creating cache filters.
 /// </summary>
-public class ActionCacheFilterAbstractFactory : IActionCacheFilterAbstractFactory<IFilterMetadata>
+public class ActionCacheEndpointFilterAbstractFactory : IActionCacheFilterAbstractFactory<IEndpointFilter>
 {
     /// <summary>
     /// The cache factories used to create caches.
@@ -29,7 +30,7 @@ public class ActionCacheFilterAbstractFactory : IActionCacheFilterAbstractFactor
     /// </summary>
     /// <param name="cacheFactories">The cache factories used to create caches.</param>
     /// <param name="binderFactory">The template binder for parsing route parameters for templated namespaces.</param>
-    public ActionCacheFilterAbstractFactory(
+    public ActionCacheEndpointFilterAbstractFactory(
         IEnumerable<IActionCacheFactory> cacheFactories,
         TemplateBinderFactory binderFactory
     )
@@ -41,13 +42,13 @@ public class ActionCacheFilterAbstractFactory : IActionCacheFilterAbstractFactor
     /// <inheritdoc/>
     /// <exception cref="InvalidCacheInstanceException"></exception> 
     /// <exception cref="FilterTypeNotSupportedException"></exception>
-    public IFilterMetadata CreateInstance(Namespace @namespace, FilterType type) => 
+    public IEndpointFilter CreateInstance(Namespace @namespace, FilterType type) => 
         CreateInstance(@namespace, absoluteExpiration: null, slidingExpiration: null, type);
 
     /// <inheritdoc/>
     /// <exception cref="InvalidCacheInstanceException"></exception> 
     /// <exception cref="FilterTypeNotSupportedException"></exception>
-    public IFilterMetadata CreateInstance(Namespace @namespace, TimeSpan? absoluteExpiration, TimeSpan? slidingExpiration, FilterType type)
+    public IEndpointFilter CreateInstance(Namespace @namespace, TimeSpan? absoluteExpiration, TimeSpan? slidingExpiration, FilterType type)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(@namespace, nameof(@namespace));
 
@@ -56,13 +57,13 @@ public class ActionCacheFilterAbstractFactory : IActionCacheFilterAbstractFactor
     }
 
     /// <summary>
-    /// Creates an <see cref="IFilterMetadata"/> handler for the specified caches and filter type.
+    /// Creates an <see cref="IEndpointFilter"/> handler for the specified caches and filter type.
     /// </summary>
     /// <param name="caches">A read-only list of action cache instances to handle.</param>
     /// <param name="type">The type of filter to create.</param>
-    /// <returns>An <see cref="IFilterMetadata"/> implementation based on the specified filter type.</returns>
+    /// <returns>An <see cref="IEndpointFilter"/> implementation based on the specified filter type.</returns>
     /// <exception cref="InvalidCacheInstanceException">Thrown if no cache instances are provided.</exception>
-    internal IFilterMetadata CreateHandler(IReadOnlyList<IActionCache> caches, FilterType type)
+    internal IEndpointFilter CreateHandler(IReadOnlyList<IActionCache> caches, FilterType type)
     {
         if (caches.Count == 0)
         {
@@ -85,14 +86,13 @@ public class ActionCacheFilterAbstractFactory : IActionCacheFilterAbstractFactor
     /// </summary>
     /// <param name="cache">The cache handler to use for the filter.</param>
     /// <param name="type">The type of filter to create.</param>
-    /// <returns>An <see cref="IFilterMetadata"/> implementation corresponding to the filter type.</returns>
+    /// <returns>An <see cref="IEndpointFilter"/> implementation corresponding to the filter type.</returns>
     /// <exception cref="FilterTypeNotSupportedException">Thrown if the filter type is unsupported.</exception>
-    internal IFilterMetadata CreateFilter(ActionCacheHandler cache, FilterType type) => 
+    internal IEndpointFilter CreateFilter(ActionCacheHandler cache, FilterType type) => 
         type switch
         {
-            FilterType.Add      => new ActionCacheFilter(cache, BinderFactory),
-            FilterType.Evict    => new ActionCacheEvictionFilter(cache, BinderFactory),
-            FilterType.Refresh  => new ActionCacheRefreshFilter(cache, BinderFactory),   
+            FilterType.Add      => new ActionCacheEndpointFilter(cache, BinderFactory),
+            FilterType.Evict    => new ActionCacheEndpointEvictionFilter(cache, BinderFactory),  
             _                   => throw new FilterTypeNotSupportedException(type)         
         };
 
