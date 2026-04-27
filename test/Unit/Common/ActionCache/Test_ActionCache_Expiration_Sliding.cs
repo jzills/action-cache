@@ -1,45 +1,45 @@
 using ActionCache;
-using Microsoft.Extensions.DependencyInjection;
-using Unit.TestUtiltiies.Data;
+using Unit.TestUtilities.Builders;
 
 namespace Unit.Common;
 
 [TestFixture]
-public class Test_ActionCache_Expiration_Sliding
+public class ActionCacheSlidingExpirationTests
 {
-    IActionCache Cache;
-    
-    [Test]
-    [TestCaseSource(typeof(TestData), nameof(TestData.GetServiceProviders))]
-    public async Task Test_GetAsync_Expires(IServiceProvider serviceProvider)
-    {
-        var cacheFactory = serviceProvider.GetRequiredService<IActionCacheFactory>();
-        Cache = cacheFactory.Create(nameof(Test_GetAsync_Expires), slidingExpiration: TimeSpan.FromSeconds(11));
-    
-        await Cache.SetAsync("Key_Expiration_1", "Value_1");
-        var result = await Cache.GetAsync<string?>("Key_Expiration_1");
-        var keys = await Cache.GetKeysAsync();
+    private IActionCache _cache;
+    private IActionCacheFactory _factory;
 
-        Assert.That(result, Is.EqualTo("Value_1"));
-        Assert.That(keys.Count(), Is.EqualTo(1));
-
-        Thread.Sleep(10000);
-
-        result = await Cache.GetAsync<string?>("Key_Expiration_1");
-        keys = await Cache.GetKeysAsync();
-
-        Thread.Sleep(10000);
-
-        result = await Cache.GetAsync<string?>("Key_Expiration_1");
-        keys = await Cache.GetKeysAsync();
-        
-        Assert.That(result, Is.Not.Null);
-        Assert.That(keys.Count(), Is.EqualTo(1));
-    }
+    [SetUp]
+    public void SetUp() => _factory = MemoryActionCacheFactoryBuilder.Build();
 
     [TearDown]
-    public async Task TearDown()
+    public async Task TearDown() => await _cache.RemoveAsync();
+
+    [Test]
+    public async Task GetAsync_WhenSlidingWindowRefreshed_ReturnsCachedValue()
     {
-        await Cache.RemoveAsync();
+        _cache = _factory.Create(nameof(GetAsync_WhenSlidingWindowRefreshed_ReturnsCachedValue), slidingExpiration: TimeSpan.FromSeconds(15))!;
+
+        await _cache.SetAsync("Key_Expiration_1", "Value_1");
+
+        var resultBefore = await _cache.GetAsync<string?>("Key_Expiration_1");
+        var keysBefore = await _cache.GetKeysAsync();
+
+        resultBefore.Should().Be("Value_1");
+        keysBefore.Should().HaveCount(1);
+
+        Thread.Sleep(10000);
+
+        // Access within the sliding window resets the expiry
+        await _cache.GetAsync<string?>("Key_Expiration_1");
+        await _cache.GetKeysAsync();
+
+        Thread.Sleep(10000);
+
+        var resultAfter = await _cache.GetAsync<string?>("Key_Expiration_1");
+        var keysAfter = await _cache.GetKeysAsync();
+
+        resultAfter.Should().NotBeNull();
+        keysAfter.Should().HaveCount(1);
     }
 }

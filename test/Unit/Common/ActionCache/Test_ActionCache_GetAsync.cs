@@ -1,40 +1,39 @@
 using ActionCache;
-using Microsoft.Extensions.DependencyInjection;
-using Unit.TestUtiltiies.Data;
+using Unit.TestUtilities.Builders;
 
 namespace Unit.Common;
 
 [TestFixture]
-public class Test_ActionCache_GetAsync
+public class ActionCacheGetAsyncTests
 {
-    IActionCache Cache;
+    private IActionCache _cache;
+    private IActionCacheFactory _factory;
 
-    [Test]
-    [TestCaseSource(typeof(TestData), nameof(TestData.GetServiceProviders))]
-    public async Task Test(IServiceProvider serviceProvider)
-    {
-        var cacheFactory = serviceProvider.GetRequiredService<IActionCacheFactory>();
-        Cache = cacheFactory.Create(nameof(Test_ActionCache_GetAsync))!;
-        await Cache.SetAsync("Foo", "Bar");
-
-        var result = await Cache.GetAsync<string>("Foo");
-        Assert.That(result, Is.EqualTo("Bar"));
-    }
-
-    [Test]
-    [TestCaseSource(typeof(TestData), nameof(TestData.GetServiceProviders))]
-    public async Task Test_NullableInt_ReturnsNull(IServiceProvider serviceProvider)
-    {
-        var cacheFactory = serviceProvider.GetRequiredService<IActionCacheFactory>();
-        Cache = cacheFactory.Create("Test")!;
-        
-        var result = await Cache.GetAsync<int?>("Foo_Not_Present");
-        Assert.That(result, Is.EqualTo(null));
-    }
+    [SetUp]
+    public void SetUp() => _factory = MemoryActionCacheFactoryBuilder.Build();
 
     [TearDown]
-    public async Task TearDown()
+    public async Task TearDown() => await _cache.RemoveAsync();
+
+    [Test]
+    public async Task GetAsync_WhenKeyExists_ReturnsValue()
     {
-        await Cache.RemoveAsync();
+        _cache = _factory.Create(nameof(GetAsync_WhenKeyExists_ReturnsValue))!;
+
+        await _cache.SetAsync("Foo", "Bar");
+
+        var result = await _cache.GetAsync<string>("Foo");
+
+        result.Should().Be("Bar");
+    }
+
+    [Test]
+    public async Task GetAsync_WhenKeyDoesNotExist_ReturnsNull()
+    {
+        _cache = _factory.Create(nameof(GetAsync_WhenKeyDoesNotExist_ReturnsNull))!;
+
+        var result = await _cache.GetAsync<int?>("Foo_Not_Present");
+
+        result.Should().BeNull();
     }
 }

@@ -1,63 +1,61 @@
 using ActionCache;
-using Microsoft.Extensions.DependencyInjection;
-using Unit.TestUtiltiies.Data;
+using Unit.TestUtilities.Builders;
 
 namespace Unit.Common;
 
 [TestFixture]
-public class Test_ActionCache_Expiration_Absolute
+public class ActionCacheAbsoluteExpirationTests
 {
-    IActionCache Cache;
-    
-    [Test]
-    [TestCaseSource(typeof(TestData), nameof(TestData.GetServiceProviders))]
-    public async Task Test_GetAsync_Expires(IServiceProvider serviceProvider)
-    {
-        var cacheFactory = serviceProvider.GetRequiredService<IActionCacheFactory>();
-        Cache = cacheFactory.Create(nameof(Test_GetAsync_Expires), TimeSpan.FromSeconds(5));
-    
-        await Cache.SetAsync("Key_Expiration_1", "Value_1");
-        var result = await Cache.GetAsync<string?>("Key_Expiration_1");
-        var keys = await Cache.GetKeysAsync();
+    private IActionCache _cache;
+    private IActionCacheFactory _factory;
 
-        Assert.That(result, Is.EqualTo("Value_1"));
-        Assert.That(keys.Count(), Is.EqualTo(1));
-
-        Thread.Sleep(5000);
-
-        result = await Cache.GetAsync<string?>("Key_Expiration_1");
-        keys = await Cache.GetKeysAsync();
-        
-        Assert.That(result, Is.Null);
-        Assert.That(keys.Count(), Is.EqualTo(0));
-    }
-
-    [Test]
-    [TestCaseSource(typeof(TestData), nameof(TestData.GetServiceProviders))]
-    public async Task Test_GetKeys_Expires(IServiceProvider serviceProvider)
-    {
-        var cacheFactory = serviceProvider.GetRequiredService<IActionCacheFactory>();
-        Cache = cacheFactory.Create(nameof(Test_GetKeys_Expires), TimeSpan.FromSeconds(5));
-    
-        await Cache.SetAsync("Key_Expiration_1", "Value_1");
-        var result = await Cache.GetAsync<string?>("Key_Expiration_1");
-        var keys = await Cache.GetKeysAsync();
-
-        Assert.That(result, Is.EqualTo("Value_1"));
-        Assert.That(keys.Count(), Is.EqualTo(1));
-
-        Thread.Sleep(5000);
-
-        keys = await Cache.GetKeysAsync();
-        result = await Cache.GetAsync<string?>("Key_Expiration_1");
-        
-        Assert.That(result, Is.Null);
-        Assert.That(keys.Count(), Is.EqualTo(0));
-    }
+    [SetUp]
+    public void SetUp() => _factory = MemoryActionCacheFactoryBuilder.Build();
 
     [TearDown]
-    public async Task TearDown()
+    public async Task TearDown() => await _cache.RemoveAsync();
+
+    [Test]
+    public async Task GetAsync_WhenAbsoluteExpirationElapsed_ReturnsNull()
     {
-        await Cache.RemoveAsync();
+        _cache = _factory.Create(nameof(GetAsync_WhenAbsoluteExpirationElapsed_ReturnsNull), TimeSpan.FromSeconds(5))!;
+
+        await _cache.SetAsync("Key_Expiration_1", "Value_1");
+
+        var resultBefore = await _cache.GetAsync<string?>("Key_Expiration_1");
+        var keysBefore = await _cache.GetKeysAsync();
+
+        resultBefore.Should().Be("Value_1");
+        keysBefore.Should().HaveCount(1);
+
+        Thread.Sleep(5000);
+
+        var resultAfter = await _cache.GetAsync<string?>("Key_Expiration_1");
+        var keysAfter = await _cache.GetKeysAsync();
+
+        resultAfter.Should().BeNull();
+        keysAfter.Should().BeEmpty();
+    }
+
+    [Test]
+    public async Task GetKeysAsync_WhenAbsoluteExpirationElapsed_ReturnsEmpty()
+    {
+        _cache = _factory.Create(nameof(GetKeysAsync_WhenAbsoluteExpirationElapsed_ReturnsEmpty), TimeSpan.FromSeconds(5))!;
+
+        await _cache.SetAsync("Key_Expiration_1", "Value_1");
+
+        var resultBefore = await _cache.GetAsync<string?>("Key_Expiration_1");
+        var keysBefore = await _cache.GetKeysAsync();
+
+        resultBefore.Should().Be("Value_1");
+        keysBefore.Should().HaveCount(1);
+
+        Thread.Sleep(5000);
+
+        var keysAfter = await _cache.GetKeysAsync();
+        var resultAfter = await _cache.GetAsync<string?>("Key_Expiration_1");
+
+        resultAfter.Should().BeNull();
+        keysAfter.Should().BeEmpty();
     }
 }

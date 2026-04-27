@@ -1,23 +1,26 @@
 using ActionCache;
-using Microsoft.Extensions.DependencyInjection;
-using Unit.TestUtiltiies.Data;
+using Unit.TestUtilities.Builders;
 
 namespace Unit.Common;
 
 [TestFixture]
-public class Test_ActionCache_RemoveAsync
+public class ActionCacheRemoveAsyncTests
 {
+    private IActionCacheFactory _factory;
+
+    [SetUp]
+    public void SetUp() => _factory = MemoryActionCacheFactoryBuilder.Build();
+
     [Test]
-    [TestCaseSource(typeof(TestData), nameof(TestData.GetServiceProviders))]
-    public async Task Test(IServiceProvider serviceProvider)
+    public async Task RemoveAsync_WhenKeyExists_RemovesEntry()
     {
-        var cacheFactory = serviceProvider.GetRequiredService<IActionCacheFactory>();
-        var cache = cacheFactory.Create(nameof(Test_ActionCache_RemoveAsync))!;
+        var cache = _factory.Create(nameof(RemoveAsync_WhenKeyExists_RemovesEntry))!;
 
         await cache.SetAsync("Foo", "Bar");
         await cache.RemoveAsync("Foo");
 
         var result = await cache.GetAsync<string>("Foo");
-        Assert.That(result, Is.Null);
+
+        result.Should().BeNull();
     }
 }

@@ -1,25 +1,27 @@
 using ActionCache;
-using Microsoft.Extensions.DependencyInjection;
-using Unit.TestUtiltiies.Data;
+using Unit.TestUtilities.Builders;
 
 namespace Unit.Common;
 
 [TestFixture]
-public class Test_ActionCache_SetAsync
+public class ActionCacheSetAsyncTests
 {
+    private IActionCacheFactory _factory;
+
+    [SetUp]
+    public void SetUp() => _factory = MemoryActionCacheFactoryBuilder.Build();
+
     [Test]
-    [TestCaseSource(typeof(TestData), nameof(TestData.GetServiceProviders))]
-    public async Task Test(IServiceProvider serviceProvider)
+    public async Task SetAsync_Always_PersistsValue()
     {
-        var cacheFactory = serviceProvider.GetRequiredService<IActionCacheFactory>();
-        var cache = cacheFactory.Create(nameof(Test_ActionCache_SetAsync));
+        var cache = _factory.Create(nameof(SetAsync_Always_PersistsValue));
 
-        Assert.That(cache, Is.Not.Null);
+        cache.Should().NotBeNull();
 
-        await cache.SetAsync("Foo", "Bar");
+        await cache!.SetAsync("Foo", "Bar");
         var result = await cache.GetAsync<string>("Foo");
         await cache.RemoveAsync("Foo");
 
-        Assert.That(result, Is.EqualTo("Bar"));
+        result.Should().Be("Bar");
     }
 }

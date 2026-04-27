@@ -8,19 +8,34 @@ using ActionCache.Attributes;
 using ActionCache.Filters;
 using ActionCache;
 using ActionCache.Common.Keys;
-using Unit.TestUtiltiies.Data;
 using Microsoft.AspNetCore.Routing.Template;
+using Unit.TestUtilities.Builders;
 
 namespace Unit.Common;
 
 [TestFixture]
-public class Test_ActionCacheFilter_OkObjectResult_CacheEntry_Added
+public class ActionCacheFilterTests
 {
-    IActionCache Cache;
+    private IActionCache _cache;
+    private IActionCacheFactory _factory;
+    private TemplateBinderFactory _binderFactory;
+
+    [SetUp]
+    public void SetUp()
+    {
+        _factory = MemoryActionCacheFactoryBuilder.Build();
+        _binderFactory = new ServiceCollection()
+            .AddLogging()
+            .AddRouting()
+            .BuildServiceProvider()
+            .GetRequiredService<TemplateBinderFactory>();
+    }
+
+    [TearDown]
+    public async Task TearDown() => await _cache.RemoveAsync();
 
     [Test]
-    [TestCaseSource(typeof(TestData), nameof(TestData.GetServiceProviders))]
-    public async Task Test(IServiceProvider serviceProvider)
+    public async Task OnActionExecutionAsync_WhenOkObjectResult_AddsCacheEntry()
     {
         var @namespace = "Test";
         var routeValues = new RouteValueDictionary
@@ -29,56 +44,38 @@ public class Test_ActionCacheFilter_OkObjectResult_CacheEntry_Added
             { "controller", "someController" },
             { "action", "someAction" }
         };
-
         var routeData = new RouteData(routeValues);
-        var actionDescriptor = new ActionDescriptor();
-        
         var metadata = new List<IFilterMetadata> { new ActionCacheAttribute { Namespace = @namespace } };
         var actionContext = new ActionContext(
             httpContext: new DefaultHttpContext(),
             routeData: routeData,
-            actionDescriptor: actionDescriptor
+            actionDescriptor: new ActionDescriptor()
         );
-
         var actionExecutingContext = new ActionExecutingContext(
             actionContext,
             metadata,
             new Dictionary<string, object>(),
             null);
-
-        ActionExecutionDelegate next = () => {
-            var context = new ActionExecutedContext(
-                actionExecutingContext,
-                metadata,
-                null
-            )
+        ActionExecutionDelegate next = () =>
+        {
+            var context = new ActionExecutedContext(actionExecutingContext, metadata, null)
             {
                 Result = new OkObjectResult("Foo")
             };
-
             return Task.FromResult(context);
         };
 
-        var binderFactory = serviceProvider.GetRequiredService<TemplateBinderFactory>();
-        var cacheFactory = serviceProvider.GetRequiredService<IActionCacheFactory>();
-        Cache = cacheFactory.Create(@namespace)!;
-        var filter = new ActionCacheFilter(Cache, binderFactory);
+        _cache = _factory.Create(@namespace)!;
+        var filter = new ActionCacheFilter(_cache, _binderFactory);
 
         await filter.OnActionExecutionAsync(actionExecutingContext, next);
 
         var key = new ActionCacheKeyBuilder()
             .WithRouteValues(routeData.Values)
             .Build();
+        var cacheResult = await _cache.GetAsync<IActionResult>(key);
 
-        var cacheResult = await Cache.GetAsync<IActionResult>(key);
-       
-        Assert.IsInstanceOf<OkObjectResult>(cacheResult);
-        Assert.That((cacheResult as OkObjectResult)?.Value, Is.EqualTo("Foo"));
-    }
-
-    [TearDown]
-    public async Task TearDown()
-    {
-        await Cache.RemoveAsync();
+        cacheResult.Should().BeAssignableTo<OkObjectResult>();
+        cacheResult.As<OkObjectResult>().Value.Should().Be("Foo");
     }
 }
