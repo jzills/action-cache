@@ -92,6 +92,27 @@ public class ActionCacheFilterHitTests
         nextCalled.Should().BeTrue();
     }
 
+    [Test]
+    public async Task OnActionExecutionAsync_WhenCacheMissAndResultIsNonNull_StoresCacheEntry()
+    {
+        _cacheMock.Setup(cache => cache.GetAsync<IActionResult?>(It.IsAny<string>()))
+            .ReturnsAsync((IActionResult?)null);
+
+        var context = BuildActionExecutingContext();
+        ActionExecutionDelegate next = () =>
+        {
+            var executed = new ActionExecutedContext(context, [], new object())
+            {
+                Result = new OkObjectResult("fresh")
+            };
+            return Task.FromResult(executed);
+        };
+
+        await _sut.OnActionExecutionAsync(context, next);
+
+        _cacheMock.Verify(cache => cache.SetAsync(It.IsAny<string>(), It.IsAny<IActionResult>()), Times.Once);
+    }
+
     private static ActionExecutingContext BuildActionExecutingContext(
         RouteValueDictionary? routeValues = null)
     {

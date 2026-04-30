@@ -72,6 +72,18 @@ public class MethodInfoExtensionsTests
 
         result.Should().BeFalse();
     }
+
+    [Test]
+    public void TryGetRefreshResult_WhenMethodReturnsTask_UnwrapsAndReturnsTrue()
+    {
+        var instance = new SampleController();
+        var methodInfo = typeof(SampleController).GetMethod(nameof(SampleController.GetValueAsync))!;
+
+        var success = methodInfo.TryGetRefreshResult(instance, [], out var value);
+
+        success.Should().BeTrue();
+        value.Should().Be("async-result");
+    }
 }
 
 file class SampleController
@@ -81,6 +93,8 @@ file class SampleController
     public string GetValue() => "result";
 
     public string? GetNull() => null;
+
+    public Task<string> GetValueAsync() => Task.FromResult("async-result");
 
     [ActionCache(Namespace = CachedNamespace)]
     public string CachedAction() => "cached";

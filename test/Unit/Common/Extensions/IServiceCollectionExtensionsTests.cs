@@ -1,4 +1,5 @@
 using ActionCache;
+using ActionCache.AzureCosmos.Exceptions;
 using ActionCache.Common;
 using ActionCache.Common.Caching;
 using ActionCache.Common.Extensions;
@@ -84,5 +85,46 @@ public class IServiceCollectionExtensionsTests
         var result = services.AddActionCache(options => { });
 
         result.Should().BeSameAs(services);
+    }
+
+    [Test]
+    public void AddActionCache_WithSqlServerCache_RegistersIActionCacheFactory()
+    {
+        var services = new ServiceCollection();
+
+        services.AddActionCache(options => options.UseSqlServerCache(sqlOptions =>
+        {
+            sqlOptions.ConnectionString = "Server=localhost;Database=Cache;Trusted_Connection=True";
+            sqlOptions.SchemaName = "dbo";
+            sqlOptions.TableName = "CacheEntries";
+        }));
+
+        services.Should().Contain(descriptor =>
+            descriptor.ServiceType == typeof(IActionCacheFactory));
+    }
+
+    [Test]
+    public void AddActionCache_WithAzureCosmosCache_WhenConnectionStringMissing_ThrowsMissingConnectionStringException()
+    {
+        var services = new ServiceCollection();
+
+        Action act = () => services.AddActionCache(options =>
+            options.UseAzureCosmosCache(cosmosOptions => { }));
+
+        act.Should().Throw<MissingConnectionStringException>();
+    }
+
+    [Test]
+    public void AddActionCache_WithAzureCosmosCache_WhenDatabaseIdMissing_ThrowsMissingDatabaseIdException()
+    {
+        var services = new ServiceCollection();
+
+        Action act = () => services.AddActionCache(options =>
+            options.UseAzureCosmosCache(cosmosOptions =>
+            {
+                cosmosOptions.ConnectionString = "AccountEndpoint=https://localhost:8081/;AccountKey=dGVzdA==";
+            }));
+
+        act.Should().Throw<MissingDatabaseIdException>();
     }
 }

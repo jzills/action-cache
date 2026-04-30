@@ -90,4 +90,23 @@ public class IDistributedCacheExtensionsTests
             cache => cache.SetAsync(It.IsAny<string>(), It.IsAny<byte[]>(), It.IsAny<DistributedCacheEntryOptions>(), default),
             Times.Never);
     }
+
+    [Test]
+    public async Task GetKeysAsync_WhenKeysContainExpiredEntries_RemovesExpiredAndUpdatesCache()
+    {
+        var pastExpiry = DateTimeOffset.UtcNow.AddHours(-1);
+        var keys = new System.Collections.Concurrent.ConcurrentDictionary<string, DateTimeOffset?>();
+        keys.TryAdd("expiredKey", pastExpiry);
+        keys.TryAdd("validKey", DateTimeOffset.UtcNow.AddHours(1));
+        var json = CacheJsonSerializer.Serialize(keys);
+        _cacheMock.Setup(cache => cache.Get((string)_namespace)).Returns(Encoding.UTF8.GetBytes(json));
+
+        var result = await _cacheMock.Object.GetKeysAsync(_namespace, _entryOptions);
+
+        result.Should().NotContainKey("expiredKey");
+        result.Should().ContainKey("validKey");
+        _cacheMock.Verify(
+            cache => cache.SetAsync(It.IsAny<string>(), It.IsAny<byte[]>(), It.IsAny<DistributedCacheEntryOptions>(), default),
+            Times.Once);
+    }
 }

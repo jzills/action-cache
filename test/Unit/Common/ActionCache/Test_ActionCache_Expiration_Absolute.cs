@@ -52,8 +52,8 @@ public class ActionCacheAbsoluteExpirationTests
 
         Thread.Sleep(5000);
 
-        var keysAfter = await _cache.GetKeysAsync();
         var resultAfter = await _cache.GetAsync<string?>("Key_Expiration_1");
+        var keysAfter = await _cache.GetKeysAsync();
 
         resultAfter.Should().BeNull();
         keysAfter.Should().BeEmpty();

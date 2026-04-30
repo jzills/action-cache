@@ -117,4 +117,21 @@ public class DistributedCacheLockerTests
 
         result.IsAcquired.Should().BeFalse();
     }
+
+    [Test]
+    public async Task WaitForLockAsync_WhenLockIsAcquired_ReturnsAcquiredLock()
+    {
+        byte[]? storedValue = null;
+        _cacheMock.Setup(cache => cache.GetAsync(It.IsAny<string>(), default))
+            .ReturnsAsync(() => storedValue);
+
+        _cacheMock.Setup(cache => cache.SetAsync(It.IsAny<string>(), It.IsAny<byte[]>(), It.IsAny<DistributedCacheEntryOptions>(), default))
+            .Callback<string, byte[], DistributedCacheEntryOptions, CancellationToken>(
+                (key, val, opts, ct) => storedValue = val)
+            .Returns(Task.CompletedTask);
+
+        var result = await _sut.WaitForLockAsync("resource");
+
+        result.IsAcquired.Should().BeTrue();
+    }
 }

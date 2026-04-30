@@ -1,7 +1,9 @@
 using ActionCache.Common.Caching;
+using Microsoft.AspNetCore.Mvc.Controllers;
 using Microsoft.AspNetCore.Mvc.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
+using System.Reflection;
 
 namespace Unit.Common.Caching;
 
@@ -83,4 +85,40 @@ public class ActionCacheDescriptorProviderTests
         result.MethodInfos.Should().BeEmpty();
         result.Controllers.Should().BeEmpty();
     }
+
+    [Test]
+    public void GetControllerActionMethodInfo_WhenMatchingDescriptorExists_ReturnsNonEmptyDescriptor()
+    {
+        var controllerType = typeof(CachedTestController);
+        var methodInfo = controllerType.GetMethod("Get", BindingFlags.Public | BindingFlags.Instance)!;
+
+        var descriptor = new ControllerActionDescriptor
+        {
+            MethodInfo = methodInfo,
+            ControllerTypeInfo = controllerType.GetTypeInfo(),
+            ControllerName = "CachedTest",
+            ActionName = "Get",
+            RouteValues = new Dictionary<string, string?>()
+        };
+
+        _descriptorProviderMock
+            .Setup(provider => provider.ActionDescriptors)
+            .Returns(new ActionDescriptorCollection([descriptor], 0));
+
+        var serviceProvider = new ServiceCollection()
+            .AddTransient(controllerType)
+            .BuildServiceProvider();
+
+        var sut = new ActionCacheDescriptorProvider(serviceProvider, _descriptorProviderMock.Object);
+
+        var result = sut.GetControllerActionMethodInfo("DescriptorTestNs");
+
+        result.MethodInfos.Should().NotBeEmpty();
+    }
+}
+
+public class CachedTestController
+{
+    [ActionCache.Attributes.ActionCache(Namespace = "DescriptorTestNs")]
+    public string Get() => "ok";
 }
