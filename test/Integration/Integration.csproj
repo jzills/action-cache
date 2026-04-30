@@ -9,12 +9,16 @@
     <IsTestProject>true</IsTestProject>
   </PropertyGroup>
 
+  <PropertyGroup>
+    <_TargetVersion Condition="'$(TargetFramework)' == 'net8.0'">8.0.0</_TargetVersion>
+    <_TargetVersion Condition="'$(TargetFramework)' == 'net10.0'">10.0.0</_TargetVersion>
+  </PropertyGroup>
+
   <ItemGroup>
-    <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="8.0.1" />
-    <PackageReference Include="Microsoft.Extensions.Caching.SqlServer" Version="8.0.1" />
-    <PackageReference Include="Microsoft.Extensions.Caching.StackExchangeRedis" Version="8.0.1" />
-    <PackageReference Include="Microsoft.AspNetCore.TestHost" Version="8.0.8" Condition="'$(TargetFramework)' == 'net8.0'" />
-    <PackageReference Include="Microsoft.AspNetCore.TestHost" Version="10.0.7" Condition="'$(TargetFramework)' == 'net10.0'" />
+    <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="$(_TargetVersion)" />
+    <PackageReference Include="Microsoft.Extensions.Caching.SqlServer" Version="$(_TargetVersion)" />
+    <PackageReference Include="Microsoft.Extensions.Caching.StackExchangeRedis" Version="$(_TargetVersion)" />
+    <PackageReference Include="Microsoft.AspNetCore.TestHost" Version="$(_TargetVersion)" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.6.0" />
     <PackageReference Include="NUnit" Version="3.13.3" />
     <PackageReference Include="NUnit3TestAdapter" Version="4.2.1" />
