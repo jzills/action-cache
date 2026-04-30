@@ -7,13 +7,13 @@ using ActionCache.Common.Serialization;
 namespace Unit.Common;
 
 [TestFixture]
-public class Test_ActionCacheKeyBuilder_WithActionArguments_Hash
+public class ActionCacheKeyBuilderTests
 {
     [Test]
     [TestCaseSource(typeof(TestData), nameof(TestData.GetControllerDescriptors))]
-    public void Test(
-        IEnumerable<ControllerParameterDescriptor> _, 
-        RouteValueDictionary routeValues, 
+    public void Build_WithActionArguments_ProducesEncodedKey(
+        IEnumerable<ControllerParameterDescriptor> _,
+        RouteValueDictionary routeValues,
         Dictionary<string, object> actionArguments
     )
     {
@@ -23,6 +23,10 @@ public class Test_ActionCacheKeyBuilder_WithActionArguments_Hash
             .Build();
 
         var decodedKey = new KeyEncoder().Decode(key);
-        Assert.That(decodedKey, Is.EqualTo($"{ActionCacheKeyComponents.RouteValuesKey}={CacheJsonSerializer.Serialize(routeValues)}&{ActionCacheKeyComponents.ActionArgumentsKey}={CacheJsonSerializer.Serialize(actionArguments)}"));
+
+        decodedKey.Should().Be(
+            $"{ActionCacheKeyComponents.RouteValuesKey}={CacheJsonSerializer.Serialize(routeValues)}" +
+            $"&{ActionCacheKeyComponents.ActionArgumentsKey}={CacheJsonSerializer.Serialize(actionArguments)}"
+        );
     }
 }

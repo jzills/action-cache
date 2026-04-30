@@ -1,31 +1,30 @@
 using ActionCache;
-using Microsoft.Extensions.DependencyInjection;
-using Unit.TestUtiltiies.Data;
+using Unit.TestUtilities.Builders;
 
 namespace Unit.Common;
 
 [TestFixture]
-public class Test_ActionCache_GetKeysAsync
+public class ActionCacheGetKeysAsyncTests
 {
-    IActionCache Cache;
+    private IActionCache _cache;
+    private IActionCacheFactory _factory;
 
-    [Test]
-    [TestCaseSource(typeof(TestData), nameof(TestData.GetServiceProviders))]
-    public async Task Test(IServiceProvider serviceProvider)
-    {
-        var cacheFactory = serviceProvider.GetRequiredService<IActionCacheFactory>();
-        Cache = cacheFactory.Create(nameof(Test_ActionCache_GetKeysAsync))!;
-
-        await Cache.SetAsync("Foo", "Bar");
-        await Cache.SetAsync("Biz", "Baz");
-
-        var result = await Cache.GetKeysAsync();
-        Assert.That(result.Count(), Is.EqualTo(2));
-    }
+    [SetUp]
+    public void SetUp() => _factory = MemoryActionCacheFactoryBuilder.Build();
 
     [TearDown]
-    public async Task TearDown()
+    public async Task TearDown() => await _cache.RemoveAsync();
+
+    [Test]
+    public async Task GetKeysAsync_WhenMultipleKeysExist_ReturnsAllKeys()
     {
-        await Cache.RemoveAsync();
+        _cache = _factory.Create(nameof(GetKeysAsync_WhenMultipleKeysExist_ReturnsAllKeys))!;
+
+        await _cache.SetAsync("Foo", "Bar");
+        await _cache.SetAsync("Biz", "Baz");
+
+        var result = await _cache.GetKeysAsync();
+
+        result.Should().HaveCount(2);
     }
 }

@@ -1,30 +1,32 @@
 using ActionCache;
-using Microsoft.Extensions.DependencyInjection;
-using Unit.TestUtiltiies.Data;
+using Unit.TestUtilities.Builders;
 
 namespace Unit.Common;
 
 [TestFixture]
-public class Test_ActionCache_RemoveAsync_Namespace
+public class ActionCacheRemoveNamespaceTests
 {
+    private IActionCacheFactory _factory;
+
+    [SetUp]
+    public void SetUp() => _factory = MemoryActionCacheFactoryBuilder.Build();
+
     [Test]
-    [TestCaseSource(typeof(TestData), nameof(TestData.GetServiceProviders))]
-    public async Task Test(IServiceProvider serviceProvider)
+    public async Task RemoveAsync_WhenNamespaceRemoved_AllEntriesAreNull()
     {
-        var cacheFactory = serviceProvider.GetRequiredService<IActionCacheFactory>();
-        var cache = cacheFactory.Create(nameof(Test_ActionCache_RemoveAsync_Namespace))!;
+        var cache = _factory.Create(nameof(RemoveAsync_WhenNamespaceRemoved_AllEntriesAreNull))!;
 
         await cache.SetAsync("Foo", "Bar");
         await cache.SetAsync("Biz", "Baz");
         await cache.SetAsync("Coz", "Doz");
         await cache.RemoveAsync();
 
-        string?[] result = [
-            await cache.GetAsync<string>("Foo"),
-            await cache.GetAsync<string>("Biz"),
-            await cache.GetAsync<string>("Coz")
-        ];
+        var foo = await cache.GetAsync<string>("Foo");
+        var biz = await cache.GetAsync<string>("Biz");
+        var coz = await cache.GetAsync<string>("Coz");
 
-        Assert.That(result, Is.All.Null);
+        foo.Should().BeNull();
+        biz.Should().BeNull();
+        coz.Should().BeNull();
     }
 }
