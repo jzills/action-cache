@@ -1,8 +1,6 @@
 using ActionCache;
+using Integration.TestUtilities.Data;
 using Microsoft.Extensions.DependencyInjection;
-using Unit.TestUtiltiies.Data;
-
-namespace Unit.Common;
 
 [TestFixture]
 public class Test_ActionCache_GetAsync
@@ -27,7 +25,7 @@ public class Test_ActionCache_GetAsync
     {
         var cacheFactory = serviceProvider.GetRequiredService<IActionCacheFactory>();
         Cache = cacheFactory.Create("Test")!;
-        
+
         var result = await Cache.GetAsync<int?>("Foo_Not_Present");
         Assert.That(result, Is.EqualTo(null));
     }
