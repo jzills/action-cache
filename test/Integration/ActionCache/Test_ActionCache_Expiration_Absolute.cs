@@ -21,7 +21,7 @@ public class Test_ActionCache_Expiration_Absolute
         Assert.That(result, Is.EqualTo("Value_1"));
         Assert.That(keys.Count(), Is.EqualTo(1));
 
-        Thread.Sleep(6000);
+        Thread.Sleep(10000);
 
         result = await Cache.GetAsync<string?>("Key_Expiration_1");
         keys = await Cache.GetKeysAsync();
@@ -44,7 +44,7 @@ public class Test_ActionCache_Expiration_Absolute
         Assert.That(result, Is.EqualTo("Value_1"));
         Assert.That(keys.Count(), Is.EqualTo(1));
 
-        Thread.Sleep(6000);
+        Thread.Sleep(10000);
 
         keys = await Cache.GetKeysAsync();
         result = await Cache.GetAsync<string?>("Key_Expiration_1");

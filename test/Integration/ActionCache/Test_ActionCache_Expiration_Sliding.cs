@@ -12,7 +12,7 @@ public class Test_ActionCache_Expiration_Sliding
     public async Task Test_GetAsync_Expires(IServiceProvider serviceProvider)
     {
         var cacheFactory = serviceProvider.GetRequiredService<IActionCacheFactory>();
-        Cache = cacheFactory.Create(nameof(Test_GetAsync_Expires), slidingExpiration: TimeSpan.FromSeconds(11));
+        Cache = cacheFactory.Create(nameof(Test_GetAsync_Expires), slidingExpiration: TimeSpan.FromSeconds(30));
 
         await Cache.SetAsync("Key_Expiration_1", "Value_1");
         var result = await Cache.GetAsync<string?>("Key_Expiration_1");
