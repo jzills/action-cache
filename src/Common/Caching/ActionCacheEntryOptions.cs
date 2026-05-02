@@ -25,14 +25,14 @@ public class ActionCacheEntryOptions
     /// <summary>
     /// Gets or sets the duration for which the lock will remain valid once acquired.
     /// </summary>
-    /// <value>The default is 200 milliseconds.</value>
-    public TimeSpan LockDuration { get; set; } = TimeSpan.FromMilliseconds(200);
+    /// <value>The default is 5 seconds.</value>
+    public TimeSpan LockDuration { get; set; } = TimeSpan.FromSeconds(5);
 
     /// <summary>
     /// Gets or sets the maximum amount of time to wait for acquiring the lock before timing out.
     /// </summary>
-    /// <value>The default is 200 milliseconds.</value>
-    public TimeSpan LockTimeout { get; set; } = TimeSpan.FromMilliseconds(200);
+    /// <value>The default is 10 seconds.</value>
+    public TimeSpan LockTimeout { get; set; } = TimeSpan.FromSeconds(10);
 
     /// <summary>
     /// Calculates the absolute expiration date and time based on <see cref="AbsoluteExpiration"/>, relative to the current UTC time.

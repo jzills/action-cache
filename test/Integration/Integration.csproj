@@ -7,6 +7,7 @@
 
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
+    <RunSettingsFilePath>$(MSBuildThisFileDirectory)integration.runsettings</RunSettingsFilePath>
   </PropertyGroup>
 
   <PropertyGroup>

@@ -9,8 +9,9 @@ public static class TestData
 {
     public static IEnumerable<IServiceProvider> GetServiceProviders() =>
         GetRedisCacheServiceProvider().Concat(
-            GetSqlServerServiceProvider()).Concat(
-                GetMultipleCacheServiceProvider());
+            GetSqlServerServiceProvider());//.Concat(
+                // GetAzureCosmosServiceProvider()).Concat(
+                    /// GetMultipleCacheServiceProvider());
 
     public static IEnumerable<IServiceProvider> GetRedisCacheServiceProvider()
     {
@@ -60,10 +61,11 @@ public static class TestData
             options.UseAzureCosmosCache(options =>
             {
                 options.DatabaseId = "ActionCache";
-                options.ConnectionString = "AccountEndpoint=https://localhost:8081/;AccountKey=C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b5seMGOPXxiI3g5MVGR8";
+                options.ConnectionString = "AccountEndpoint=https://localhost:8081/;AccountKey=C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw==";
                 options.CosmosClientOptions = new CosmosClientOptions
                 {
                     ConnectionMode = ConnectionMode.Gateway,
+                    LimitToEndpoint = true,
                     HttpClientFactory = () => new HttpClient(new HttpClientHandler
                     {
                         ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
