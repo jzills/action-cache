@@ -63,11 +63,11 @@ jobs:
         env:
           PROTOCOL: https
         options: >-
-          --health-cmd "curl -f http://localhost:8080/_explorer/emulator.pem || curl -f http://localhost:8080/ready"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 20
-          --health-start-period 60s
+          --health-cmd "curl -f http://localhost:8080/_explorer/index.html || exit 1"
+          --health-interval 15s
+          --health-timeout 10s
+          --health-retries 30
+          --health-start-period 90s
     steps:
       - uses: actions/checkout@v6
 
