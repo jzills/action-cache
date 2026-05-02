@@ -91,9 +91,7 @@ public class SqlServerActionCache : ActionCacheBase<DistributedCacheLock>
     public override async Task RemoveAsync()
     {
         var keys = await GetKeysAsync();
-
-        await CacheLocker.WaitForLockThenAsync(Namespace,
-            () => Task.WhenAll(keys.Select(RemoveAsync)));
+        await Task.WhenAll(keys.Select(RemoveAsync));
     }
 
     /// <summary>

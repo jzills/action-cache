@@ -112,20 +112,7 @@ public class SqlServerActionCacheTests
             Times.AtLeastOnce);
     }
 
-    [Test]
-    public async Task RemoveAsync_NoKey_WhenNoKeys_CallsLocker()
-    {
-        _cacheMock.Setup(cache => cache.Get(It.IsAny<string>()))
-            .Returns((byte[]?)null);
-
-        await _sut.RemoveAsync();
-
-        _lockerMock.Verify(
-            locker => locker.WaitForLockThenAsync(It.IsAny<string>(), It.IsAny<Func<Task>>()),
-            Times.AtLeastOnce);
-    }
-
-    [Test]
+[Test]
     public async Task GetKeysAsync_WhenNoKeys_ReturnsEmpty()
     {
         _cacheMock.Setup(cache => cache.Get(It.IsAny<string>()))

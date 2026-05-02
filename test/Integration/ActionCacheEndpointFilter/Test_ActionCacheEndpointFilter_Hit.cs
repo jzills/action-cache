@@ -41,7 +41,7 @@ public class Test_ActionCacheEndpointFilter_Hit
     [Test]
     public async Task Test()
     {
-        var route = "teams";
+        var route = "teams/1";
         var response = await Client.GetAsync(route);
         response.EnsureSuccessStatusCode();
 

@@ -65,17 +65,19 @@ public class RedisExpiryServiceTests
     public async Task ExpiryCallback_WhenMessageIsEmpty_DoesNotCallSortedSetRemove()
     {
         Action<RedisChannel, RedisValue>? capturedHandler = null;
+        var handlerCaptured = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         _subscriberMock
             .Setup(subscriber => subscriber.SubscribeAsync(
                 It.IsAny<RedisChannel>(),
                 It.IsAny<Action<RedisChannel, RedisValue>>(),
                 It.IsAny<CommandFlags>()))
             .Callback<RedisChannel, Action<RedisChannel, RedisValue>, CommandFlags>(
-                (_, handler, _) => capturedHandler = handler)
+                (_, handler, _) => { capturedHandler = handler; handlerCaptured.SetResult(); })
             .Returns(Task.CompletedTask);
 
         using var cts = new CancellationTokenSource();
         await _sut.StartAsync(cts.Token);
+        await handlerCaptured.Task.WaitAsync(TimeSpan.FromSeconds(5));
 
         capturedHandler!.Invoke(RedisChannel.Literal("__keyevent@0__:expired"), new RedisValue(""));
 
@@ -89,17 +91,19 @@ public class RedisExpiryServiceTests
     public async Task ExpiryCallback_WhenMessageHasNoColon_DoesNotCallSortedSetRemove()
     {
         Action<RedisChannel, RedisValue>? capturedHandler = null;
+        var handlerCaptured = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         _subscriberMock
             .Setup(subscriber => subscriber.SubscribeAsync(
                 It.IsAny<RedisChannel>(),
                 It.IsAny<Action<RedisChannel, RedisValue>>(),
                 It.IsAny<CommandFlags>()))
             .Callback<RedisChannel, Action<RedisChannel, RedisValue>, CommandFlags>(
-                (_, handler, _) => capturedHandler = handler)
+                (_, handler, _) => { capturedHandler = handler; handlerCaptured.SetResult(); })
             .Returns(Task.CompletedTask);
 
         using var cts = new CancellationTokenSource();
         await _sut.StartAsync(cts.Token);
+        await handlerCaptured.Task.WaitAsync(TimeSpan.FromSeconds(5));
 
         capturedHandler!.Invoke(RedisChannel.Literal("__keyevent@0__:expired"), new RedisValue("keywithnoseparator"));
 
@@ -113,13 +117,14 @@ public class RedisExpiryServiceTests
     public async Task ExpiryCallback_WhenMessageMatchesNamespaceKeyPattern_RemovesMemberFromSortedSet()
     {
         Action<RedisChannel, RedisValue>? capturedHandler = null;
+        var handlerCaptured = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         _subscriberMock
             .Setup(subscriber => subscriber.SubscribeAsync(
                 It.IsAny<RedisChannel>(),
                 It.IsAny<Action<RedisChannel, RedisValue>>(),
                 It.IsAny<CommandFlags>()))
             .Callback<RedisChannel, Action<RedisChannel, RedisValue>, CommandFlags>(
-                (_, handler, _) => capturedHandler = handler)
+                (_, handler, _) => { capturedHandler = handler; handlerCaptured.SetResult(); })
             .Returns(Task.CompletedTask);
 
         _databaseMock
@@ -129,6 +134,7 @@ public class RedisExpiryServiceTests
 
         using var cts = new CancellationTokenSource();
         await _sut.StartAsync(cts.Token);
+        await handlerCaptured.Task.WaitAsync(TimeSpan.FromSeconds(5));
 
         capturedHandler!.Invoke(RedisChannel.Literal("__keyevent@0__:expired"), new RedisValue("mynamespace:mykey"));
 

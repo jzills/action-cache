@@ -1,7 +1,7 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>net8.0;net9.0</TargetFrameworks>
+    <TargetFrameworks>net8.0;net10.0</TargetFrameworks>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
@@ -17,10 +17,15 @@
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageProjectUrl>https://github.com/jzills/ActionCache</PackageProjectUrl>
-    <RepositoryUrl>https://github.com/jzills/ActionCache.git</RepositoryUrl> 
+    <RepositoryUrl>https://github.com/jzills/ActionCache.git</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageTags>mvc;cache;azure;cosmos;sqlserver;redis;memory</PackageTags>
     <Copyright>Copyright © Joshua Zillwood</Copyright>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <_TargetVersion Condition="'$(TargetFramework)' == 'net8.0'">8.0.0</_TargetVersion>
+    <_TargetVersion Condition="'$(TargetFramework)' == 'net10.0'">10.0.0</_TargetVersion>
   </PropertyGroup>
 
   <ItemGroup>
@@ -31,8 +36,8 @@
     <None Include="../resources/Icon.jpg" Pack="true" PackagePath="" />
   </ItemGroup>
 
-  <ItemGroup> 
-    <InternalsVisibleTo Include="Unit" /> 
+  <ItemGroup>
+    <InternalsVisibleTo Include="Unit" />
   </ItemGroup>
 
   <ItemGroup>
@@ -47,9 +52,9 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Azure.Cosmos" Version="3.46.1" />
-    <PackageReference Include="Microsoft.Extensions.Caching.StackExchangeRedis" Version="8.0.1" />
-    <PackageReference Include="Microsoft.Extensions.Caching.SqlServer" Version="8.0.1" />
+    <PackageReference Include="Microsoft.Extensions.Caching.StackExchangeRedis" Version="$(_TargetVersion)" />
+    <PackageReference Include="Microsoft.Extensions.Caching.SqlServer" Version="$(_TargetVersion)" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
   </ItemGroup>
-  
+
 </Project>
