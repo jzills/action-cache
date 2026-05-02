@@ -56,4 +56,4 @@ jobs:
 
       - name: Test
         working-directory: ./test/Integration
-        run: dotnet test --no-build --verbosity normal
+        run: dotnet test -p:TestTfmsInParallel=false --no-build --verbosity normal

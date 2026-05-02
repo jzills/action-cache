@@ -9,9 +9,9 @@ public static class TestData
 {
     public static IEnumerable<IServiceProvider> GetServiceProviders() =>
         GetRedisCacheServiceProvider().Concat(
-            GetSqlServerServiceProvider());//.Concat(
-                // GetAzureCosmosServiceProvider()).Concat(
-                    /// GetMultipleCacheServiceProvider());
+            GetSqlServerServiceProvider()).Concat(
+                GetAzureCosmosServiceProvider()).Concat(
+                    GetMultipleCacheServiceProvider());
 
     public static IEnumerable<IServiceProvider> GetRedisCacheServiceProvider()
     {
