@@ -1,7 +1,7 @@
 using ActionCache.Common;
 using ActionCache.Common.Caching;
-using ActionCache.Redis.Concurrency;
-using ActionCache.Redis.Concurrency.Locks;
+using ActionCache.Common.Concurrency;
+using ActionCache.Common.Concurrency.Locks;
 using ActionCache.Utilities;
 using Microsoft.Extensions.Options;
 using StackExchange.Redis;
@@ -36,12 +36,12 @@ public class RedisActionCacheFactory : ActionCacheFactoryBase
     /// <inheritdoc/>
     public override IActionCache? Create(Namespace @namespace)
     {
-        var context = new ActionCacheContext<RedisCacheLock>
+        var context = new ActionCacheContext<NullCacheLock>
         {
             Namespace = @namespace,
             EntryOptions = EntryOptions,
             RefreshProvider = RefreshProvider,
-            CacheLocker = new RedisCacheLocker(Cache, EntryOptions.LockDuration, EntryOptions.LockTimeout)
+            CacheLocker = new NullCacheLocker()
         };
 
         return new RedisActionCache(Cache, context);
@@ -50,7 +50,7 @@ public class RedisActionCacheFactory : ActionCacheFactoryBase
     /// <inheritdoc/>
     public override IActionCache? Create(Namespace @namespace, TimeSpan? absoluteExpiration = null, TimeSpan? slidingExpiration = null)
     {
-        var context = new ActionCacheContext<RedisCacheLock>
+        var context = new ActionCacheContext<NullCacheLock>
         {
             Namespace = @namespace,
             EntryOptions = new ActionCacheEntryOptions
@@ -59,7 +59,7 @@ public class RedisActionCacheFactory : ActionCacheFactoryBase
                 SlidingExpiration = slidingExpiration
             },
             RefreshProvider = RefreshProvider,
-            CacheLocker = new RedisCacheLocker(Cache, EntryOptions.LockDuration, EntryOptions.LockTimeout)
+            CacheLocker = new NullCacheLocker()
         };
 
         return new RedisActionCache(Cache, context);

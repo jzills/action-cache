@@ -1,8 +1,8 @@
 using ActionCache.Common;
 using ActionCache.Common.Caching;
+using ActionCache.Common.Concurrency;
+using ActionCache.Common.Concurrency.Locks;
 using ActionCache.Redis;
-using ActionCache.Redis.Concurrency;
-using ActionCache.Redis.Concurrency.Locks;
 using ActionCache.Utilities;
 using Moq;
 using StackExchange.Redis;
@@ -19,15 +19,12 @@ public class RedisActionCacheExpirationTests
     public void SetUp()
     {
         _databaseMock = new Mock<IDatabase>();
-        var context = new ActionCacheContext<RedisCacheLock>
+        var context = new ActionCacheContext<NullCacheLock>
         {
             Namespace = new Namespace("TestNs"),
             EntryOptions = new ActionCacheEntryOptions(),
             RefreshProvider = new ActionCacheRefreshProvider(new ActionCacheDescriptorProviderNull()),
-            CacheLocker = new RedisCacheLocker(
-                _databaseMock.Object,
-                TimeSpan.FromSeconds(5),
-                TimeSpan.FromSeconds(10))
+            CacheLocker = new NullCacheLocker()
         };
         _sut = new RedisActionCache(_databaseMock.Object, context);
     }
@@ -35,7 +32,7 @@ public class RedisActionCacheExpirationTests
     [Test]
     public async Task GetAsync_WhenAbsoluteExpirationHasPassed_DeletesAndReturnsDefault()
     {
-        var pastTimestamp = 1L; // 1 ms after Unix epoch = year 1970, definitely in the past
+        var pastTimestamp = 1L;
         var entries = new HashEntry[]
         {
             new HashEntry(RedisHashEntry.Value, "\"value\""),
