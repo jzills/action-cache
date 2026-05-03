@@ -16,6 +16,7 @@ public class NullCacheLockerTests
         var cacheLock = await _locker.TryAcquireLockAsync("resource");
         cacheLock.Should().NotBeNull();
         cacheLock.Resource.Should().Be("resource");
+        cacheLock.IsAcquired.Should().BeTrue();
     }
 
     [Test]
@@ -23,6 +24,7 @@ public class NullCacheLockerTests
     {
         var cacheLock = await _locker.WaitForLockAsync("resource");
         cacheLock.Should().NotBeNull();
+        cacheLock.IsAcquired.Should().BeTrue();
     }
 
     [Test]
@@ -33,23 +35,22 @@ public class NullCacheLockerTests
     }
 
     [Test]
-    public async Task WaitForLockThenAsync_Action_DoesNotExecute_BecauseLockNeverAcquired()
+    public async Task WaitForLockThenAsync_Action_AlwaysExecutes()
     {
-        // NullCacheLock.IsAcquired defaults false, so the base WaitForLockThenAsync never runs the action
         var executed = false;
         await _locker.WaitForLockThenAsync("resource", () => { executed = true; });
-        executed.Should().BeFalse();
+        executed.Should().BeTrue();
     }
 
     [Test]
-    public async Task WaitForLockThenAsync_Func_ReturnsDefault_BecauseLockNeverAcquired()
+    public async Task WaitForLockThenAsync_AsyncFunc_ReturnsResult()
     {
         var result = await _locker.WaitForLockThenAsync("resource", () => Task.FromResult(42));
-        result.Should().Be(default(int));
+        result.Should().Be(42);
     }
 
     [Test]
-    public async Task WaitForLockThenAsync_AsyncAction_DoesNotExecute_BecauseLockNeverAcquired()
+    public async Task WaitForLockThenAsync_AsyncAction_AlwaysExecutes()
     {
         var executed = false;
         await _locker.WaitForLockThenAsync("resource", () =>
@@ -57,14 +58,13 @@ public class NullCacheLockerTests
             executed = true;
             return Task.CompletedTask;
         });
-        executed.Should().BeFalse();
+        executed.Should().BeTrue();
     }
 
     [Test]
-    public async Task WaitForLockThenAsync_SyncFunc_ReturnsDefault_BecauseLockNeverAcquired()
+    public async Task WaitForLockThenAsync_SyncFunc_ReturnsResult()
     {
         var result = await _locker.WaitForLockThenAsync("resource", () => 99);
-        result.Should().Be(default(int));
+        result.Should().Be(99);
     }
-
 }

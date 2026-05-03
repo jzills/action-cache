@@ -1,7 +1,7 @@
 using ActionCache.Common;
 using ActionCache.Common.Caching;
-using ActionCache.Common.Concurrency;
-using ActionCache.Common.Concurrency.Locks;
+using ActionCache.Redis.Concurrency;
+using ActionCache.Redis.Concurrency.Locks;
 using ActionCache.Utilities;
 using Microsoft.Extensions.Options;
 using StackExchange.Redis;
@@ -15,15 +15,15 @@ public class RedisActionCacheFactory : ActionCacheFactoryBase
 {
     /// <summary>
     /// An IDatabase representation of a Redis cache.
-    /// </summary> 
+    /// </summary>
     protected readonly IDatabase Cache;
-    
+
     /// <summary>
     /// Constructor for RedisActionCacheFactory.
     /// </summary>
     /// <param name="connectionMultiplexer">ConnectionMultiplexer for Redis.</param>
-    /// <param name="entryOptions">The global entry options used for creation when expiration times are not supplied.</param> 
-    /// <param name="refreshProvider">The refresh provider to handle cache refreshes.</param>  
+    /// <param name="entryOptions">The global entry options used for creation when expiration times are not supplied.</param>
+    /// <param name="refreshProvider">The refresh provider to handle cache refreshes.</param>
     public RedisActionCacheFactory(
         IConnectionMultiplexer connectionMultiplexer,
         IOptions<ActionCacheEntryOptions> entryOptions,
@@ -32,16 +32,16 @@ public class RedisActionCacheFactory : ActionCacheFactoryBase
     {
         Cache = connectionMultiplexer.GetDatabase();
     }
-    
+
     /// <inheritdoc/>
     public override IActionCache? Create(Namespace @namespace)
     {
-        var context = new ActionCacheContext<NullCacheLock>
+        var context = new ActionCacheContext<RedisCacheLock>
         {
             Namespace = @namespace,
             EntryOptions = EntryOptions,
             RefreshProvider = RefreshProvider,
-            CacheLocker = new NullCacheLocker()
+            CacheLocker = new RedisCacheLocker(Cache, EntryOptions.LockDuration, EntryOptions.LockTimeout)
         };
 
         return new RedisActionCache(Cache, context);
@@ -50,7 +50,7 @@ public class RedisActionCacheFactory : ActionCacheFactoryBase
     /// <inheritdoc/>
     public override IActionCache? Create(Namespace @namespace, TimeSpan? absoluteExpiration = null, TimeSpan? slidingExpiration = null)
     {
-        var context = new ActionCacheContext<NullCacheLock>
+        var context = new ActionCacheContext<RedisCacheLock>
         {
             Namespace = @namespace,
             EntryOptions = new ActionCacheEntryOptions
@@ -59,7 +59,7 @@ public class RedisActionCacheFactory : ActionCacheFactoryBase
                 SlidingExpiration = slidingExpiration
             },
             RefreshProvider = RefreshProvider,
-            CacheLocker = new NullCacheLocker()
+            CacheLocker = new RedisCacheLocker(Cache, EntryOptions.LockDuration, EntryOptions.LockTimeout)
         };
 
         return new RedisActionCache(Cache, context);

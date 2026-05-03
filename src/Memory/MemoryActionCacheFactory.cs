@@ -1,6 +1,7 @@
 using ActionCache.Common;
 using ActionCache.Common.Caching;
 using ActionCache.Common.Concurrency;
+using ActionCache.Common.Concurrency.Locks;
 using ActionCache.Utilities;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
@@ -45,15 +46,12 @@ public class MemoryActionCacheFactory : ActionCacheFactoryBase
     {
         if (ExpirationTokens.TryGetOrAdd(@namespace, out var expirationTokenSource))
         {
-            var context = new ActionCacheContext<SemaphoreSlimLock>
+            var context = new ActionCacheContext<NullCacheLock>
             {
                 Namespace = @namespace,
                 EntryOptions = EntryOptions,
                 RefreshProvider = RefreshProvider,
-                CacheLocker = new SemaphoreSlimLocker(
-                    EntryOptions.LockDuration, 
-                    EntryOptions.LockTimeout
-                )
+                CacheLocker = new NullCacheLocker()
             };
 
             return new MemoryActionCache(Cache, expirationTokenSource, context);
@@ -69,7 +67,7 @@ public class MemoryActionCacheFactory : ActionCacheFactoryBase
     {
         if (ExpirationTokens.TryGetOrAdd(@namespace, out var expirationTokenSource))
         {
-            var context = new ActionCacheContext<SemaphoreSlimLock>
+            var context = new ActionCacheContext<NullCacheLock>
             {
                 Namespace = @namespace,
                 EntryOptions = new ActionCacheEntryOptions
@@ -78,10 +76,7 @@ public class MemoryActionCacheFactory : ActionCacheFactoryBase
                     SlidingExpiration = slidingExpiration
                 },
                 RefreshProvider = RefreshProvider,
-                CacheLocker = new SemaphoreSlimLocker(
-                    EntryOptions.LockDuration, 
-                    EntryOptions.LockTimeout
-                )
+                CacheLocker = new NullCacheLocker()
             };
 
             return new MemoryActionCache(Cache, expirationTokenSource, context);

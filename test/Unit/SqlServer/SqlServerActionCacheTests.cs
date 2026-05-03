@@ -1,8 +1,8 @@
 using ActionCache.Common;
 using ActionCache.Common.Caching;
 using ActionCache.Common.Concurrency;
-using ActionCache.Common.Concurrency.Locks;
 using ActionCache.SqlServer;
+using ActionCache.SqlServer.Concurrency.Locks;
 using ActionCache.Utilities;
 using Microsoft.Extensions.Caching.Distributed;
 using Moq;
@@ -16,14 +16,14 @@ namespace Unit.SqlServer;
 public class SqlServerActionCacheTests
 {
     private Mock<IDistributedCache> _cacheMock;
-    private Mock<ICacheLocker<DistributedCacheLock>> _lockerMock;
+    private Mock<ICacheLocker<SqlServerCacheLock>> _lockerMock;
     private SqlServerActionCache _sut;
 
     [SetUp]
     public void SetUp()
     {
         _cacheMock = new Mock<IDistributedCache>();
-        _lockerMock = new Mock<ICacheLocker<DistributedCacheLock>>();
+        _lockerMock = new Mock<ICacheLocker<SqlServerCacheLock>>();
 
         _lockerMock
             .Setup(locker => locker.WaitForLockThenAsync(It.IsAny<string>(), It.IsAny<Func<Task>>()))
@@ -36,7 +36,7 @@ public class SqlServerActionCacheTests
             .Returns<string, Func<Task<ConcurrentDictionary<string, DateTimeOffset?>>>>(
                 async (_, func) => await func());
 
-        var context = new ActionCacheContext<DistributedCacheLock>
+        var context = new ActionCacheContext<SqlServerCacheLock>
         {
             Namespace = new Namespace("TestNs"),
             EntryOptions = new ActionCacheEntryOptions(),
@@ -112,7 +112,7 @@ public class SqlServerActionCacheTests
             Times.AtLeastOnce);
     }
 
-[Test]
+    [Test]
     public async Task GetKeysAsync_WhenNoKeys_ReturnsEmpty()
     {
         _cacheMock.Setup(cache => cache.Get(It.IsAny<string>()))

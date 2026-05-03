@@ -4,6 +4,7 @@ using ActionCache.Common.Caching;
 using ActionCache.SqlServer;
 using ActionCache.Utilities;
 using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.Extensions.Caching.SqlServer;
 using Microsoft.Extensions.Options;
 using Moq;
 
@@ -15,6 +16,7 @@ public class SqlServerActionCacheFactoryTests
     private Mock<IDistributedCache> _cacheMock;
     private Mock<IActionCacheRefreshProvider> _refreshProviderMock;
     private IOptions<ActionCacheEntryOptions> _entryOptions;
+    private IOptions<SqlServerCacheOptions> _sqlServerOptions;
     private SqlServerActionCacheFactory _sut;
 
     [SetUp]
@@ -23,7 +25,15 @@ public class SqlServerActionCacheFactoryTests
         _cacheMock = new Mock<IDistributedCache>();
         _refreshProviderMock = new Mock<IActionCacheRefreshProvider>();
         _entryOptions = Options.Create(new ActionCacheEntryOptions());
-        _sut = new SqlServerActionCacheFactory(_cacheMock.Object, _entryOptions, _refreshProviderMock.Object);
+        _sqlServerOptions = Options.Create(new SqlServerCacheOptions
+        {
+            ConnectionString = "Server=localhost;Database=Cache;Integrated Security=true;"
+        });
+        _sut = new SqlServerActionCacheFactory(
+            _cacheMock.Object,
+            _sqlServerOptions,
+            _entryOptions,
+            _refreshProviderMock.Object);
     }
 
     [Test]

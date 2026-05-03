@@ -1,6 +1,6 @@
 using ActionCache.Common;
 using ActionCache.Common.Caching;
-using ActionCache.Common.Concurrency.Locks;
+using ActionCache.Redis.Concurrency.Locks;
 using ActionCache.Common.Serialization;
 using ActionCache.Redis.Extensions;
 using ActionCache.Redis.Extensions.Internal;
@@ -12,7 +12,7 @@ namespace ActionCache.Redis;
 /// <summary>
 /// Represents a Redis implementation of the IActionCache interface.
 /// </summary>
-public class RedisActionCache : ActionCacheBase<NullCacheLock>
+public class RedisActionCache : ActionCacheBase<RedisCacheLock>
 {
     /// <summary>
     /// An IDatabase representation of a Redis cache.
@@ -24,7 +24,7 @@ public class RedisActionCache : ActionCacheBase<NullCacheLock>
     /// </summary>
     /// <param name="cache">The IDatabase to use for caching.</param>
     /// <param name="context">The cache context.</param>  
-    public RedisActionCache(IDatabase cache, ActionCacheContext<NullCacheLock> context) : base(context)
+    public RedisActionCache(IDatabase cache, ActionCacheContext<RedisCacheLock> context) : base(context)
     {
         Cache = cache;
     }

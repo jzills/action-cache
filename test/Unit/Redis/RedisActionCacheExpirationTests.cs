@@ -1,8 +1,8 @@
 using ActionCache.Common;
 using ActionCache.Common.Caching;
-using ActionCache.Common.Concurrency;
-using ActionCache.Common.Concurrency.Locks;
 using ActionCache.Redis;
+using ActionCache.Redis.Concurrency;
+using ActionCache.Redis.Concurrency.Locks;
 using ActionCache.Utilities;
 using Moq;
 using StackExchange.Redis;
@@ -19,12 +19,15 @@ public class RedisActionCacheExpirationTests
     public void SetUp()
     {
         _databaseMock = new Mock<IDatabase>();
-        var context = new ActionCacheContext<NullCacheLock>
+        var context = new ActionCacheContext<RedisCacheLock>
         {
             Namespace = new Namespace("TestNs"),
             EntryOptions = new ActionCacheEntryOptions(),
             RefreshProvider = new ActionCacheRefreshProvider(new ActionCacheDescriptorProviderNull()),
-            CacheLocker = new NullCacheLocker()
+            CacheLocker = new RedisCacheLocker(
+                _databaseMock.Object,
+                TimeSpan.FromSeconds(5),
+                TimeSpan.FromSeconds(10))
         };
         _sut = new RedisActionCache(_databaseMock.Object, context);
     }
