@@ -32,7 +32,7 @@ public class RedisActionCacheExpirationTests
     [Test]
     public async Task GetAsync_WhenAbsoluteExpirationHasPassed_DeletesAndReturnsDefault()
     {
-        var pastTimestamp = 1L; // 1 ms after Unix epoch = year 1970, definitely in the past
+        var pastTimestamp = 1L;
         var entries = new HashEntry[]
         {
             new HashEntry(RedisHashEntry.Value, "\"value\""),

@@ -1,5 +1,5 @@
 using ActionCache.Common.Caching;
-using ActionCache.Common.Concurrency;
+using ActionCache.Common.Concurrency.Locks;
 using ActionCache.Memory.Extensions.Internal;
 using ActionCache.Utilities;
 using Microsoft.Extensions.Caching.Memory;
@@ -10,7 +10,7 @@ namespace ActionCache.Memory;
 /// <summary>
 /// Represents a memory action cache implementation.
 /// </summary>
-public class MemoryActionCache : ActionCacheBase<SemaphoreSlimLock>
+public class MemoryActionCache : ActionCacheBase<NullCacheLock>
 {
     /// <summary>
     /// A memory cache implementation.
@@ -31,7 +31,7 @@ public class MemoryActionCache : ActionCacheBase<SemaphoreSlimLock>
     public MemoryActionCache(
         IMemoryCache cache,
         CancellationTokenSource cancellationTokenSource,
-        ActionCacheContext<SemaphoreSlimLock> context
+        ActionCacheContext<NullCacheLock> context
     ) : base(context)
     {
         Cache = cache;

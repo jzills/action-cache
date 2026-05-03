@@ -59,7 +59,7 @@ internal static class IMemoryCacheExtensions
         var keys = cache.GetKeys(@namespace, entryOptions);
         if (keys.TryAdd(key, entryOptions.AbsoluteExpiration))
         {
-            cache.Set(key, keys, entryOptions);
+            cache.Set(@namespace, keys, entryOptions);
         }
     }
 

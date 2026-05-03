@@ -1,8 +1,8 @@
 using ActionCache.Common;
 using ActionCache.Common.Caching;
 using ActionCache.Common.Concurrency;
-using ActionCache.Common.Concurrency.Locks;
 using ActionCache.SqlServer;
+using ActionCache.SqlServer.Concurrency.Locks;
 using ActionCache.Utilities;
 using Microsoft.Extensions.Caching.Distributed;
 using Moq;
@@ -16,7 +16,7 @@ namespace Unit.Common.Caching;
 public class ActionCacheBaseRefreshTests
 {
     private Mock<IDistributedCache> _cacheMock;
-    private Mock<ICacheLocker<DistributedCacheLock>> _lockerMock;
+    private Mock<ICacheLocker<SqlServerCacheLock>> _lockerMock;
     private Mock<IActionCacheRefreshProvider> _refreshProviderMock;
     private SqlServerActionCache _sut;
 
@@ -24,7 +24,7 @@ public class ActionCacheBaseRefreshTests
     public void SetUp()
     {
         _cacheMock = new Mock<IDistributedCache>();
-        _lockerMock = new Mock<ICacheLocker<DistributedCacheLock>>();
+        _lockerMock = new Mock<ICacheLocker<SqlServerCacheLock>>();
         _refreshProviderMock = new Mock<IActionCacheRefreshProvider>();
 
         _lockerMock
@@ -38,7 +38,7 @@ public class ActionCacheBaseRefreshTests
             .Returns<string, Func<Task<ConcurrentDictionary<string, DateTimeOffset?>>>>(
                 async (_, func) => await func());
 
-        var context = new ActionCacheContext<DistributedCacheLock>
+        var context = new ActionCacheContext<SqlServerCacheLock>
         {
             Namespace = new Namespace("TestNs"),
             EntryOptions = new ActionCacheEntryOptions(),

@@ -52,6 +52,7 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Azure.Cosmos" Version="3.46.1" />
+    <PackageReference Include="Microsoft.Data.SqlClient" Version="5.2.2" />
     <PackageReference Include="Microsoft.Extensions.Caching.StackExchangeRedis" Version="$(_TargetVersion)" />
     <PackageReference Include="Microsoft.Extensions.Caching.SqlServer" Version="$(_TargetVersion)" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />

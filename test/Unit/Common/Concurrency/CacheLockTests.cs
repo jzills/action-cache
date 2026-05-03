@@ -1,42 +1,13 @@
 using ActionCache.Common.Concurrency;
 using ActionCache.Common.Concurrency.Locks;
+using ActionCache.Redis.Concurrency.Locks;
+using ActionCache.SqlServer.Concurrency.Locks;
 
 namespace Unit.Common;
 
 [TestFixture]
 public class CacheLockTests
 {
-    [Test]
-    public void CacheLock_DefaultIsAcquired_IsFalse()
-    {
-        var cacheLock = new SemaphoreSlimLock("res", TimeSpan.FromMilliseconds(200), TimeSpan.FromMilliseconds(200));
-        cacheLock.IsAcquired.Should().BeFalse();
-    }
-
-    [Test]
-    public void CacheLock_Resource_IsSet()
-    {
-        var cacheLock = new SemaphoreSlimLock("myResource", TimeSpan.Zero, TimeSpan.Zero);
-        cacheLock.Resource.Should().Be("myResource");
-    }
-
-    [Test]
-    public void CacheLock_DateRequested_IsApproximatelyNow()
-    {
-        var before = DateTime.UtcNow;
-        var cacheLock = new SemaphoreSlimLock("r", TimeSpan.Zero, TimeSpan.Zero);
-        var after = DateTime.UtcNow;
-        cacheLock.DateRequested.Should().BeOnOrAfter(before).And.BeOnOrBefore(after);
-    }
-
-    [Test]
-    public void SemaphoreSlimLock_Duration_IsSet()
-    {
-        var cacheLock = new SemaphoreSlimLock("r", TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(2));
-        cacheLock.Duration.Should().Be(TimeSpan.FromSeconds(1));
-        cacheLock.Timeout.Should().Be(TimeSpan.FromSeconds(2));
-    }
-
     [Test]
     public void NullCacheLock_Resource_IsSet()
     {
@@ -45,54 +16,87 @@ public class CacheLockTests
     }
 
     [Test]
-    public void NullCacheLock_IsAcquired_DefaultsFalse()
+    public void NullCacheLock_IsAcquired_IsTrue()
     {
         var cacheLock = new NullCacheLock("r");
-        cacheLock.IsAcquired.Should().BeFalse();
+        cacheLock.IsAcquired.Should().BeTrue();
     }
 
     [Test]
-    public void DistributedCacheLock_Key_PrefixedWithLock()
+    public void RedisCacheLock_Resource_IsSet()
     {
-        var cacheLock = new DistributedCacheLock("myns", TimeSpan.Zero, TimeSpan.Zero);
+        var cacheLock = new RedisCacheLock("myns", TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(5));
+        cacheLock.Resource.Should().Be("myns");
+    }
+
+    [Test]
+    public void RedisCacheLock_Key_PrefixedWithLock()
+    {
+        var cacheLock = new RedisCacheLock("myns", TimeSpan.Zero, TimeSpan.Zero);
         cacheLock.Key.Should().StartWith("Lock:");
         cacheLock.Key.Should().Contain("myns");
     }
 
     [Test]
-    public void DistributedCacheLock_Value_IsGuid()
+    public void RedisCacheLock_Token_IsNonEmptyGuid()
     {
-        var cacheLock = new DistributedCacheLock("r", TimeSpan.Zero, TimeSpan.Zero);
-        cacheLock.Value.Should().NotBeNullOrWhiteSpace();
-        Guid.TryParse(cacheLock.Value, out _).Should().BeTrue();
+        var cacheLock = new RedisCacheLock("r", TimeSpan.Zero, TimeSpan.Zero);
+        cacheLock.Token.Should().NotBeNullOrWhiteSpace();
+        Guid.TryParse(cacheLock.Token, out _).Should().BeTrue();
     }
 
     [Test]
-    public void DistributedCacheLock_ShouldTryAcquire_WhenNotAcquiredAndNotTimedOut_ReturnsTrue()
+    public void RedisCacheLock_TwoInstances_HaveDifferentTokens()
     {
-        var cacheLock = new DistributedCacheLock("r", TimeSpan.Zero, TimeSpan.FromSeconds(30));
-        cacheLock.ShouldTryAcquire().Should().BeTrue();
+        var a = new RedisCacheLock("r", TimeSpan.Zero, TimeSpan.Zero);
+        var b = new RedisCacheLock("r", TimeSpan.Zero, TimeSpan.Zero);
+        a.Token.Should().NotBe(b.Token);
     }
 
     [Test]
-    public void DistributedCacheLock_ShouldTryAcquire_WhenAlreadyAcquired_ReturnsFalse()
+    public void RedisCacheLock_IsAcquired_DefaultsFalse()
     {
-        var cacheLock = new DistributedCacheLock("r", TimeSpan.Zero, TimeSpan.FromSeconds(30));
-        cacheLock.IsAcquired = true;
-        cacheLock.ShouldTryAcquire().Should().BeFalse();
+        var cacheLock = new RedisCacheLock("r", TimeSpan.Zero, TimeSpan.Zero);
+        cacheLock.IsAcquired.Should().BeFalse();
     }
 
     [Test]
-    public void DistributedCacheLock_HasExceededTimeout_WhenTimeoutIsZero_ReturnsTrue()
+    public void RedisCacheLock_DateRequested_IsApproximatelyNow()
     {
-        var cacheLock = new DistributedCacheLock("r", TimeSpan.Zero, TimeSpan.Zero);
-        cacheLock.HasExceededTimeout().Should().BeTrue();
+        var before = DateTime.UtcNow;
+        var cacheLock = new RedisCacheLock("r", TimeSpan.Zero, TimeSpan.Zero);
+        var after = DateTime.UtcNow;
+        cacheLock.DateRequested.Should().BeOnOrAfter(before).And.BeOnOrBefore(after);
     }
 
     [Test]
-    public void DistributedCacheLock_HasExceededTimeout_WhenTimeoutIsFuture_ReturnsFalse()
+    public void SqlServerCacheLock_Resource_IsSet()
     {
-        var cacheLock = new DistributedCacheLock("r", TimeSpan.Zero, TimeSpan.FromSeconds(30));
-        cacheLock.HasExceededTimeout().Should().BeFalse();
+        var cacheLock = new SqlServerCacheLock("myns", TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(5));
+        cacheLock.Resource.Should().Be("myns");
+    }
+
+    [Test]
+    public void SqlServerCacheLock_Duration_IsSet()
+    {
+        var cacheLock = new SqlServerCacheLock("r", TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(2));
+        cacheLock.Duration.Should().Be(TimeSpan.FromSeconds(1));
+        cacheLock.Timeout.Should().Be(TimeSpan.FromSeconds(2));
+    }
+
+    [Test]
+    public void SqlServerCacheLock_IsAcquired_DefaultsFalse()
+    {
+        var cacheLock = new SqlServerCacheLock("r", TimeSpan.Zero, TimeSpan.Zero);
+        cacheLock.IsAcquired.Should().BeFalse();
+    }
+
+    [Test]
+    public void CacheLock_DateRequested_IsApproximatelyNow()
+    {
+        var before = DateTime.UtcNow;
+        var cacheLock = new NullCacheLock("r");
+        var after = DateTime.UtcNow;
+        cacheLock.DateRequested.Should().BeOnOrAfter(before).And.BeOnOrBefore(after);
     }
 }

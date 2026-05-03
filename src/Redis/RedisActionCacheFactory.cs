@@ -15,15 +15,15 @@ public class RedisActionCacheFactory : ActionCacheFactoryBase
 {
     /// <summary>
     /// An IDatabase representation of a Redis cache.
-    /// </summary> 
+    /// </summary>
     protected readonly IDatabase Cache;
-    
+
     /// <summary>
     /// Constructor for RedisActionCacheFactory.
     /// </summary>
     /// <param name="connectionMultiplexer">ConnectionMultiplexer for Redis.</param>
-    /// <param name="entryOptions">The global entry options used for creation when expiration times are not supplied.</param> 
-    /// <param name="refreshProvider">The refresh provider to handle cache refreshes.</param>  
+    /// <param name="entryOptions">The global entry options used for creation when expiration times are not supplied.</param>
+    /// <param name="refreshProvider">The refresh provider to handle cache refreshes.</param>
     public RedisActionCacheFactory(
         IConnectionMultiplexer connectionMultiplexer,
         IOptions<ActionCacheEntryOptions> entryOptions,
@@ -32,7 +32,7 @@ public class RedisActionCacheFactory : ActionCacheFactoryBase
     {
         Cache = connectionMultiplexer.GetDatabase();
     }
-    
+
     /// <inheritdoc/>
     public override IActionCache? Create(Namespace @namespace)
     {

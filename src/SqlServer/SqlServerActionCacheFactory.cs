@@ -1,50 +1,58 @@
 using ActionCache.Common;
 using ActionCache.Common.Caching;
-using ActionCache.Common.Concurrency;
+using ActionCache.SqlServer.Concurrency;
+using ActionCache.SqlServer.Concurrency.Locks;
 using ActionCache.Utilities;
 using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.Extensions.Caching.SqlServer;
 using Microsoft.Extensions.Options;
 
 namespace ActionCache.SqlServer;
 
 /// <summary>
-/// Represents a factory for creating SqlServer action caches.
+/// Factory for creating <see cref="SqlServerActionCache"/> instances backed by
+/// <see cref="SqlServerCacheLocker"/> (sp_getapplock / sp_releaseapplock).
 /// </summary>
 public class SqlServerActionCacheFactory : ActionCacheFactoryBase
 {
-    /// <summary>
-    /// A SqlServer cache implementation.
-    /// </summary>
+    /// <summary>The distributed cache used for storing cache entries.</summary>
     protected readonly IDistributedCache Cache;
+
+    /// <summary>Connection string extracted from <see cref="SqlServerCacheOptions"/> for the locker.</summary>
+    protected readonly string ConnectionString;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SqlServerActionCacheFactory"/> class.
     /// </summary>
-    /// <param name="cache">The SqlServer cache to use.</param>
-    /// <param name="entryOptions">The global entry options used for creation when expiration times are not supplied.</param>
-    /// <param name="refreshProvider">The refresh provider responsible for invoking cached controller actions.</param> 
+    /// <param name="cache">The distributed cache to be used.</param>
+    /// <param name="sqlServerCacheOptions">SQL Server cache options; the connection string is used by the locker.</param>
+    /// <param name="entryOptions">Global entry options used when expiration is not specified per namespace.</param>
+    /// <param name="refreshProvider">Provider responsible for refreshing cached action results.</param>
     public SqlServerActionCacheFactory(
         IDistributedCache cache,
+        IOptions<SqlServerCacheOptions> sqlServerCacheOptions,
         IOptions<ActionCacheEntryOptions> entryOptions,
         IActionCacheRefreshProvider refreshProvider
     ) : base(entryOptions, refreshProvider)
     {
         Cache = cache;
+        ConnectionString = sqlServerCacheOptions.Value.ConnectionString
+            ?? throw new InvalidOperationException(
+                "SqlServerCacheOptions.ConnectionString must be set to use SqlServerCacheLocker.");
     }
 
     /// <inheritdoc/>
     public override IActionCache? Create(Namespace @namespace)
     {
-        var context = new ActionCacheContext<DistributedCacheLock>
+        var context = new ActionCacheContext<SqlServerCacheLock>
         {
             Namespace = @namespace,
             EntryOptions = EntryOptions,
             RefreshProvider = RefreshProvider,
-            CacheLocker = new DistributedCacheLocker(
-                Cache,
+            CacheLocker = new SqlServerCacheLocker(
+                ConnectionString,
                 EntryOptions.LockDuration,
-                EntryOptions.LockTimeout
-            )
+                EntryOptions.LockTimeout)
         };
 
         return new SqlServerActionCache(Cache, context);
@@ -53,7 +61,7 @@ public class SqlServerActionCacheFactory : ActionCacheFactoryBase
     /// <inheritdoc/>
     public override IActionCache? Create(Namespace @namespace, TimeSpan? absoluteExpiration = null, TimeSpan? slidingExpiration = null)
     {
-        var context = new ActionCacheContext<DistributedCacheLock>
+        var context = new ActionCacheContext<SqlServerCacheLock>
         {
             Namespace = @namespace,
             EntryOptions = new ActionCacheEntryOptions
@@ -62,13 +70,12 @@ public class SqlServerActionCacheFactory : ActionCacheFactoryBase
                 SlidingExpiration = slidingExpiration
             },
             RefreshProvider = RefreshProvider,
-            CacheLocker = new DistributedCacheLocker(
-                Cache, 
-                EntryOptions.LockDuration, 
-                EntryOptions.LockTimeout
-            )
+            CacheLocker = new SqlServerCacheLocker(
+                ConnectionString,
+                EntryOptions.LockDuration,
+                EntryOptions.LockTimeout)
         };
-        
+
         return new SqlServerActionCache(Cache, context);
     }
 }

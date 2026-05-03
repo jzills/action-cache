@@ -12,5 +12,6 @@ public class NullCacheLock : CacheLock
     /// <param name="resource">The resource name associated with this lock.</param>
     public NullCacheLock(string resource) : base(resource)
     {
+        IsAcquired = true;
     }
 }

@@ -1,5 +1,5 @@
 using ActionCache.Common.Caching;
-using ActionCache.Common.Concurrency;
+using ActionCache.SqlServer.Concurrency.Locks;
 using ActionCache.Common.Serialization;
 using ActionCache.Memory.Extensions.Internal;
 using ActionCache.Utilities;
@@ -10,7 +10,7 @@ namespace ActionCache.SqlServer;
 /// <summary>
 /// A cache implementation for SQL Server-based action caching with distributed locking support.
 /// </summary>
-public class SqlServerActionCache : ActionCacheBase<DistributedCacheLock>
+public class SqlServerActionCache : ActionCacheBase<SqlServerCacheLock>
 {
     /// <summary>
     /// The distributed cache used for storing and retrieving cache entries.
@@ -22,7 +22,7 @@ public class SqlServerActionCache : ActionCacheBase<DistributedCacheLock>
     /// </summary>
     /// <param name="cache">The distributed cache to be used.</param>
     /// <param name="context">The cache context.</param>  
-    public SqlServerActionCache(IDistributedCache cache, ActionCacheContext<DistributedCacheLock> context) 
+    public SqlServerActionCache(IDistributedCache cache, ActionCacheContext<SqlServerCacheLock> context) 
         : base(context) => Cache = cache;
 
     /// <summary>
