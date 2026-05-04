@@ -10,11 +10,20 @@ public record class Namespace(string Value)
     /// </summary>
     internal const string Assembly = nameof(ActionCache);
 
+    private static readonly AsyncLocal<Dictionary<string, string?>?> _routeValueStore = new();
+
+    private static Dictionary<string, string?> GetStore() =>
+        _routeValueStore.Value ??= new Dictionary<string, string?>();
+
     /// <summary>
-    /// Gets or sets a string value containing route template parameters.
-    /// This property is used to hold route information that can include parameterized values.
+    /// Gets or sets a string value containing route template parameters,
+    /// scoped to the current async execution context to prevent cross-request mutation.
     /// </summary>
-    public string? ValueWithRouteTemplateParameters { get; set; }
+    public string? ValueWithRouteTemplateParameters
+    {
+        get => GetStore().TryGetValue(Value, out var v) ? v : null;
+        set => GetStore()[Value] = value;
+    }
 
     /// <summary>
     /// Creates a fully qualified namespace key.

@@ -83,10 +83,9 @@ public class RedisActionCache : ActionCacheBase<NullCacheLock>
         
         if (Assembly.TryGetResourceAsText(LuaResources.SetHash, out var script))
         {
-            await Cache.ScriptEvaluateAsync(script, 
-                [(string)Namespace, (RedisKey)key], 
-                [redisValue, absoluteExpiration, slidingExpiration, ttl], 
-                CommandFlags.FireAndForget
+            await Cache.ScriptEvaluateAsync(script,
+                [(string)Namespace, (RedisKey)key],
+                [redisValue, absoluteExpiration, slidingExpiration, ttl]
             );
         }
         else
@@ -129,7 +128,7 @@ public class RedisActionCache : ActionCacheBase<NullCacheLock>
             return default!;
         }
         
-        if (ActionCacheEntryOptions.HasExpiredSlidingExpiration(hashEntries.GetSlidingExpiration()))
+        if (ActionCacheEntryOptions.HasSlidingExpiration(hashEntries.GetSlidingExpiration()))
         {
             await Cache.KeyExpireAsync(namespaceKey, TimeSpan.FromMilliseconds(hashEntries.GetSlidingExpiration()), CommandFlags.FireAndForget);
         }

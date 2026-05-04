@@ -96,7 +96,7 @@ public abstract class CacheLockerBase<TLock> : ICacheLocker<TLock> where TLock :
         }
         else
         {
-            // Handle lock acquisition failure
+            throw new InvalidOperationException($"Failed to acquire lock for resource '{resource}' within the configured timeout.");
         }
     }
 
@@ -129,7 +129,7 @@ public abstract class CacheLockerBase<TLock> : ICacheLocker<TLock> where TLock :
         }
         else
         {
-            // Handle lock acquisition failure
+            throw new InvalidOperationException($"Failed to acquire lock for resource '{resource}' within the configured timeout.");
         }
 
         return result;

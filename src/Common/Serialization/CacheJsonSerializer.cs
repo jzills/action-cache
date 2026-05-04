@@ -14,7 +14,7 @@ internal static class CacheJsonSerializer
     /// </summary>
     internal static readonly JsonSerializerSettings SerializerSettings = new JsonSerializerSettings
     {
-        TypeNameHandling = TypeNameHandling.All,
+        TypeNameHandling = TypeNameHandling.None,
         ReferenceLoopHandling = ReferenceLoopHandling.Ignore,
         Converters = new List<JsonConverter> { new ActionArgumentsConverter() }
     };

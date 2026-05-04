@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using ActionCache.Redis;
 using Moq;
 using StackExchange.Redis;
@@ -111,6 +112,97 @@ public class RedisExpiryServiceTests
 
         _databaseMock.Verify(db => db.SortedSetRemoveAsync(
             It.IsAny<RedisKey>(), It.IsAny<RedisValue>(), It.IsAny<CommandFlags>()), Times.Never);
+    }
+
+    // Bug H6: The regex ^(.*):([^:]+)$ splits on the last colon in the full Redis key.
+    // The plan flags this as broken for namespaces containing colons. The tests below
+    // verify the actual behavior: because (.*) is greedy, it always captures everything
+    // up to the last colon, which IS the correct namespace/key boundary — provided the
+    // cache key itself (hex-encoded) never contains a colon. These tests document the
+    // behavior under multi-colon namespaces so that any future key-format change does
+    // not silently break namespace extraction.
+
+    [Test]
+    public async Task ExpiryCallback_WhenNamespaceContainsSingleColon_CorrectlySplitsKey_H6()
+    {
+        Action<RedisChannel, RedisValue>? capturedHandler = null;
+        var handlerCaptured = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        _subscriberMock
+            .Setup(subscriber => subscriber.SubscribeAsync(
+                It.IsAny<RedisChannel>(),
+                It.IsAny<Action<RedisChannel, RedisValue>>(),
+                It.IsAny<CommandFlags>()))
+            .Callback<RedisChannel, Action<RedisChannel, RedisValue>, CommandFlags>(
+                (_, handler, _) => { capturedHandler = handler; handlerCaptured.SetResult(); })
+            .Returns(Task.CompletedTask);
+
+        RedisKey? capturedSortedSetKey = null;
+        RedisValue? capturedMember = null;
+        _databaseMock
+            .Setup(db => db.SortedSetRemoveAsync(
+                It.IsAny<RedisKey>(), It.IsAny<RedisValue>(), It.IsAny<CommandFlags>()))
+            .Callback<RedisKey, RedisValue, CommandFlags>((key, member, _) =>
+            {
+                capturedSortedSetKey = key;
+                capturedMember = member;
+            })
+            .ReturnsAsync(true);
+
+        using var cts = new CancellationTokenSource();
+        await _sut.StartAsync(cts.Token);
+        await handlerCaptured.Task.WaitAsync(TimeSpan.FromSeconds(5));
+
+        // Namespace "ActionCache:Users" with cache key "abc123"
+        capturedHandler!.Invoke(
+            RedisChannel.Literal("__keyevent@0__:expired"),
+            new RedisValue("ActionCache:Users:abc123"));
+
+        await Task.Delay(100);
+
+        capturedSortedSetKey.Should().Be((RedisKey)"ActionCache:Users");
+        capturedMember.Should().Be((RedisValue)"abc123");
+    }
+
+    [Test]
+    public async Task ExpiryCallback_WhenNamespaceContainsMultipleColons_SplitsAtLastColon_H6()
+    {
+        Action<RedisChannel, RedisValue>? capturedHandler = null;
+        var handlerCaptured = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        _subscriberMock
+            .Setup(subscriber => subscriber.SubscribeAsync(
+                It.IsAny<RedisChannel>(),
+                It.IsAny<Action<RedisChannel, RedisValue>>(),
+                It.IsAny<CommandFlags>()))
+            .Callback<RedisChannel, Action<RedisChannel, RedisValue>, CommandFlags>(
+                (_, handler, _) => { capturedHandler = handler; handlerCaptured.SetResult(); })
+            .Returns(Task.CompletedTask);
+
+        RedisKey? capturedSortedSetKey = null;
+        RedisValue? capturedMember = null;
+        _databaseMock
+            .Setup(db => db.SortedSetRemoveAsync(
+                It.IsAny<RedisKey>(), It.IsAny<RedisValue>(), It.IsAny<CommandFlags>()))
+            .Callback<RedisKey, RedisValue, CommandFlags>((key, member, _) =>
+            {
+                capturedSortedSetKey = key;
+                capturedMember = member;
+            })
+            .ReturnsAsync(true);
+
+        using var cts = new CancellationTokenSource();
+        await _sut.StartAsync(cts.Token);
+        await handlerCaptured.Task.WaitAsync(TimeSpan.FromSeconds(5));
+
+        // Namespace "ActionCache:Area:Controller:Action" with cache key "abc123"
+        // The greedy (.*) captures everything up to the last colon, so the split IS correct.
+        capturedHandler!.Invoke(
+            RedisChannel.Literal("__keyevent@0__:expired"),
+            new RedisValue("ActionCache:Area:Controller:Action:abc123"));
+
+        await Task.Delay(100);
+
+        capturedSortedSetKey.Should().Be((RedisKey)"ActionCache:Area:Controller:Action");
+        capturedMember.Should().Be((RedisValue)"abc123");
     }
 
     [Test]

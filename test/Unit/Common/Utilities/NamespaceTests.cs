@@ -52,4 +52,40 @@ public class NamespaceTests
 
         result.Should().Be($"{Namespace.Assembly}:MyNamespace/42:SomeKey");
     }
+
+    [Test]
+    public async Task ValueWithRouteTemplateParameters_ConcurrentRequests_AreIsolatedPerAsyncContext()
+    {
+        Namespace sharedNamespace = "Account:{id}";
+        var results = new System.Collections.Concurrent.ConcurrentDictionary<string, string?>();
+
+        await Task.WhenAll(
+            Task.Run(() =>
+            {
+                sharedNamespace.ValueWithRouteTemplateParameters = "Account/1";
+                results["A"] = sharedNamespace.ValueWithRouteTemplateParameters;
+            }),
+            Task.Run(() =>
+            {
+                sharedNamespace.ValueWithRouteTemplateParameters = "Account/2";
+                results["B"] = sharedNamespace.ValueWithRouteTemplateParameters;
+            })
+        );
+
+        results["A"].Should().Be("Account/1");
+        results["B"].Should().Be("Account/2");
+    }
+
+    [Test]
+    public void ValueWithRouteTemplateParameters_WhenSet_ChangesImplicitStringConversion()
+    {
+        Namespace ns = "Resource:{id}";
+
+        string keyBeforeSet = ns;
+        ns.ValueWithRouteTemplateParameters = "Resource/99";
+        string keyAfterSet = ns;
+
+        keyBeforeSet.Should().Be($"{Namespace.Assembly}:Resource:{{id}}");
+        keyAfterSet.Should().Be($"{Namespace.Assembly}:Resource/99");
+    }
 }

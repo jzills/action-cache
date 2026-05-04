@@ -1,3 +1,4 @@
+using System.Reflection;
 using ActionCache;
 using ActionCache.Common;
 using ActionCache.Common.Caching;
@@ -76,5 +77,45 @@ public class SqlServerActionCacheFactoryTests
         var result = _sut.Create((Namespace)"TestNs", null, null);
 
         result.Should().NotBeNull();
+    }
+
+    // Bug M7: same as RedisActionCacheFactory — LockDuration and LockTimeout are not copied
+    // into the per-call ActionCacheEntryOptions when expiration overrides are provided.
+    // Note: SqlServerCacheLocker is initialised with the GLOBAL EntryOptions lock settings
+    // (correct for the locker itself), but the EntryOptions stored inside the cache context
+    // is missing the custom lock values, affecting any future code that reads them from context.
+
+    [Test]
+    public void Create_WithExpirations_DropsConfiguredLockDurationInContext_BugM7()
+    {
+        var customLockDuration = TimeSpan.FromSeconds(30);
+        var configuredOptions = Options.Create(new ActionCacheEntryOptions
+        {
+            LockDuration = customLockDuration
+        });
+        var factory = new SqlServerActionCacheFactory(
+            _cacheMock.Object,
+            _sqlServerOptions,
+            configuredOptions,
+            _refreshProviderMock.Object);
+
+        var cache = factory.Create((Namespace)"TestNs", TimeSpan.FromMinutes(5), null);
+
+        var entryOptions = GetEntryOptions(cache!);
+
+        // BUG: LockDuration is reset to the default 5 s inside the cache context.
+        entryOptions.LockDuration.Should().Be(customLockDuration);
+    }
+
+    private static ActionCacheEntryOptions GetEntryOptions(IActionCache cache)
+    {
+        var type = cache.GetType();
+        FieldInfo? field = null;
+        while (type != null && field == null)
+        {
+            field = type.GetField("EntryOptions", BindingFlags.NonPublic | BindingFlags.Instance);
+            type = type.BaseType;
+        }
+        return (ActionCacheEntryOptions)field!.GetValue(cache)!;
     }
 }
