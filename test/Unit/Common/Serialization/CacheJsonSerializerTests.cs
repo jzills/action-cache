@@ -1,21 +1,15 @@
 using ActionCache.Common.Serialization;
+using Newtonsoft.Json;
 
 namespace Unit.Common.Serialization;
 
-// Bug C1: CacheJsonSerializer uses TypeNameHandling.All in its JsonSerializerSettings.
-// This causes the serializer to embed a "$type" property in every non-primitive payload
-// and to honor that property on deserialization — instantiating whatever type is named.
-//
-// If an attacker can write to the cache backend (Redis, SQL Server, Cosmos) they can plant
-// a gadget-chain payload and trigger arbitrary code execution on the next deserialization.
-//
-// Note: Dictionary<string, object> is exempted by the registered ActionArgumentsConverter,
-// and JSON primitives (string, int, bool) never carry $type. The real risk is for any
-// concrete object or collection used as a cached value type T in SetAsync<T>.
-//
-// Fix: switch to TypeNameHandling.None and rely on the strongly-typed generic parameter
-// T in Deserialize<T>. If polymorphic types are required, use a custom ISerializationBinder
-// with an explicit allowlist of safe types.
+// C1 fix: CacheJsonSerializer previously used TypeNameHandling.All which embedded $type in
+// every payload, making every cache value a potential RCE gadget target for anyone with
+// cache-write access. Fixed to TypeNameHandling.Auto + SafeSerializationBinder:
+//   - Auto: $type is only emitted when the runtime type differs from the declared type
+//     (i.e., only for genuine polymorphic scenarios such as IActionResult → OkObjectResult).
+//   - SafeSerializationBinder: restricts which types may be instantiated from $type,
+//     blocking known gadget-chain namespaces and unloaded assemblies.
 
 [TestFixture]
 public class CacheJsonSerializerTests
@@ -23,37 +17,51 @@ public class CacheJsonSerializerTests
     private sealed record UserDto(string Name, int Age);
 
     [Test]
-    public void Serialize_WithConcreteObjectType_EmbedsTypeMetadata_BugC1()
+    public void Serialize_WithConcreteObjectType_DoesNotEmbedTypeMetadata()
     {
-        var dto = new UserDto("Alice", 30);
+        // Declared type == runtime type → Auto does not emit $type.
+        var json = CacheJsonSerializer.Serialize(new UserDto("Alice", 30));
 
-        var json = CacheJsonSerializer.Serialize(dto);
-
-        // BUG: $type is embedded — an attacker with write access to the cache backend can
-        // replace this payload with a gadget-chain type to trigger RCE on deserialization.
-        // Fix: TypeNameHandling.None must be used; the fix causes this assertion to pass.
         json.Should().NotContain("$type");
     }
 
     [Test]
-    public void Serialize_WithCollectionType_EmbedsTypeMetadata_BugC1()
+    public void Serialize_WithCollectionType_DoesNotEmbedTypeMetadata()
     {
-        var items = new List<string> { "a", "b", "c" };
+        var json = CacheJsonSerializer.Serialize(new List<string> { "a", "b" });
 
-        var json = CacheJsonSerializer.Serialize(items);
-
-        // BUG: $type wraps the List — e.g. "$type":"System.Collections.Generic.List`1[...]"
         json.Should().NotContain("$type");
     }
 
     [Test]
-    public void Serialize_WithTypeNameHandlingNone_DoesNotLeakTypeMetadata()
+    public void Serialize_WithConcreteType_DoesNotLeakTypeName()
     {
-        var dto = new UserDto("Alice", 30);
-
-        var json = CacheJsonSerializer.Serialize(dto);
+        var json = CacheJsonSerializer.Serialize(new UserDto("Alice", 30));
 
         json.Should().NotContain(nameof(UserDto));
-        json.Should().NotContain("$type");
+    }
+
+    [Test]
+    public void Deserialize_BlockedGadgetChainType_ThrowsJsonSerializationException()
+    {
+        // An attacker who writes directly to the cache backend might plant a $type that
+        // references a known gadget-chain namespace. SafeSerializationBinder must reject it.
+        var maliciousPayload = """{"$type":"System.Windows.Data.ObjectDataProvider, PresentationFramework","MethodName":"Start"}""";
+
+        Action act = () => CacheJsonSerializer.Deserialize<object>(maliciousPayload);
+
+        act.Should().Throw<JsonSerializationException>()
+            .WithMessage("*Error resolving type*System.Windows*");
+    }
+
+    [Test]
+    public void Deserialize_ConcreteType_RoundTripsCorrectly()
+    {
+        var original = new UserDto("Alice", 30);
+
+        var json = CacheJsonSerializer.Serialize(original);
+        var result = CacheJsonSerializer.Deserialize<UserDto>(json);
+
+        result.Should().Be(original);
     }
 }
