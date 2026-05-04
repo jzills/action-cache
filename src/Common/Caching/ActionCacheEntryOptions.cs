@@ -81,14 +81,13 @@ public class ActionCacheEntryOptions
         DateTimeOffset.UtcNow >= DateTimeOffset.FromUnixTimeMilliseconds(absoluteExpirationUnix);
 
     /// <summary>
-    /// Determines if the sliding expiration has passed based on the provided sliding expiration value.
+    /// Determines if a sliding expiration duration is configured for the cache entry.
     /// </summary>
-    /// <param name="slidingExpiration">The sliding expiration value, which represents the time in milliseconds.</param>
+    /// <param name="slidingExpiration">The sliding expiration duration in milliseconds.</param>
     /// <returns>
-    /// <c>true</c> if the sliding expiration time has passed; otherwise, <c>false</c>.
-    /// If <paramref name="slidingExpiration"/> is less than or equal to <see cref="NoExpiration"/>, expiration is not enforced.
+    /// <c>true</c> if the sliding expiration duration is set (greater than <see cref="NoExpiration"/>); otherwise, <c>false</c>.
     /// </returns>
-    public static bool HasExpiredSlidingExpiration(long slidingExpiration) => HasExpirationValue(slidingExpiration);
+    public static bool HasSlidingExpiration(long slidingExpiration) => HasExpirationValue(slidingExpiration);
 
     /// <summary>
     /// Determines if the provided expiration value is valid (greater than the <see cref="NoExpiration"/> value).

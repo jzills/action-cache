@@ -104,7 +104,7 @@ internal class ActionArgumentsConverter : JsonConverter<Dictionary<string, objec
             foreach (var (key, value) in source)
             {
                 writer.WritePropertyName(key);
-                serializer.Serialize(writer, value); 
+                serializer.Serialize(writer, value, typeof(object));
             }
         }
 

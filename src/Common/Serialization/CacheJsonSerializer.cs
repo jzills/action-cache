@@ -14,7 +14,11 @@ internal static class CacheJsonSerializer
     /// </summary>
     internal static readonly JsonSerializerSettings SerializerSettings = new JsonSerializerSettings
     {
-        TypeNameHandling = TypeNameHandling.All,
+        // Auto only embeds $type when the runtime type differs from the declared type
+        // (e.g. IActionResult → OkObjectResult). A binder restricts which types may be
+        // instantiated from a $type field, blocking known deserialization gadget chains.
+        TypeNameHandling = TypeNameHandling.Auto,
+        SerializationBinder = new SafeSerializationBinder(),
         ReferenceLoopHandling = ReferenceLoopHandling.Ignore,
         Converters = new List<JsonConverter> { new ActionArgumentsConverter() }
     };
@@ -25,8 +29,8 @@ internal static class CacheJsonSerializer
     /// <typeparam name="T">The type of the object to serialize.</typeparam>
     /// <param name="obj">The object to serialize. Can be null.</param>
     /// <returns>A JSON string representation of the object.</returns>
-    internal static string Serialize<T>(T? obj) => 
-        JsonConvert.SerializeObject(obj, SerializerSettings);
+    internal static string Serialize<T>(T? obj) =>
+        JsonConvert.SerializeObject(obj, typeof(T), SerializerSettings);
 
     /// <summary>
     /// Deserializes a JSON string to an object of type <typeparamref name="T"/> 

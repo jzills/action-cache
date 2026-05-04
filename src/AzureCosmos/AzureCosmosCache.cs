@@ -59,7 +59,7 @@ public class AzureCosmosActionCache : ActionCacheBase<NullCacheLock>
                 return default!;
             }
 
-            if (ActionCacheEntryOptions.HasExpiredSlidingExpiration(response.Resource.SlidingExpiration))
+            if (ActionCacheEntryOptions.HasSlidingExpiration(response.Resource.SlidingExpiration))
             {
                 await Cache.ReplaceItemAsync(
                     response.Resource,
@@ -94,7 +94,7 @@ public class AzureCosmosActionCache : ActionCacheBase<NullCacheLock>
             Value = CacheJsonSerializer.Serialize(value),
             AbsoluteExpiration = absoluteExpiration,
             SlidingExpiration = slidingExpiration,
-            TTL = ttl == ActionCacheEntryOptions.NoExpiration ? -1 : ttl / 1000 // The deconstructed TTL is in milliseconds, we need to convert it to seconds.
+            TTL = ttl == ActionCacheEntryOptions.NoExpiration ? -1 : (long)Math.Ceiling(ttl / 1000.0)
         }, PartitionKey);
     }
 

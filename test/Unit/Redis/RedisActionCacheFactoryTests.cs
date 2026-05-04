@@ -1,3 +1,4 @@
+using System.Reflection;
 using ActionCache;
 using ActionCache.Common;
 using ActionCache.Common.Caching;
@@ -71,5 +72,68 @@ public class RedisActionCacheFactoryTests
         var result = _sut.Create((Namespace)"TestNs", null, null);
 
         result.Should().NotBeNull();
+    }
+
+    // Bug M7: Create(namespace, absoluteExpiration, slidingExpiration) constructs a fresh
+    // ActionCacheEntryOptions with only the expiration fields set. LockDuration and LockTimeout
+    // from the configured options are not copied, so they silently reset to their defaults
+    // (5 s and 10 s respectively). Consumers who configure custom lock durations via IOptions
+    // will find them ignored whenever a per-namespace expiration is also specified.
+    //
+    // Fix: copy LockDuration and LockTimeout from the existing EntryOptions when constructing
+    // the replacement, or accept the full ActionCacheEntryOptions and override only expiration.
+
+    [Test]
+    public void Create_WithExpirations_DropsConfiguredLockDuration_BugM7()
+    {
+        var customLockDuration = TimeSpan.FromSeconds(30);
+        var configuredOptions = Options.Create(new ActionCacheEntryOptions
+        {
+            LockDuration = customLockDuration
+        });
+        var factory = new RedisActionCacheFactory(
+            _multiplexerMock.Object,
+            configuredOptions,
+            _refreshProviderMock.Object);
+
+        var cache = factory.Create((Namespace)"TestNs", TimeSpan.FromMinutes(5), null);
+
+        var entryOptions = GetEntryOptions(cache!);
+
+        // BUG: LockDuration is reset to the default 5 s instead of the configured 30 s.
+        entryOptions.LockDuration.Should().Be(customLockDuration);
+    }
+
+    [Test]
+    public void Create_WithExpirations_DropsConfiguredLockTimeout_BugM7()
+    {
+        var customLockTimeout = TimeSpan.FromSeconds(60);
+        var configuredOptions = Options.Create(new ActionCacheEntryOptions
+        {
+            LockTimeout = customLockTimeout
+        });
+        var factory = new RedisActionCacheFactory(
+            _multiplexerMock.Object,
+            configuredOptions,
+            _refreshProviderMock.Object);
+
+        var cache = factory.Create((Namespace)"TestNs", TimeSpan.FromMinutes(5), null);
+
+        var entryOptions = GetEntryOptions(cache!);
+
+        // BUG: LockTimeout is reset to the default 10 s instead of the configured 60 s.
+        entryOptions.LockTimeout.Should().Be(customLockTimeout);
+    }
+
+    private static ActionCacheEntryOptions GetEntryOptions(IActionCache cache)
+    {
+        var type = cache.GetType();
+        FieldInfo? field = null;
+        while (type != null && field == null)
+        {
+            field = type.GetField("EntryOptions", BindingFlags.NonPublic | BindingFlags.Instance);
+            type = type.BaseType;
+        }
+        return (ActionCacheEntryOptions)field!.GetValue(cache)!;
     }
 }

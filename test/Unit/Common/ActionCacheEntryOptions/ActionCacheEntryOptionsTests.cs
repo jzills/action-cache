@@ -107,15 +107,15 @@ public class ActionCacheEntryOptionsTests
     }
 
     [Test]
-    public void HasExpiredSlidingExpiration_WhenZero_ReturnsFalse()
+    public void HasSlidingExpiration_WhenZero_ReturnsFalse()
     {
-        ActionCacheEntryOptions.HasExpiredSlidingExpiration(0L).Should().BeFalse();
+        ActionCacheEntryOptions.HasSlidingExpiration(0L).Should().BeFalse();
     }
 
     [Test]
-    public void HasExpiredSlidingExpiration_WhenPositive_ReturnsTrue()
+    public void HasSlidingExpiration_WhenPositive_ReturnsTrue()
     {
-        ActionCacheEntryOptions.HasExpiredSlidingExpiration(5000L).Should().BeTrue();
+        ActionCacheEntryOptions.HasSlidingExpiration(5000L).Should().BeTrue();
     }
 
     [Test]
@@ -163,5 +163,16 @@ public class ActionCacheEntryOptionsTests
     public void DefaultLockTimeout_Is10Seconds()
     {
         new ActionCacheEntryOptions().LockTimeout.Should().Be(TimeSpan.FromSeconds(10));
+    }
+
+    [Test]
+    public void HasSlidingExpiration_IsEquivalentToHasExpirationValue()
+    {
+        long value = 5_000L;
+
+        bool hasSliding = ActionCacheEntryOptions.HasSlidingExpiration(value);
+        bool hasValue = ActionCacheEntryOptions.HasExpirationValue(value);
+
+        hasSliding.Should().Be(hasValue);
     }
 }

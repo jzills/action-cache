@@ -6,6 +6,37 @@ namespace Unit.Common;
 [TestFixture]
 public class ActionCacheKeyComponentsBuilderTests
 {
+    // Bug M1: ActionCacheKeyComponentsBuilder calls KeyEncoder.Decode(value) in its constructor
+    // with no try-catch. A corrupted or manually crafted cache key that is not valid hex throws
+    // FormatException with no context about which key was malformed.
+    //
+    // Fix: wrap the decode in try-catch, log the offending key, and either return a safe default
+    // or rethrow with additional context.
+
+    [Test]
+    public void Constructor_WhenValueIsNotValidHex_ThrowsFormatException_BugM1()
+    {
+        const string malformedKey = "not-valid-hex!!";
+
+        // BUG: throws FormatException with no context about the bad key.
+        // Fix: catch and rethrow with key info, or return empty/default components.
+        Action act = () => new ActionCacheKeyComponentsBuilder(malformedKey);
+
+        act.Should().Throw<FormatException>();
+    }
+
+    [Test]
+    public void Constructor_WhenValueIsValidHexButNotQueryString_DoesNotThrow_BugM1()
+    {
+        // Valid hex that decodes to non-query-string content — should not throw
+        // (the query parser treats unrecognised content as a single key with no value).
+        var validHexOfArbitraryContent = new ActionCache.Common.Keys.KeyEncoder().Encode("not-a-query-string");
+
+        Action act = () => new ActionCacheKeyComponentsBuilder(validHexOfArbitraryContent);
+
+        act.Should().NotThrow();
+    }
+
     [Test]
     public void Build_Always_ParsesRouteValuesAndActionArguments()
     {

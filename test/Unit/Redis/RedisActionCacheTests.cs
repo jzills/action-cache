@@ -140,4 +140,25 @@ public class RedisActionCacheTests
             db => db.ScriptEvaluateAsync(It.IsAny<string>(), It.IsAny<RedisKey[]>(), It.IsAny<RedisValue[]>(), It.IsAny<CommandFlags>()),
             Times.Once);
     }
+
+    // Bug H4: the primary SetAsync path passes CommandFlags.FireAndForget to ScriptEvaluateAsync.
+    // The result (including errors) is discarded entirely — the caller believes the value was
+    // cached when it was not. A network error, OOM, or Lua error is silently swallowed.
+    // Fix: remove CommandFlags.FireAndForget and await the result so failures are surfaced.
+
+    [Test]
+    public async Task SetAsync_WhenLuaScriptLoads_ShouldNotUseFireAndForget_BugH4()
+    {
+        CommandFlags? capturedFlags = null;
+        _databaseMock
+            .Setup(db => db.ScriptEvaluateAsync(
+                It.IsAny<string>(), It.IsAny<RedisKey[]>(), It.IsAny<RedisValue[]>(), It.IsAny<CommandFlags>()))
+            .Callback<string, RedisKey[], RedisValue[], CommandFlags>((_, _, _, flags) => capturedFlags = flags)
+            .ReturnsAsync(RedisResult.Create(RedisValue.Null));
+
+        await _sut.SetAsync("key", "value");
+
+        // BUG: capturedFlags is CommandFlags.FireAndForget — write failures are invisible to the caller.
+        capturedFlags.Should().NotBe(CommandFlags.FireAndForget);
+    }
 }
