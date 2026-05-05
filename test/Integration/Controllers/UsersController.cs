@@ -39,25 +39,25 @@ public class UsersController : Controller
 
 public class Query
 {
-    public Guid[] IncludeIds { get; set; }
+    public Guid[]? IncludeIds { get; set; }
     public bool ShowAll { get; set; }
-    public SubQuery[] SubQueries { get; set; }
+    public SubQuery[]? SubQueries { get; set; }
 }
 
 public class SubQuery
 {
-    public string Contains { get; set; }
+    public string? Contains { get; set; }
 }
 
 public class User
 {
     public Guid Id { get; set; }
-    public string Name { get; set; }
-    public ContactInfo ContactInfo { get; set; }
+    public string? Name { get; set; }
+    public ContactInfo? ContactInfo { get; set; }
 }
 
 public class ContactInfo
 {
-    public string Email { get; set; }
-    public string PhoneNumber { get; set; }
+    public string? Email { get; set; }
+    public string? PhoneNumber { get; set; }
 }

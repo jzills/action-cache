@@ -5,7 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 [TestFixture]
 public class Test_ActionCache_Expiration_Sliding
 {
-    IActionCache Cache;
+    IActionCache? Cache;
 
     [Test]
     [TestCaseSource(typeof(TestData), nameof(TestData.GetServiceProviders))]
@@ -38,6 +38,7 @@ public class Test_ActionCache_Expiration_Sliding
     [TearDown]
     public async Task TearDown()
     {
-        await Cache.RemoveAsync();
+        if (Cache != null)
+            await Cache.RemoveAsync();
     }
 }
