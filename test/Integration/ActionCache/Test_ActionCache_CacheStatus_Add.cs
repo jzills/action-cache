@@ -1,36 +1,33 @@
+using System.Reflection;
 using ActionCache;
 using ActionCache.Common.Enums;
 using ActionCache.Common.Extensions;
 using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 
 [TestFixture]
 public class Test_ActionCache_CacheStatus_Add
 {
-    TestServer Server;
+    WebApplication App;
     HttpClient Client;
 
     [SetUp]
-    public void Setup()
+    public async Task Setup()
     {
-        var builder = new WebHostBuilder()
-            .ConfigureServices(services => 
-            {
-                services.AddMvc();
-                services.AddActionCache(options => options.UseRedisCache("127.0.0.1:6379"));
-            })
-            .Configure(app =>
-            {
-                app.UseHttpsRedirection();
-                app.UseRouting();
+        var builder = WebApplication.CreateBuilder();
+        builder.WebHost.UseTestServer();
+        builder.Services.AddMvc()
+            .AddApplicationPart(Assembly.GetExecutingAssembly());
+        builder.Services.AddActionCache(options => options.UseRedisCache("127.0.0.1:6379"));
 
-                app.UseEndpoints(options => options.MapControllers());
-            });
+        App = builder.Build();
+        App.UseHttpsRedirection();
+        App.UseRouting();
+        App.UseEndpoints(options => options.MapControllers());
 
-        Server = new TestServer(builder);
-        Client = Server.CreateClient();
+        await App.StartAsync();
+        Client = App.GetTestServer().CreateClient();
     }
 
     [Test]
@@ -64,8 +61,9 @@ public class Test_ActionCache_CacheStatus_Add
     [TearDown]
     public async Task TearDown()
     {
-        var cacheFactory = Server.Services.GetRequiredService<IActionCacheFactory>();
+        var cacheFactory = App.Services.GetRequiredService<IActionCacheFactory>();
         var cache = cacheFactory.Create("Users");
         await cache!.RemoveAsync();
+        await App.StopAsync();
     }
 }
