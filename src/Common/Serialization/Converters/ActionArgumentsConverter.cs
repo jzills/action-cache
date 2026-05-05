@@ -34,7 +34,7 @@ internal class ActionArgumentsConverter : JsonConverter<Dictionary<string, objec
         foreach (var property in obj.Properties())
         {
             var value = ConvertToken(property.Value, serializer);
-            result.Add(property.Name, value);
+            result.Add(property.Name, value!);
         }
 
         return result;

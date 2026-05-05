@@ -38,7 +38,7 @@ public class ActionCacheKeyBuilder
     /// </summary>
     /// <param name="actionArguments">Arguments for the action.</param>
     /// <returns>Returns itself for chaining.</returns>
-    public ActionCacheKeyBuilder WithActionArguments(IDictionary<string, object?> actionArguments)
+    public ActionCacheKeyBuilder WithActionArguments(IDictionary<string, object?>? actionArguments)
     {
         if (actionArguments is null) return this;
         KeyComponents.ActionArguments = actionArguments.ToDictionary();
