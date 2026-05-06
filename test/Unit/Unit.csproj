@@ -10,7 +10,7 @@
   </PropertyGroup>
 
   <PropertyGroup>
-    <_TargetVersion Condition="'$(TargetFramework)' == 'net8.0'">8.0.0</_TargetVersion>
+    <_TargetVersion Condition="'$(TargetFramework)' == 'net8.0'">8.0.1</_TargetVersion>
     <_TargetVersion Condition="'$(TargetFramework)' == 'net10.0'">10.0.0</_TargetVersion>
   </PropertyGroup>
 

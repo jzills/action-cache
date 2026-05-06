@@ -73,7 +73,7 @@ public static class RouteHandlerBuilderExtensions
         /// <param name="context">The filter invocation context.</param>
         /// <param name="attribute">When this method returns, contains the attribute if found; otherwise, <c>null</c>.</param>
         /// <returns><c>true</c> if the attribute was found; otherwise, <c>false</c>.</returns>
-        internal bool TryGetValue<T>(EndpointFilterInvocationContext context, out T? attribute) where T : Attribute
+        internal bool TryGetValue<T>(EndpointFilterInvocationContext context, [NotNullWhen(true)] out T? attribute) where T : Attribute
         {
             var endpoint = context.HttpContext.GetEndpoint();
             if (endpoint is null)

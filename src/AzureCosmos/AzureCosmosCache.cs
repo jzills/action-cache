@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using Microsoft.Azure.Cosmos;
 using ActionCache.Common;
@@ -40,6 +41,7 @@ public class AzureCosmosActionCache : ActionCacheBase<NullCacheLock>
     /// </summary>
     /// <param name="key">The key of the cache entry.</param>
     /// <returns>The cached value or null if not found.</returns> 
+#pragma warning disable CS8609
     public override async Task<TValue> GetAsync<TValue>(string key)
     {
         try
@@ -76,13 +78,14 @@ public class AzureCosmosActionCache : ActionCacheBase<NullCacheLock>
             return default!;
         }
     }
+#pragma warning restore CS8609
 
     /// <summary>
     /// Asynchronously sets a value in the cache.
     /// </summary>
     /// <param name="key">The cache key to set the value for.</param>
     /// <param name="value">The value to set in the cache.</param>
-    public override Task SetAsync<TValue>(string key, TValue value)
+    public override Task SetAsync<TValue>(string key, [AllowNull] TValue value)
     {
         var (absoluteExpiration, slidingExpiration, ttl) = EntryOptions;
 

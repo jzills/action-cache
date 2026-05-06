@@ -5,7 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 [TestFixture]
 public class Test_ActionCache_GetAsync
 {
-    IActionCache Cache;
+    IActionCache? Cache;
 
     [Test]
     [TestCaseSource(typeof(TestData), nameof(TestData.GetServiceProviders))]
@@ -33,6 +33,7 @@ public class Test_ActionCache_GetAsync
     [TearDown]
     public async Task TearDown()
     {
-        await Cache.RemoveAsync();
+        if (Cache != null)
+            await Cache.RemoveAsync();
     }
 }

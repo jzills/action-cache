@@ -3,41 +3,32 @@ using ActionCache.Common.Enums;
 using ActionCache.Common.Extensions;
 using ActionCache.EndpointFilters.Extensions;
 using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 
 [TestFixture]
 public class Test_ActionCacheEvictionEndpointFilter
 {
-    TestServer Server;
+    WebApplication App;
     HttpClient Client;
 
     [SetUp]
-    public void Setup()
+    public async Task Setup()
     {
-        var builder = new WebHostBuilder()
-            .ConfigureServices(services => 
-            {
-                services.AddRouting();
-                services.AddActionCache(options => options.UseMemoryCache(cacheOptions => { }));
-            })
-            .Configure(app =>
-            {
-                app.UseHttpsRedirection();
-                app.UseRouting();
-                app.UseEndpoints(options =>
-                {
-                    options.MapGet("/teams", () => new { Id = 1, Value = "Joshua" })
-                        .WithActionCache("Teams");
+        var builder = WebApplication.CreateBuilder();
+        builder.WebHost.UseTestServer();
+        builder.Services.AddActionCache(options => options.UseMemoryCache(cacheOptions => { }));
 
-                    options.MapDelete("/teams", () => { })
-                        .WithActionCacheEviction("Teams");
-                });
-            });
+        App = builder.Build();
+        App.UseHttpsRedirection();
+        App.UseRouting();
+        App.MapGet("/teams", () => new { Id = 1, Value = "Joshua" })
+            .WithActionCache("Teams");
+        App.MapDelete("/teams", () => { })
+            .WithActionCacheEviction("Teams");
 
-        Server = new TestServer(builder);
-        Client = Server.CreateClient();
+        await App.StartAsync();
+        Client = App.GetTestServer().CreateClient();
     }
 
     [Test]
@@ -57,8 +48,9 @@ public class Test_ActionCacheEvictionEndpointFilter
     [TearDown]
     public async Task TearDown()
     {
-        var cacheFactory = Server.Services.GetRequiredService<IActionCacheFactory>();
+        var cacheFactory = App.Services.GetRequiredService<IActionCacheFactory>();
         var cache = cacheFactory.Create("Teams");
         await cache!.RemoveAsync();
+        await App.StopAsync();
     }
 }

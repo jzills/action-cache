@@ -29,12 +29,13 @@ internal static class EndpointFilterInvocationContextExtensions
         {
             var parameters = endpoint.RequestDelegate?.Method.GetParameters() ?? [];
             var actionArguments = parameters?
-                .Zip(context.Arguments, (parameter, argument) => (parameter.Name, argument))?
-                .ToDictionary();
+                .Zip(context.Arguments, (parameter, argument) => (parameter.Name, argument))
+                .Where(pair => pair.Name is not null)
+                .ToDictionary(pair => pair.Name!, pair => pair.argument);
 
             key = new ActionCacheKeyBuilder()
                 .WithRouteValues(context.HttpContext.GetRouteData().Values)
-                .WithActionArguments(actionArguments)
+                .WithActionArguments(actionArguments ?? [])
                 .Build();
 
             if (string.IsNullOrWhiteSpace(key))

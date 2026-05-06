@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using ActionCache.Common;
 using ActionCache.Common.Caching;
 using ActionCache.Common.Concurrency.Locks;
@@ -75,7 +76,7 @@ public class RedisActionCache : ActionCacheBase<NullCacheLock>
     /// </summary>
     /// <param name="key">The key of the item to set in the cache.</param>
     /// <param name="value">The value of the item to set in the cache.</param>
-    public override async Task SetAsync<TValue>(string key, TValue value)
+    public override async Task SetAsync<TValue>(string key, [AllowNull] TValue value)
     {
         RedisValue redisValue = CacheJsonSerializer.Serialize(value);
 
@@ -111,6 +112,7 @@ public class RedisActionCache : ActionCacheBase<NullCacheLock>
     /// </summary>
     /// <param name="key">The key of the item to retrieve from the cache.</param>
     /// <returns>The cached item if found, otherwise default.</returns>
+#pragma warning disable CS8609
     public override async Task<TValue> GetAsync<TValue>(string key)
     {
         var namespaceKey = Namespace.Create(key);
@@ -127,7 +129,7 @@ public class RedisActionCache : ActionCacheBase<NullCacheLock>
             await Cache.SortedSetRemoveAsync((string)Namespace, key);
             return default!;
         }
-        
+
         if (ActionCacheEntryOptions.HasSlidingExpiration(hashEntries.GetSlidingExpiration()))
         {
             await Cache.KeyExpireAsync(namespaceKey, TimeSpan.FromMilliseconds(hashEntries.GetSlidingExpiration()), CommandFlags.FireAndForget);
@@ -143,6 +145,7 @@ public class RedisActionCache : ActionCacheBase<NullCacheLock>
             return CacheJsonSerializer.Deserialize<TValue>(jsonValue)!;
         }
     }
+#pragma warning restore CS8609
 
     /// <inheritdoc/>
     public override async Task<IEnumerable<string>> GetKeysAsync()

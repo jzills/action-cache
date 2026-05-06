@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using ActionCache.Common.Caching;
 using ActionCache.SqlServer.Concurrency.Locks;
 using ActionCache.Common.Serialization;
@@ -45,6 +46,7 @@ public class SqlServerActionCache : ActionCacheBase<SqlServerCacheLock>
     /// <typeparam name="TValue">The type of the cached value.</typeparam>
     /// <param name="key">The key of the cache entry.</param>
     /// <returns>The cached value or the default value of the type if not found.</returns>
+#pragma warning disable CS8609
     public override async Task<TValue> GetAsync<TValue>(string key)
     {
         var json = await Cache.GetStringAsync(Namespace.Create(key));
@@ -57,6 +59,7 @@ public class SqlServerActionCache : ActionCacheBase<SqlServerCacheLock>
             return CacheJsonSerializer.Deserialize<TValue>(json)!;
         }
     }
+#pragma warning restore CS8609
 
     /// <summary>
     /// Asynchronously sets a value in the cache.
@@ -64,7 +67,7 @@ public class SqlServerActionCache : ActionCacheBase<SqlServerCacheLock>
     /// <typeparam name="TValue">The type of the value to set in the cache.</typeparam>
     /// <param name="key">The cache key to set the value for.</param>
     /// <param name="value">The value to set in the cache.</param>
-    public override async Task SetAsync<TValue>(string key, TValue value)
+    public override async Task SetAsync<TValue>(string key, [AllowNull] TValue value)
     {
         var entryOptions = CreateEntryOptions();
         await Cache.SetStringAsync(Namespace.Create(key), CacheJsonSerializer.Serialize(value), entryOptions);

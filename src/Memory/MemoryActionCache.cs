@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using ActionCache.Common.Caching;
 using ActionCache.Common.Concurrency.Locks;
 using ActionCache.Memory.Extensions.Internal;
@@ -55,15 +56,17 @@ public class MemoryActionCache : ActionCacheBase<NullCacheLock>
     /// </summary>
     /// <param name="key">The key of the cache entry.</param>
     /// <returns>The cached value or null if not found.</returns> 
+#pragma warning disable CS8609, CS8619
     public override Task<TValue> GetAsync<TValue>(string key) =>
         Task.FromResult(Cache.Get<TValue>(Namespace.Create(key)));
+#pragma warning restore CS8609, CS8619
 
     /// <summary>
     /// Asynchronously sets a value in the cache.
     /// </summary>
     /// <param name="key">The cache key to set the value for.</param>
     /// <param name="value">The value to set in the cache.</param>
-    public override Task SetAsync<TValue>(string key, TValue value)
+    public override Task SetAsync<TValue>(string key, [AllowNull] TValue value)
     {
         var entryOptions = CreateEntryOptions();
         Cache.Set(Namespace.Create(key), value, entryOptions);
