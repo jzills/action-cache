@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Http;
 namespace ActionCache.Filters;
 
 /// <summary>
-/// Provides a custom filter factory for caching action results based on the configuration.
+/// A filter factory attribute that creates an <see cref="ActionCache.EndpointFilters.ActionCacheEndpointEvictionFilter"/> to evict cached entries for the configured namespace.
 /// </summary>
 [AttributeUsage(AttributeTargets.Method)]
 public class ActionCacheEndpointEvictionFilterFactory : ActionCacheEndpointFilterFactoryBase

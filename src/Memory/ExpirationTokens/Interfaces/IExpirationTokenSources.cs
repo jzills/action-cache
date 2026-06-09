@@ -1,15 +1,15 @@
 namespace ActionCache.Memory;
 
 /// <summary>
-/// Interface for managing expiration token sources
+/// Defines a mechanism for retrieving or creating <see cref="CancellationTokenSource"/> instances keyed by a cache namespace.
 /// </summary>
 public interface IExpirationTokenSources
 {
     /// <summary>
-    /// Attempts to get or add a cancellation token source for the specified key
+    /// Retrieves an existing <see cref="CancellationTokenSource"/> for the given key, or creates and stores a new one if none exists.
     /// </summary>
-    /// <param name="key">The key associated with the cancellation token source</param>
-    /// <param name="cancellationTokenSource">The cancellation token source associated with the key</param>
-    /// <returns>True if the cancellation token source was retrieved or added successfully, false otherwise</returns>
+    /// <param name="key">The cache key used to look up or register the token source.</param>
+    /// <param name="cancellationTokenSource">When this method returns, contains the <see cref="CancellationTokenSource"/> associated with <paramref name="key"/>.</param>
+    /// <returns><see langword="true"/> if the token source was successfully retrieved or created; otherwise, <see langword="false"/>.</returns>
     bool TryGetOrAdd(string key, out CancellationTokenSource cancellationTokenSource);
 }

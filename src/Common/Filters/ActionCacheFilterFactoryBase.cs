@@ -27,14 +27,14 @@ public abstract class ActionCacheFilterFactoryBase : Attribute, IFilterFactory
     public abstract IFilterMetadata CreateInstance(IServiceProvider serviceProvider);
 
     /// <summary>
-    /// 
+    /// Resolves and creates an <see cref="IFilterMetadata"/> of the specified type with optional expiration settings.
     /// </summary>
-    /// <param name="serviceProvider">The service provider.</param>
+    /// <param name="serviceProvider">The service provider used to resolve the abstract filter factory.</param>
     /// <param name="type">The type of filter to be created.</param>
-    /// <param name="absoluteExpiration">The absolute expiration in milliseconds for a cache entry.</param>
-    /// <param name="slidingExpiration">The sliding expiration in milliseconds for a cache entry.</param>
-    /// <returns>An instance of a cache filter.</returns>
-    protected IFilterMetadata CreateInstance(IServiceProvider serviceProvider, 
+    /// <param name="absoluteExpiration">The absolute expiration duration for a cache entry, or <see langword="null"/> for no absolute expiration.</param>
+    /// <param name="slidingExpiration">The sliding expiration duration for a cache entry, or <see langword="null"/> for no sliding expiration.</param>
+    /// <returns>An <see cref="IFilterMetadata"/> instance representing the resolved cache filter.</returns>
+    protected IFilterMetadata CreateInstance(IServiceProvider serviceProvider,
         FilterType type,
         TimeSpan? absoluteExpiration = null, 
         TimeSpan? slidingExpiration = null 

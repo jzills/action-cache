@@ -27,12 +27,9 @@ public class SqlServerActionCache : ActionCacheBase<SqlServerCacheLock>
         : base(context) => Cache = cache;
 
     /// <summary>
-    /// Gets or sets the cache entry options that control the expiration and sliding expiration of cache items.
+    /// Creates the distributed cache entry options from the current <see cref="ActionCacheBase{TLock}.EntryOptions"/>.
     /// </summary>
-    /// <summary>
-    /// Creates the entry options for memory cache.
-    /// </summary>
-    /// <value>The cache entry options applied to new entries.</value>
+    /// <returns>A <see cref="DistributedCacheEntryOptions"/> configured with the current sliding and absolute expiration values.</returns>
     private DistributedCacheEntryOptions CreateEntryOptions() =>
         new DistributedCacheEntryOptions
         {

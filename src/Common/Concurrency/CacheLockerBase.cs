@@ -76,10 +76,7 @@ public abstract class CacheLockerBase<TLock> : ICacheLocker<TLock> where TLock :
     /// <param name="resource">The resource to acquire the lock for.</param>
     /// <param name="thenFunc">The action to execute once the lock is acquired.</param>
     /// <returns>A task representing the asynchronous operation.</returns>
-    /// <remarks>
-    /// The action will be executed after the lock is acquired and released once the action completes.
-    /// If the lock acquisition fails, no action is executed.
-    /// </remarks>
+    /// <exception cref="InvalidOperationException">Thrown when the lock cannot be acquired within the configured timeout.</exception>
     public virtual async Task WaitForLockThenAsync(string resource, Func<Task> thenFunc)
     {
         var cacheLock = await WaitForLockAsync(resource);
@@ -107,10 +104,7 @@ public abstract class CacheLockerBase<TLock> : ICacheLocker<TLock> where TLock :
     /// <param name="resource">The resource to acquire the lock for.</param>
     /// <param name="resultAccessor">The function that will be executed once the lock is acquired, which returns a result.</param>
     /// <returns>A task representing the asynchronous operation, with the result of the function.</returns>
-    /// <remarks>
-    /// The result will be returned after the lock is acquired and released once the function completes.
-    /// If the lock acquisition fails, the result will be null.
-    /// </remarks>
+    /// <exception cref="InvalidOperationException">Thrown when the lock cannot be acquired within the configured timeout.</exception>
     public virtual async Task<TResult?> WaitForLockThenAsync<TResult>(string resource, Func<Task<TResult>> resultAccessor)
     {
         TResult? result = default;

@@ -8,7 +8,7 @@ using Microsoft.Extensions.DependencyInjection;
 namespace ActionCache.Filters;
 
 /// <summary>
-/// Provides a base factory for creating instances of action cache filters.
+/// Provides a base factory for creating instances of Minimal API endpoint cache filters.
 /// </summary>
 public abstract class ActionCacheEndpointFilterFactoryBase : Attribute
 {
@@ -27,13 +27,13 @@ public abstract class ActionCacheEndpointFilterFactoryBase : Attribute
     public abstract IEndpointFilter CreateInstance(IServiceProvider serviceProvider);
 
     /// <summary>
-    /// 
+    /// Resolves and creates an <see cref="IEndpointFilter"/> of the specified type with optional expiration settings.
     /// </summary>
-    /// <param name="serviceProvider">The service provider.</param>
+    /// <param name="serviceProvider">The service provider used to resolve the abstract filter factory.</param>
     /// <param name="type">The type of filter to be created.</param>
-    /// <param name="absoluteExpiration">The absolute expiration in milliseconds for a cache entry.</param>
-    /// <param name="slidingExpiration">The sliding expiration in milliseconds for a cache entry.</param>
-    /// <returns>An instance of a cache filter.</returns>
+    /// <param name="absoluteExpiration">The absolute expiration duration for a cache entry, or <see langword="null"/> for no absolute expiration.</param>
+    /// <param name="slidingExpiration">The sliding expiration duration for a cache entry, or <see langword="null"/> for no sliding expiration.</param>
+    /// <returns>An <see cref="IEndpointFilter"/> instance representing the resolved cache filter.</returns>
     protected IEndpointFilter CreateInstance(IServiceProvider serviceProvider, 
         FilterType type,
         TimeSpan? absoluteExpiration = null, 

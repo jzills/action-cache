@@ -3,8 +3,7 @@ using ActionCache.Common.Concurrency.Locks;
 namespace ActionCache.Common.Concurrency;
 
 /// <summary>
-/// Represents a no-operation cache locker that does not perform any actual locking mechanism.
-/// It serves as a fallback implementation where a locking system is required but not enforced.
+/// A no-operation <see cref="CacheLockerBase{TLock}"/> that immediately grants every lock request without any blocking or synchronization.
 /// </summary>
 public class NullCacheLocker : CacheLockerBase<NullCacheLock>
 {
@@ -16,16 +15,14 @@ public class NullCacheLocker : CacheLockerBase<NullCacheLock>
     }
 
     /// <summary>
-    /// Releases the specified lock asynchronously. Since this is a no-operation implementation, 
-    /// the method completes immediately.
+    /// Releases the specified lock asynchronously as a no-operation and returns a completed task immediately.
     /// </summary>
     /// <param name="cacheLock">The lock to be released.</param>
     /// <returns>A completed task.</returns>
     public override Task ReleaseLockAsync(NullCacheLock cacheLock) => Task.CompletedTask;
 
     /// <summary>
-    /// Attempts to acquire a lock for the specified resource asynchronously.
-    /// Since this is a no-operation implementation, it always returns a new lock immediately.
+    /// Returns a pre-acquired <see cref="NullCacheLock"/> for the specified resource without any blocking.
     /// </summary>
     /// <param name="resource">The resource to lock.</param>
     /// <returns>A completed task containing the acquired lock.</returns>
@@ -33,8 +30,7 @@ public class NullCacheLocker : CacheLockerBase<NullCacheLock>
         Task.FromResult(new NullCacheLock(resource));
 
     /// <summary>
-    /// Waits for a lock on the specified resource asynchronously.
-    /// Since this is a no-operation implementation, it immediately returns a new lock.
+    /// Returns a pre-acquired <see cref="NullCacheLock"/> for the specified resource without any waiting.
     /// </summary>
     /// <param name="resource">The resource to lock.</param>
     /// <returns>A completed task containing the acquired lock.</returns>

@@ -5,7 +5,7 @@ using ActionCache.Utilities;
 namespace ActionCache.Common.Caching;
 
 /// <summary>
-/// A class responsible for executing controller actions for cache keys
+/// Re-invokes cached controller actions to produce up-to-date values for each cache key.
 /// </summary>
 public class ActionCacheRefreshProvider : IActionCacheRefreshProvider
 {

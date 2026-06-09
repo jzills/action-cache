@@ -22,14 +22,12 @@ public class ActionCacheKeyComponents
     public const string ActionArgumentsKey = nameof(ActionArgumentsKey);
 
     /// <summary>
-    /// Gets or sets the route values for the current action. 
-    /// These values are typically used to help uniquely identify the route for caching purposes.
+    /// Gets or sets the route values used to uniquely identify the route for caching purposes.
     /// </summary>
     public RouteValueDictionary? RouteValues { get; set; } = new();
 
     /// <summary>
-    /// Gets or sets the dictionary of action arguments for the current action.
-    /// These arguments provide additional context for identifying the action and are used in caching.
+    /// Gets or sets the action arguments used as additional context for identifying and caching the action.
     /// </summary>
     public Dictionary<string, object?>? ActionArguments { get; set; } = new Dictionary<string, object?>();
     
@@ -45,11 +43,11 @@ public class ActionCacheKeyComponents
     }
 
     /// <summary>
-    /// Deconstructs route values into string representations of an area, controller and action.
+    /// Deconstructs the route values into the area, controller, and action name components.
     /// </summary>
-    /// <param name="area"></param>
-    /// <param name="controller"></param>
-    /// <param name="action"></param>
+    /// <param name="area">The area name, or <see langword="null"/> if not present in the route values.</param>
+    /// <param name="controller">The controller name, or <see langword="null"/> if not present in the route values.</param>
+    /// <param name="action">The action name, or <see langword="null"/> if not present in the route values.</param>
     public void Deconstruct(out string? area, out string? controller, out string? action)
     {
         ArgumentNullException.ThrowIfNull(RouteValues);

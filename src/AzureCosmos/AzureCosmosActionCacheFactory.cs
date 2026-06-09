@@ -14,7 +14,7 @@ namespace ActionCache.AzureCosmos;
 public class AzureCosmosActionCacheFactory : ActionCacheFactoryBase
 {
     /// <summary>
-    /// An Azure Cosmos Db client implementation.
+    /// The Azure Cosmos DB container used as the backing store for created cache instances.
     /// </summary>
     protected readonly Container Cache;
 

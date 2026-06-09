@@ -15,7 +15,7 @@ public abstract class CacheLock
     }
 
     /// <summary>
-    /// Gets or sets the unique resource identifier associated with the lock.
+    /// Gets the unique resource identifier associated with the lock.
     /// </summary>
     public readonly string Resource;
 
@@ -35,7 +35,7 @@ public abstract class CacheLock
     public TimeSpan Timeout { get; set; } = TimeSpan.FromMilliseconds(150);
 
     /// <summary>
-    /// Gets the timestamp when the lock request was initiated.
+    /// Gets the UTC timestamp when the lock request was initiated.
     /// </summary>
     public DateTime DateRequested { get; } = DateTime.UtcNow;
 }

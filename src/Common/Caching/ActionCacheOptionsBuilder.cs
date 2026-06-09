@@ -65,7 +65,7 @@ public class ActionCacheOptionsBuilder
     }
 
     /// <summary>
-    /// Enables the use of SQL Server cache.
+    /// Enables the use of Azure Cosmos DB as a cache backend.
     /// </summary>
     /// <returns>Returns this instance of <see cref="ActionCacheOptionsBuilder"/>.</returns>
     public ActionCacheOptionsBuilder UseAzureCosmosCache(Action<AzureCosmosCacheOptions> configureOptions)

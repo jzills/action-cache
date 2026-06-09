@@ -33,17 +33,17 @@ public record class Namespace(string Value)
     public string Create(string key) => Concat(Assembly, ValueWithRouteTemplateParameters ?? Value, key);
 
     /// <summary>
-    /// Allows implicit conversion of the Namespace instance to a string.
+    /// Implicitly converts a <see cref="Namespace"/> to its fully qualified string representation.
     /// </summary>
-    /// <param name="this">The Namespace instance.</param>
-    /// <returns>A concatenated string with the assembly and namespace value.</returns>
+    /// <param name="this">The <see cref="Namespace"/> instance to convert.</param>
+    /// <returns>A colon-separated string combining the assembly name and namespace value.</returns>
     public static implicit operator string(Namespace @this) => Concat(Assembly, @this.ValueWithRouteTemplateParameters ?? @this.Value);
 
     /// <summary>
-    /// Allows implicit conversion of a string to a Namespace instance.
+    /// Implicitly converts a string to a <see cref="Namespace"/> instance.
     /// </summary>
-    /// <param name="namespace">The string to convert.</param>
-    /// <returns>A new Namespace instance based on the string.</returns>
+    /// <param name="namespace">The namespace value string.</param>
+    /// <returns>A new <see cref="Namespace"/> wrapping the given string.</returns>
     public static implicit operator Namespace(string @namespace) => new Namespace(@namespace);
 
     /// <summary>

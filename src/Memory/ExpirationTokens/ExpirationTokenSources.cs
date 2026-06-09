@@ -4,7 +4,7 @@ using Microsoft.Extensions.Primitives;
 namespace ActionCache.Memory;
 
 /// <summary>
-/// Class to manage expiration token sources using memory cache.
+/// Manages <see cref="CancellationTokenSource"/> instances used as expiration tokens for memory cache entries.
 /// </summary>
 public class ExpirationTokenSources : IExpirationTokenSources
 {
@@ -14,9 +14,9 @@ public class ExpirationTokenSources : IExpirationTokenSources
     protected readonly IMemoryCache Cache;
 
     /// <summary>
-    /// Constructor for ExpirationTokenSources class.
+    /// Initializes a new instance of the <see cref="ExpirationTokenSources"/> class.
     /// </summary>
-    /// <param name="cache">The memory cache to use.</param>
+    /// <param name="cache">The memory cache used to store and retrieve <see cref="CancellationTokenSource"/> instances.</param>
     public ExpirationTokenSources(IMemoryCache cache) => Cache = cache;
 
     /// <summary>
