@@ -1,8 +1,7 @@
 namespace ActionCache.Common.Concurrency.Locks;
 
 /// <summary>
-/// Represents a no-operation cache lock that does not perform any locking mechanism.
-/// This is useful as a fallback when no actual locking is required.
+/// Represents a no-operation cache lock that always reports itself as acquired without performing any locking.
 /// </summary>
 public class NullCacheLock : CacheLock
 {

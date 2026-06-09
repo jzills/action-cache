@@ -14,14 +14,14 @@ namespace ActionCache.Redis;
 public class RedisActionCacheFactory : ActionCacheFactoryBase
 {
     /// <summary>
-    /// An IDatabase representation of a Redis cache.
+    /// The Redis database instance used for cache read and write operations.
     /// </summary>
     protected readonly IDatabase Cache;
 
     /// <summary>
-    /// Constructor for RedisActionCacheFactory.
+    /// Initializes a new instance of the <see cref="RedisActionCacheFactory"/> class.
     /// </summary>
-    /// <param name="connectionMultiplexer">ConnectionMultiplexer for Redis.</param>
+    /// <param name="connectionMultiplexer">The Redis connection multiplexer used to obtain the database instance.</param>
     /// <param name="entryOptions">The global entry options used for creation when expiration times are not supplied.</param>
     /// <param name="refreshProvider">The refresh provider to handle cache refreshes.</param>
     public RedisActionCacheFactory(

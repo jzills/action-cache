@@ -25,7 +25,7 @@ public class ActionCacheFilterAbstractFactory : IActionCacheFilterAbstractFactor
     protected readonly TemplateBinderFactory BinderFactory;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="ActionCacheEvictionFilter"/> class.
+    /// Initializes a new instance of the <see cref="ActionCacheFilterAbstractFactory"/> class.
     /// </summary>
     /// <param name="cacheFactories">The cache factories used to create caches.</param>
     /// <param name="binderFactory">The template binder for parsing route parameters for templated namespaces.</param>
@@ -39,14 +39,14 @@ public class ActionCacheFilterAbstractFactory : IActionCacheFilterAbstractFactor
     }
 
     /// <inheritdoc/>
-    /// <exception cref="InvalidCacheInstanceException"></exception> 
-    /// <exception cref="FilterTypeNotSupportedException"></exception>
-    public IFilterMetadata CreateInstance(Namespace @namespace, FilterType type) => 
+    /// <exception cref="InvalidCacheInstanceException">Thrown if no cache instances could be created for the namespace.</exception>
+    /// <exception cref="FilterTypeNotSupportedException">Thrown if the specified filter type is not supported.</exception>
+    public IFilterMetadata CreateInstance(Namespace @namespace, FilterType type) =>
         CreateInstance(@namespace, absoluteExpiration: null, slidingExpiration: null, type);
 
     /// <inheritdoc/>
-    /// <exception cref="InvalidCacheInstanceException"></exception> 
-    /// <exception cref="FilterTypeNotSupportedException"></exception>
+    /// <exception cref="InvalidCacheInstanceException">Thrown if no cache instances could be created for the namespace.</exception>
+    /// <exception cref="FilterTypeNotSupportedException">Thrown if the specified filter type is not supported.</exception>
     public IFilterMetadata CreateInstance(Namespace @namespace, TimeSpan? absoluteExpiration, TimeSpan? slidingExpiration, FilterType type)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(@namespace, nameof(@namespace));

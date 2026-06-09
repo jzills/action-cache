@@ -19,10 +19,10 @@ public abstract class ActionCacheFactoryBase : IActionCacheFactory
     protected readonly IActionCacheRefreshProvider RefreshProvider;
 
     /// <summary>
-    /// The base constructor.
+    /// Initializes a new instance of the <see cref="ActionCacheFactoryBase"/> class.
     /// </summary>
-    /// <param name="entryOptionsAccessor">entryOptionsAccessor global entry options accessor.</param>
-    /// <param name="refreshProvider">The refresh provider.</param>
+    /// <param name="entryOptionsAccessor">Accessor for the globally configured <see cref="ActionCacheEntryOptions"/>.</param>
+    /// <param name="refreshProvider">The provider used to refresh stale cache entries by re-invoking their originating actions.</param>
     public ActionCacheFactoryBase(
         IOptions<ActionCacheEntryOptions> entryOptionsAccessor,
         IActionCacheRefreshProvider refreshProvider

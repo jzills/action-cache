@@ -37,23 +37,23 @@ public class AzureCosmosEntry
     public required string Value { get; set; }
 
     /// <summary>
-    /// Gets or sets the absolute expiration associated with the entry.
+    /// Gets or sets the absolute expiration of the entry as a Unix timestamp in milliseconds.
     /// </summary>
     [JsonPropertyName("absoluteExpiration")]
-    [JsonProperty(PropertyName = "absoluteExpiration")]  
+    [JsonProperty(PropertyName = "absoluteExpiration")]
     public long AbsoluteExpiration { get; set; }
 
     /// <summary>
-    /// Gets or sets the sliding expiration associated with the entry.
+    /// Gets or sets the sliding expiration of the entry in milliseconds.
     /// </summary>
     [JsonPropertyName("slidingExpiration")]
-    [JsonProperty(PropertyName = "slidingExpiration")]  
+    [JsonProperty(PropertyName = "slidingExpiration")]
     public long SlidingExpiration { get; set; }
 
     /// <summary>
-    /// Gets or sets the TTL associated with the entry.
+    /// Gets or sets the Cosmos DB TTL for the entry in seconds; <c>-1</c> disables TTL-based expiration.
     /// </summary>
     [JsonPropertyName("ttl")]
-    [JsonProperty(PropertyName = "ttl")]  
+    [JsonProperty(PropertyName = "ttl")]
     public long TTL { get; set; }
 }

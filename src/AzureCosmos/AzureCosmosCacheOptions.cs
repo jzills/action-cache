@@ -8,11 +8,8 @@ namespace ActionCache.AzureCosmos;
 public class AzureCosmosCacheOptions
 {
     /// <summary>
-    /// Gets or sets the connection string for the Azure Cosmos cache.
+    /// Gets or sets the connection string used to connect to the Azure Cosmos DB account.
     /// </summary>
-    /// <remarks>
-    /// The <see cref="ConnectionString"/> is required to establish a connection to the Cosmos database.
-    /// </remarks>
     public string? ConnectionString { get; set; }
 
     /// <summary>

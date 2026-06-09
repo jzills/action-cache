@@ -8,7 +8,7 @@ namespace ActionCache.Memory;
 public class ExpirationTokenSourcesFallback : IExpirationTokenSources
 {
     /// <summary>
-    /// Tokens dictionary to store cancellationTokenSources based on keys
+    /// Thread-safe dictionary mapping cache keys to their associated <see cref="CancellationTokenSource"/> instances.
     /// </summary>
     protected ConcurrentDictionary<string, CancellationTokenSource> Tokens = new();
 

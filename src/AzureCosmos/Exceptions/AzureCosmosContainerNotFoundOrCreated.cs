@@ -9,10 +9,10 @@ namespace ActionCache.AzureCosmos.Exceptions;
 public class AzureCosmosContainerNotFoundOrCreated : Exception
 {
     /// <summary>
-    /// Initializes a new instance of the <see cref="AzureCosmosContainerNotFoundOrCreated"/> class
-    /// with the default error message.
+    /// Initializes a new instance of the <see cref="AzureCosmosContainerNotFoundOrCreated"/> class with an error message containing the HTTP status code from <paramref name="response"/>.
     /// </summary>
-    public AzureCosmosContainerNotFoundOrCreated(ContainerResponse response) 
+    /// <param name="response">The Cosmos DB container response whose status code is included in the exception message.</param>
+    public AzureCosmosContainerNotFoundOrCreated(ContainerResponse response)
         : base($"An error occurred fetching or creating Azure Cosmos container ({response.StatusCode}).")
     {
     }
