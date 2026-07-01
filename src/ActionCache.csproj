@@ -16,8 +16,8 @@
     <PackageIcon>Icon.jpg</PackageIcon>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <PackageProjectUrl>https://github.com/jzills/ActionCache</PackageProjectUrl>
-    <RepositoryUrl>https://github.com/jzills/ActionCache.git</RepositoryUrl>
+    <PackageProjectUrl>https://github.com/jzills/action-cache</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/jzills/action-cache.git</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageTags>mvc;cache;azure;cosmos;sqlserver;redis;memory</PackageTags>
     <Copyright>Copyright © Joshua Zillwood</Copyright>
