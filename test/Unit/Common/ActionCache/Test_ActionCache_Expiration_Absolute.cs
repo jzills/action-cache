@@ -18,7 +18,7 @@ public class ActionCacheAbsoluteExpirationTests
     [Test]
     public async Task GetAsync_WhenAbsoluteExpirationElapsed_ReturnsNull()
     {
-        _cache = _factory.Create(nameof(GetAsync_WhenAbsoluteExpirationElapsed_ReturnsNull), TimeSpan.FromSeconds(5))!;
+        _cache = _factory.Create(nameof(GetAsync_WhenAbsoluteExpirationElapsed_ReturnsNull), TimeSpan.FromSeconds(2))!;
 
         await _cache.SetAsync("Key_Expiration_1", "Value_1");
 
@@ -28,7 +28,7 @@ public class ActionCacheAbsoluteExpirationTests
         resultBefore.Should().Be("Value_1");
         keysBefore.Should().HaveCount(1);
 
-        Thread.Sleep(5000);
+        await Task.Delay(TimeSpan.FromSeconds(4));
 
         var resultAfter = await _cache.GetAsync<string?>("Key_Expiration_1");
         var keysAfter = await _cache.GetKeysAsync();
@@ -40,7 +40,7 @@ public class ActionCacheAbsoluteExpirationTests
     [Test]
     public async Task GetKeysAsync_WhenAbsoluteExpirationElapsed_ReturnsEmpty()
     {
-        _cache = _factory.Create(nameof(GetKeysAsync_WhenAbsoluteExpirationElapsed_ReturnsEmpty), TimeSpan.FromSeconds(5))!;
+        _cache = _factory.Create(nameof(GetKeysAsync_WhenAbsoluteExpirationElapsed_ReturnsEmpty), TimeSpan.FromSeconds(2))!;
 
         await _cache.SetAsync("Key_Expiration_1", "Value_1");
 
@@ -50,7 +50,7 @@ public class ActionCacheAbsoluteExpirationTests
         resultBefore.Should().Be("Value_1");
         keysBefore.Should().HaveCount(1);
 
-        Thread.Sleep(5000);
+        await Task.Delay(TimeSpan.FromSeconds(4));
 
         var resultAfter = await _cache.GetAsync<string?>("Key_Expiration_1");
         var keysAfter = await _cache.GetKeysAsync();

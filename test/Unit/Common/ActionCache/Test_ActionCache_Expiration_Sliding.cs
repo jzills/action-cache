@@ -28,13 +28,13 @@ public class ActionCacheSlidingExpirationTests
         resultBefore.Should().Be("Value_1");
         keysBefore.Should().HaveCount(1);
 
-        Thread.Sleep(10000);
+        await Task.Delay(TimeSpan.FromSeconds(10));
 
         // Access within the sliding window resets the expiry
         await _cache.GetAsync<string?>("Key_Expiration_1");
         await _cache.GetKeysAsync();
 
-        Thread.Sleep(10000);
+        await Task.Delay(TimeSpan.FromSeconds(10));
 
         var resultAfter = await _cache.GetAsync<string?>("Key_Expiration_1");
         var keysAfter = await _cache.GetKeysAsync();
