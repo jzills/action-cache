@@ -13,7 +13,11 @@ public class ActionCacheKeyBuilder
     protected static readonly char KeySeparator = ':';
 
     /// <summary>
-    /// The key generator, by default, implements AES encryption to allow symmetric operations.
+    /// Encodes key components into a reversible, non-confidential representation.
+    /// This is hex encoding, NOT encryption: cache keys embed the serialized route
+    /// values and action arguments in cleartext and can be decoded by anyone with
+    /// read access to the cache store. Do not place secrets in route values or
+    /// action arguments, and secure the cache store accordingly.
     /// </summary> 
     protected readonly KeyEncoder KeyEncoder = new();
 

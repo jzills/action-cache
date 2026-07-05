@@ -88,6 +88,13 @@ Both the route values and the action arguments are serialized then encoded to ge
 > [!NOTE]
 > Any route data from the request, i.e. the area, controller and action names as well as parameters are also added to the key. This is to support automatic cache refreshing.
 
+> [!NOTE]
+> Cache keys are a reversible **encoding** (hex) of the request's route values and
+> action arguments — they are **not encrypted** and are not confidential. Anyone
+> with read access to the cache store can decode them. Secure the cache store as
+> you would any datastore holding request metadata, and avoid placing secrets in
+> route values or action arguments.
+
 ## Cache Eviction
 
 An `ActionCacheEvictionAttribute` can be applied to a controller action. A cache eviction occurs at the namespace level. One or more namespaces can be used separated by a comma. In the example below, both *MyNamespace* and *MyOtherNamespace* would have their entries evicted on a successful execution of the action.
