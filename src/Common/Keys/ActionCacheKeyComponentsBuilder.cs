@@ -12,7 +12,7 @@ namespace ActionCache.Common.Keys;
 public class ActionCacheKeyComponentsBuilder
 {
     /// <summary>
-    /// A collection of name-value pairs extracted from the query string after decryption.
+    /// A collection of name-value pairs extracted from the query string after decoding.
     /// </summary>
     protected readonly NameValueCollection NameValues;
 
