@@ -40,13 +40,26 @@ internal static class NamespaceExtensions
             );
 
             var boundValues = templateBinder.BindValues(routeValues);
-            if (boundValues?.Contains("?") ?? false)
+            if (!string.IsNullOrEmpty(boundValues))
             {
-                // Remove the first forward slash and any query string parameters
-                boundValues = boundValues.Substring(1, boundValues.LastIndexOf("?") - 1);
-            }
+                // Strip any query-string suffix produced by the binder.
+                var queryIndex = boundValues.IndexOf('?');
+                if (queryIndex >= 0)
+                {
+                    boundValues = boundValues[..queryIndex];
+                }
 
-            source.ValueWithRouteTemplateParameters = HttpUtility.UrlDecode(boundValues);
+                // Strip the leading path separator.
+                boundValues = boundValues.TrimStart('/');
+
+                // Re-escape the fully-decoded value so delimiters embedded in
+                // user-supplied route values (notably ':') cannot alter the
+                // namespace's structural separators. Caching and eviction both
+                // resolve the namespace through this same path, keeping the
+                // escaped form consistent.
+                source.ValueWithRouteTemplateParameters =
+                    Uri.EscapeDataString(HttpUtility.UrlDecode(boundValues) ?? string.Empty);
+            }
         }
     }
 }

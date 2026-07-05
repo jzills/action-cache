@@ -69,4 +69,21 @@ public class NamespaceExtensionsTests
 
         @namespace.ValueWithRouteTemplateParameters.Should().BeNull();
     }
+
+    [Test]
+    public void AttachRouteValues_WhenRouteValueContainsSeparator_EscapesItToPreventNamespaceInjection()
+    {
+        var @namespace = new Namespace("Users:{id}");
+        var routeValues = new RouteValueDictionary
+        {
+            { "id", "a:b:c" }
+        };
+
+        @namespace.AttachRouteValues(routeValues, _binderFactory);
+
+        // A ':' from a user-supplied route value must be escaped so it cannot act
+        // as a namespace separator and collide with / evict another resource.
+        @namespace.ValueWithRouteTemplateParameters.Should().NotBeNull();
+        @namespace.ValueWithRouteTemplateParameters.Should().NotContain(":");
+    }
 }
