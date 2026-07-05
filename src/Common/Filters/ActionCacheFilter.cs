@@ -45,7 +45,8 @@ public class ActionCacheFilter : ActionCacheFilterBase, IAsyncActionFilter
             else
             {
                 var actionExecutedContext = await next();
-                if (actionExecutedContext.Result is not null)
+                if (actionExecutedContext.Result is not null &&
+                    actionExecutedContext.Result.IsSuccessfulResult())
                 {
                     context.AddCacheStatus(CacheStatus.Add);
                     await Cache.SetAsync(key, actionExecutedContext.Result);

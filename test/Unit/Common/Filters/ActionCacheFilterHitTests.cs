@@ -113,6 +113,49 @@ public class ActionCacheFilterHitTests
         _cacheMock.Verify(cache => cache.SetAsync(It.IsAny<string>(), It.IsAny<IActionResult>()), Times.Once);
     }
 
+    [Test]
+    public async Task OnActionExecutionAsync_WhenCacheMissAndResultIsError_DoesNotStoreCacheEntry()
+    {
+        _cacheMock.Setup(cache => cache.GetAsync<IActionResult?>(It.IsAny<string>()))
+            .ReturnsAsync((IActionResult?)null);
+
+        var context = BuildActionExecutingContext();
+        ActionExecutionDelegate next = () =>
+        {
+            var executed = new ActionExecutedContext(context, [], new object())
+            {
+                Result = new NotFoundObjectResult("missing")
+            };
+            return Task.FromResult(executed);
+        };
+
+        await _sut.OnActionExecutionAsync(context, next);
+
+        _cacheMock.Verify(cache => cache.SetAsync(It.IsAny<string>(), It.IsAny<IActionResult>()), Times.Never);
+    }
+
+    [Test]
+    public async Task OnActionExecutionAsync_WhenCacheMissAndResultIsPocoObjectResult_StoresCacheEntry()
+    {
+        _cacheMock.Setup(cache => cache.GetAsync<IActionResult?>(It.IsAny<string>()))
+            .ReturnsAsync((IActionResult?)null);
+
+        var context = BuildActionExecutingContext();
+        ActionExecutionDelegate next = () =>
+        {
+            // Null StatusCode == framework serializes as 200 (a POCO return).
+            var executed = new ActionExecutedContext(context, [], new object())
+            {
+                Result = new ObjectResult("poco") { StatusCode = null }
+            };
+            return Task.FromResult(executed);
+        };
+
+        await _sut.OnActionExecutionAsync(context, next);
+
+        _cacheMock.Verify(cache => cache.SetAsync(It.IsAny<string>(), It.IsAny<IActionResult>()), Times.Once);
+    }
+
     private static ActionExecutingContext BuildActionExecutingContext(
         RouteValueDictionary? routeValues = null)
     {
