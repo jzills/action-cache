@@ -34,12 +34,26 @@ internal static class NamespaceExtensions
     {
         if (source.ContainsRouteTemplateParameters())
         {
+            // Escape each route VALUE so a delimiter embedded in user-supplied
+            // input (notably ':') cannot alter the namespace's structural
+            // separators. Only the values are escaped — the template's own
+            // literal separators are preserved through the bind/decode round
+            // trip — so a resolved namespace still matches the equivalent
+            // literal namespace string (e.g. factory.Create("Teams:<id>")).
+            var escapedRouteValues = new RouteValueDictionary();
+            foreach (var routeValue in routeValues)
+            {
+                escapedRouteValues[routeValue.Key] = routeValue.Value is string stringValue
+                    ? Uri.EscapeDataString(stringValue)
+                    : routeValue.Value;
+            }
+
             var templateBinder = templateBinderFactory.Create(
-                TemplateParser.Parse(source.Value), 
+                TemplateParser.Parse(source.Value),
                 new RouteValueDictionary()
             );
 
-            var boundValues = templateBinder.BindValues(routeValues);
+            var boundValues = templateBinder.BindValues(escapedRouteValues);
             if (!string.IsNullOrEmpty(boundValues))
             {
                 // Strip any query-string suffix produced by the binder.
@@ -52,13 +66,11 @@ internal static class NamespaceExtensions
                 // Strip the leading path separator.
                 boundValues = boundValues.TrimStart('/');
 
-                // Re-escape the fully-decoded value so delimiters embedded in
-                // user-supplied route values (notably ':') cannot alter the
-                // namespace's structural separators. Caching and eviction both
-                // resolve the namespace through this same path, keeping the
-                // escaped form consistent.
-                source.ValueWithRouteTemplateParameters =
-                    Uri.EscapeDataString(HttpUtility.UrlDecode(boundValues) ?? string.Empty);
+                // Single decode: restores the template's structural separators
+                // (encoded once by BindValues) to raw form, while values —
+                // escaped before binding and therefore encoded twice — remain
+                // singly-escaped and inert.
+                source.ValueWithRouteTemplateParameters = HttpUtility.UrlDecode(boundValues);
             }
         }
     }
