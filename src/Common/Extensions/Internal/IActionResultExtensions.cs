@@ -1,4 +1,6 @@
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Infrastructure;
 
 namespace ActionCache.Common.Extensions.Internal;
 
@@ -36,4 +38,26 @@ internal static class IActionResultExtensions
     internal static bool IsSuccessfulStatusCodeResult(this IActionResult result) =>
         result is StatusCodeResult statusCodeResult &&
             statusCodeResult.IsSuccessStatusCode();
+
+    /// <summary>
+    /// Determines whether an <see cref="IActionResult"/> should be cached: a
+    /// result exposing a status code (<see cref="IStatusCodeActionResult"/>) is
+    /// cacheable only when that status is in the successful range (200–226, with
+    /// a null status treated as 200); any other result carries no status and is
+    /// treated as a 200 response, so it is cacheable. Mirrors the Minimal API
+    /// <c>IsSuccessfulEndpointResult</c> semantics.
+    /// </summary>
+    /// <param name="result">The <see cref="IActionResult"/> to evaluate.</param>
+    /// <returns><c>true</c> if the result should be cached; otherwise <c>false</c>.</returns>
+    internal static bool IsCacheableResult(this IActionResult result)
+    {
+        if (result is IStatusCodeActionResult statusCodeResult)
+        {
+            var statusCode = statusCodeResult.StatusCode ?? StatusCodes.Status200OK;
+            return statusCode >= StatusCodes.Status200OK &&
+                   statusCode <= StatusCodes.Status226IMUsed;
+        }
+
+        return true;
+    }
 }
