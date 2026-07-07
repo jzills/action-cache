@@ -1,15 +1,13 @@
 using System.Net;
 using ActionCache.AzureCosmos.Exceptions;
-using ActionCache.Common;
-using ActionCache.Common.Caching;
 using ActionCache.Utilities;
 using Microsoft.Azure.Cosmos;
-using Microsoft.Extensions.Options;
 
 namespace ActionCache.AzureCosmos;
 
 /// <summary>
-/// Provides functionality for creating and managing Azure Cosmos DB action caches.
+/// Provides functionality for creating and managing the Azure Cosmos DB container
+/// used as the ActionCache backing store.
 /// </summary>
 public class AzureCosmosActionCacheProvider
 {
@@ -19,45 +17,26 @@ public class AzureCosmosActionCacheProvider
     protected readonly CosmosClient CosmosClient;
 
     /// <summary>
-    /// Options for configuring action cache entries.
-    /// </summary>
-    protected readonly IOptions<ActionCacheEntryOptions> EntryOptions;
-
-    /// <summary>
-    /// The provider responsible for refreshing action caches.
-    /// </summary>
-    protected readonly IActionCacheRefreshProvider RefreshProvider;
-
-    /// <summary>
     /// Initializes a new instance of the <see cref="AzureCosmosActionCacheProvider"/> class.
     /// </summary>
     /// <param name="cosmosClient">The Cosmos DB client used for interacting with Azure Cosmos DB.</param>
-    /// <param name="entryOptions">The options for configuring action cache entries.</param>
-    /// <param name="refreshProvider">The provider responsible for refreshing action caches.</param>
-    public AzureCosmosActionCacheProvider(
-        CosmosClient cosmosClient,
-        IOptions<ActionCacheEntryOptions> entryOptions,
-        IActionCacheRefreshProvider refreshProvider
-    )
+    public AzureCosmosActionCacheProvider(CosmosClient cosmosClient)
     {
         CosmosClient = cosmosClient;
-        EntryOptions = entryOptions;
-        RefreshProvider = refreshProvider;
     }
 
     /// <summary>
-    /// Creates an instance of <see cref="AzureCosmosActionCacheFactory"/> for the specified database.
+    /// Ensures the database and cache container exist and returns the container.
     /// </summary>
     /// <param name="databaseId">The identifier of the Azure Cosmos DB database.</param>
-    /// <returns>A task that represents the asynchronous operation. 
-    /// The task result contains the created <see cref="AzureCosmosActionCacheFactory"/>.</returns>
+    /// <returns>A task whose result is the ActionCache <see cref="Container"/>.</returns>
     /// <exception cref="AzureCosmosDatabaseNotFoundOrCreated">
     /// Thrown when the database could not be found or created.
     /// </exception>
     /// <exception cref="AzureCosmosContainerNotFoundOrCreated">
     /// Thrown when the container could not be found or created.
     /// </exception>
-    public async Task<AzureCosmosActionCacheFactory> CreateAsync(string databaseId)
+    public async Task<Container> CreateContainerAsync(string databaseId)
     {
         var databaseResponse = await CosmosClient
             .CreateDatabaseIfNotExistsAsync(databaseId);
@@ -65,8 +44,8 @@ public class AzureCosmosActionCacheProvider
         if (IsSuccessStatusCode(databaseResponse.StatusCode))
         {
             var containerResponse = await databaseResponse.Database
-                .CreateContainerIfNotExistsAsync(new ContainerProperties 
-                { 
+                .CreateContainerIfNotExistsAsync(new ContainerProperties
+                {
                     Id = Namespace.Assembly,
                     PartitionKeyPath = "/namespace",
                     DefaultTimeToLive = -1
@@ -74,11 +53,7 @@ public class AzureCosmosActionCacheProvider
 
             if (IsSuccessStatusCode(containerResponse.StatusCode))
             {
-                return new AzureCosmosActionCacheFactory(
-                    containerResponse.Container,
-                    EntryOptions,
-                    RefreshProvider
-                );
+                return containerResponse.Container;
             }
             else
             {
@@ -95,10 +70,8 @@ public class AzureCosmosActionCacheProvider
     /// Determines whether the provided HTTP status code indicates a successful response.
     /// </summary>
     /// <param name="statusCode">The HTTP status code to evaluate.</param>
-    /// <returns>
-    /// <see langword="true"/> if the status code indicates success; otherwise, <see langword="false"/>.
-    /// </returns>
+    /// <returns><see langword="true"/> if the status code indicates success; otherwise, <see langword="false"/>.</returns>
     private bool IsSuccessStatusCode(HttpStatusCode statusCode) =>
-        statusCode == HttpStatusCode.OK || 
+        statusCode == HttpStatusCode.OK ||
         statusCode == HttpStatusCode.Created;
 }

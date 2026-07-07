@@ -16,21 +16,21 @@ namespace ActionCache.AzureCosmos;
 public class AzureCosmosActionCache : ActionCacheBase<NullCacheLock>
 {
     /// <summary>
-    /// An Azure Cosmos DB cache container.
+    /// The lazily-initialized Azure Cosmos DB cache container.
     /// </summary>
-    protected readonly Container Cache;
+    protected readonly AsyncLazy<Container> Cache;
 
     /// <summary>
     /// The namespaced partition key.
-    /// </summary> 
+    /// </summary>
     protected readonly PartitionKey PartitionKey;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="AzureCosmosActionCache"/> class.
     /// </summary>
-    /// <param name="cache">The Azure Cosmos DB container instance.</param>
-    /// <param name="context">The cache context.</param> 
-    public AzureCosmosActionCache(Container cache, ActionCacheContext<NullCacheLock> context) : base(context)
+    /// <param name="cache">The lazily-initialized Azure Cosmos DB container instance.</param>
+    /// <param name="context">The cache context.</param>
+    public AzureCosmosActionCache(AsyncLazy<Container> cache, ActionCacheContext<NullCacheLock> context) : base(context)
     {
         Cache = cache;
         PartitionKey = new PartitionKey(Namespace);
@@ -40,20 +40,21 @@ public class AzureCosmosActionCache : ActionCacheBase<NullCacheLock>
     /// Asynchronously gets a value from the cache.
     /// </summary>
     /// <param name="key">The key of the cache entry.</param>
-    /// <returns>The cached value or null if not found.</returns> 
+    /// <returns>The cached value or null if not found.</returns>
 #pragma warning disable CS8609
     public override async Task<TValue> GetAsync<TValue>(string key)
     {
+        var container = await Cache.Value;
         try
         {
-            var response = await Cache.ReadItemAsync<AzureCosmosEntry>(
+            var response = await container.ReadItemAsync<AzureCosmosEntry>(
                 Namespace.Create(key),
                 PartitionKey
             );
 
             if (ActionCacheEntryOptions.HasExpiredAbsoluteExpiration(response.Resource.AbsoluteExpiration))
             {
-                await Cache.DeleteItemAsync<AzureCosmosEntry>(
+                await container.DeleteItemAsync<AzureCosmosEntry>(
                     Namespace.Create(key),
                     PartitionKey
                 );
@@ -63,7 +64,7 @@ public class AzureCosmosActionCache : ActionCacheBase<NullCacheLock>
 
             if (ActionCacheEntryOptions.HasSlidingExpiration(response.Resource.SlidingExpiration))
             {
-                await Cache.ReplaceItemAsync(
+                await container.ReplaceItemAsync(
                     response.Resource,
                     response.Resource.Id,
                     PartitionKey
@@ -85,11 +86,12 @@ public class AzureCosmosActionCache : ActionCacheBase<NullCacheLock>
     /// </summary>
     /// <param name="key">The cache key to set the value for.</param>
     /// <param name="value">The value to set in the cache.</param>
-    public override Task SetAsync<TValue>(string key, [AllowNull] TValue value)
+    public override async Task SetAsync<TValue>(string key, [AllowNull] TValue value)
     {
+        var container = await Cache.Value;
         var (absoluteExpiration, slidingExpiration, ttl) = EntryOptions;
 
-        return Cache.UpsertItemAsync(new AzureCosmosEntry
+        await container.UpsertItemAsync(new AzureCosmosEntry
         {
             Id = Namespace.Create(key),
             Key = key,
@@ -107,9 +109,10 @@ public class AzureCosmosActionCache : ActionCacheBase<NullCacheLock>
     /// <param name="key">The key of the cache entry to remove.</param>
     public override async Task RemoveAsync(string key)
     {
+        var container = await Cache.Value;
         try
         {
-            await Cache.DeleteItemAsync<AzureCosmosEntry>(
+            await container.DeleteItemAsync<AzureCosmosEntry>(
                 Namespace.Create(key),
                 PartitionKey
             );
@@ -125,10 +128,11 @@ public class AzureCosmosActionCache : ActionCacheBase<NullCacheLock>
     /// </summary>
     public override async Task RemoveAsync()
     {
-        var response = await Cache.DeleteAllItemsByPartitionKeyStreamAsync(PartitionKey);
+        var container = await Cache.Value;
+        var response = await container.DeleteAllItemsByPartitionKeyStreamAsync(PartitionKey);
         if (response.StatusCode == HttpStatusCode.BadRequest)
         {
-            var items = await Cache.GetItemsAsync(Namespace);
+            var items = await container.GetItemsAsync(Namespace);
             if (items.Any())
             {
                 await Task.WhenAll(items.Select(item => RemoveAsync(item.Key)));
@@ -142,7 +146,8 @@ public class AzureCosmosActionCache : ActionCacheBase<NullCacheLock>
     /// <returns>An enumerable of strings representing current cache entry keys.</returns>
     public override async Task<IEnumerable<string>> GetKeysAsync()
     {
-        var items = await Cache.GetItemsAsync(Namespace);
+        var container = await Cache.Value;
+        var items = await container.GetItemsAsync(Namespace);
         if (items.Any())
         {
             var itemsKeys = new List<string>(items.Count);
