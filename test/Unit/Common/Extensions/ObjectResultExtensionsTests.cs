@@ -30,11 +30,12 @@ public class ObjectResultExtensionsTests
     }
 
     [Test]
-    public void IsSuccessStatusCode_WhenStatusCodeIsNull_ReturnsFalse()
+    public void IsSuccessStatusCode_WhenStatusCodeIsNull_ReturnsTrue()
     {
+        // A null StatusCode means the framework will serialize the result as 200.
         var result = new ObjectResult("data") { StatusCode = null };
 
-        result.IsSuccessStatusCode().Should().BeFalse();
+        result.IsSuccessStatusCode().Should().BeTrue();
     }
 
     [Test]

@@ -47,7 +47,7 @@ public class ActionCacheEndpointFilter : ActionCacheFilterBase, IEndpointFilter
             else
             {
                 var result = await next(context);
-                if (result is not null)
+                if (result.IsSuccessfulEndpointResult())
                 {
                     context.AddCacheStatus(CacheStatus.Add);
                     await Cache.SetAsync(key, result);

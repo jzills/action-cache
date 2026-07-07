@@ -4,6 +4,7 @@ namespace ActionCache.Common.Keys;
 
 /// <summary>
 /// Provides methods to encode and decode strings to and from hexadecimal format using UTF-8 encoding.
+/// This is a reversible encoding, not encryption; encoded values are not confidential.
 /// </summary>
 public class KeyEncoder
 {

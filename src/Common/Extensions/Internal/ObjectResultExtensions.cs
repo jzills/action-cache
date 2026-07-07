@@ -15,7 +15,10 @@ internal static class ObjectResultExtensions
     /// <returns>
     /// <c>true</c> if the status code is between 200 (OK) and 226 (IM Used), inclusive; otherwise, <c>false</c>.
     /// </returns>
-    internal static bool IsSuccessStatusCode(this ObjectResult result) =>
-        result.StatusCode >= StatusCodes.Status200OK && 
-        result.StatusCode <= StatusCodes.Status226IMUsed;
+    internal static bool IsSuccessStatusCode(this ObjectResult result)
+    {
+        var statusCode = result.StatusCode ?? StatusCodes.Status200OK;
+        return statusCode >= StatusCodes.Status200OK &&
+               statusCode <= StatusCodes.Status226IMUsed;
+    }
 }

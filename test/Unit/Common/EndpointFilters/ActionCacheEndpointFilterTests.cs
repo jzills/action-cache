@@ -101,6 +101,36 @@ public class ActionCacheEndpointFilterTests
         _cacheMock.Verify(cache => cache.SetAsync(It.IsAny<string>(), It.IsAny<object?>()), Times.Never);
     }
 
+    [Test]
+    public async Task InvokeAsync_WhenCacheMissAndNextReturnsErrorResult_DoesNotStore()
+    {
+        var httpContext = BuildHttpContextWithEndpoint();
+        var context = BuildContext(httpContext);
+        _cacheMock.Setup(cache => cache.GetAsync<object?>(It.IsAny<string>())).ReturnsAsync((object?)null);
+
+        // TypedResults.NotFound() implements IStatusCodeHttpResult with status 404.
+        EndpointFilterDelegate next = ctx => ValueTask.FromResult<object?>(TypedResults.NotFound());
+
+        var result = await _sut.InvokeAsync(context, next);
+
+        _cacheMock.Verify(cache => cache.SetAsync(It.IsAny<string>(), It.IsAny<object?>()), Times.Never);
+    }
+
+    [Test]
+    public async Task InvokeAsync_WhenCacheMissAndNextReturnsSuccessResult_Stores()
+    {
+        var httpContext = BuildHttpContextWithEndpoint();
+        var context = BuildContext(httpContext);
+        _cacheMock.Setup(cache => cache.GetAsync<object?>(It.IsAny<string>())).ReturnsAsync((object?)null);
+
+        // TypedResults.Ok(value) implements IStatusCodeHttpResult with status 200.
+        EndpointFilterDelegate next = ctx => ValueTask.FromResult<object?>(TypedResults.Ok("fresh"));
+
+        var result = await _sut.InvokeAsync(context, next);
+
+        _cacheMock.Verify(cache => cache.SetAsync(It.IsAny<string>(), It.IsAny<object?>()), Times.Once);
+    }
+
     private static DefaultHttpContext BuildHttpContextWithEndpoint()
     {
         var httpContext = new DefaultHttpContext();
