@@ -26,17 +26,25 @@ public class ActionCacheEndpointFilterAbstractFactory : IActionCacheFilterAbstra
     protected readonly TemplateBinderFactory BinderFactory;
 
     /// <summary>
+    /// Decorates created caches so backend failures degrade gracefully.
+    /// </summary>
+    protected readonly ResilientCacheDecorator ResilientDecorator;
+
+    /// <summary>
     /// Initializes a new instance of the <see cref="ActionCacheEndpointFilterAbstractFactory"/> class.
     /// </summary>
     /// <param name="cacheFactories">The cache factories used to create caches.</param>
     /// <param name="binderFactory">The template binder for parsing route parameters for templated namespaces.</param>
+    /// <param name="resilientDecorator">Wraps created caches for graceful degradation.</param>
     public ActionCacheEndpointFilterAbstractFactory(
         IEnumerable<IActionCacheFactory> cacheFactories,
-        TemplateBinderFactory binderFactory
+        TemplateBinderFactory binderFactory,
+        ResilientCacheDecorator resilientDecorator
     )
     {
         CacheFactories = cacheFactories;
         BinderFactory = binderFactory;
+        ResilientDecorator = resilientDecorator;
     }
 
     /// <inheritdoc/>
@@ -146,7 +154,7 @@ public class ActionCacheEndpointFilterAbstractFactory : IActionCacheFilterAbstra
         }
         else
         {
-            cacheInstances.AddRange(instances!);
+            cacheInstances.AddRange(instances!.Select(cache => ResilientDecorator.Decorate(cache!)));
         }
     }
 

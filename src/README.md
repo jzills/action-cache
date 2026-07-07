@@ -9,6 +9,7 @@
     * [Register with SqlServer](#register-with-sqlserver)
     * [Register with Azure Cosmos](#register-with-azure-cosmos)
     * [Register Multiple Cache Stores](#register-multiple-cache-stores)
+    * [Resilience](#resilience-fail-open-by-default)
     * [Basic Usage](#basic-usage)
     * [Cache Key Creation](#cache-key-creation)
     * [Cache Eviction](#cache-eviction)
@@ -68,6 +69,21 @@ Two or more cache stores can be combined.
         options.UseMemoryCache(...);
         options.UseRedisCache(...);
         options.UseSqlServerCache(...);
+    });
+
+## Resilience (Fail-Open by Default)
+
+By default ActionCache **fails open**: if a cache backend (Redis, SQL Server, Cosmos)
+throws while serving a request, the error is logged at `Warning` and the operation
+degrades to a cache miss (reads) or a no-op (writes/eviction/refresh) so the request
+still succeeds without caching. Caching is an enhancement, not a hard dependency.
+
+To make backend failures propagate to the caller instead, opt in to **fail-closed**:
+
+    builder.Services.AddActionCache(options =>
+    {
+        options.UseRedisCache(...);
+        options.FailClosed();
     });
 
 ## Basic Usage

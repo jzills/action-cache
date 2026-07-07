@@ -73,6 +73,7 @@ public static class IServiceCollectionExtensions
     ) => services
             .AddControllerInfo()
             .AddSingleton<ActionCacheDescriptorProviderFactory>()
+            .AddSingleton<ResilientCacheDecorator>()
             .AddScoped<IActionCacheFilterAbstractFactory<IFilterMetadata>, ActionCacheFilterAbstractFactory>()
             .AddScoped<IActionCacheFilterAbstractFactory<IEndpointFilter>, ActionCacheEndpointFilterAbstractFactory>()
             .AddScoped<IActionCacheRefreshProvider, ActionCacheRefreshProvider>()

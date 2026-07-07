@@ -6,6 +6,8 @@ using ActionCache.Exceptions;
 using ActionCache.Utilities;
 using Microsoft.AspNetCore.Routing.Template;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 using Moq;
 
 namespace Unit.Common.EndpointFilters;
@@ -38,7 +40,12 @@ public class ActionCacheEndpointFilterAbstractFactoryTests
             .BuildServiceProvider()
             .GetRequiredService<TemplateBinderFactory>();
 
-        _sut = new ActionCacheEndpointFilterAbstractFactory([_cacheFactoryMock.Object], _binderFactory);
+        var resilientDecorator = new ResilientCacheDecorator(
+            NullLoggerFactory.Instance,
+            Options.Create(new ActionCacheResilienceOptions()));
+
+        _sut = new ActionCacheEndpointFilterAbstractFactory(
+            [_cacheFactoryMock.Object], _binderFactory, resilientDecorator);
     }
 
     [Test]
