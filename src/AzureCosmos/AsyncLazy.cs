@@ -1,7 +1,7 @@
 namespace ActionCache.AzureCosmos;
 
 /// <summary>
-/// A lazily-initialized asynchronous value. The <paramref name="factory"/> runs at
+/// A lazily-initialized asynchronous value. The <c>factory</c> runs at
 /// most once (on first access to <see cref="Lazy{T}.Value"/>); every awaiter observes
 /// the same underlying <see cref="Task{TResult}"/>.
 /// </summary>
