@@ -1,5 +1,6 @@
 using System.Text.RegularExpressions;
 using ActionCache.Redis;
+using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using StackExchange.Redis;
 
@@ -26,7 +27,7 @@ public class RedisExpiryServiceTests
             .Setup(multiplexer => multiplexer.GetSubscriber(It.IsAny<object?>()))
             .Returns(_subscriberMock.Object);
 
-        _sut = new RedisExpiryService(_multiplexerMock.Object);
+        _sut = new RedisExpiryService(_multiplexerMock.Object, NullLogger<RedisExpiryService>.Instance);
     }
 
     [TearDown]
@@ -58,6 +59,26 @@ public class RedisExpiryServiceTests
 
         _subscriberMock.Verify(subscriber => subscriber.SubscribeAsync(
             It.Is<RedisChannel>(channel => channel == RedisChannel.Literal("__keyevent@0__:expired")),
+            It.IsAny<Action<RedisChannel, RedisValue>>(),
+            It.IsAny<CommandFlags>()), Times.Once);
+    }
+
+    [Test]
+    public async Task StartAsync_WhenConnectionUsesNonZeroDatabase_SubscribesToThatDatabasesChannel()
+    {
+        _databaseMock.Setup(database => database.Database).Returns(3);
+        _subscriberMock
+            .Setup(subscriber => subscriber.SubscribeAsync(
+                It.IsAny<RedisChannel>(),
+                It.IsAny<Action<RedisChannel, RedisValue>>(),
+                It.IsAny<CommandFlags>()))
+            .Returns(Task.CompletedTask);
+
+        using var cts = new CancellationTokenSource();
+        await _sut.StartAsync(cts.Token);
+
+        _subscriberMock.Verify(subscriber => subscriber.SubscribeAsync(
+            It.Is<RedisChannel>(channel => channel == RedisChannel.Literal("__keyevent@3__:expired")),
             It.IsAny<Action<RedisChannel, RedisValue>>(),
             It.IsAny<CommandFlags>()), Times.Once);
     }

@@ -1,5 +1,6 @@
 using System.Text.RegularExpressions;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using StackExchange.Redis;
 
 namespace ActionCache.Redis;
@@ -25,15 +26,24 @@ public class RedisExpiryService : BackgroundService
     protected readonly ISubscriber Subscriber;
 
     /// <summary>
+    /// Records subscription failures so a Redis outage does not crash the host.
+    /// </summary>
+    private readonly ILogger<RedisExpiryService> _logger;
+
+    /// <summary>
     /// Initializes a new instance of the <see cref="RedisExpiryService"/> class.
     /// </summary>
     /// <param name="connectionMultiplexer">
     /// The Redis connection multiplexer used to access the database and subscriber.
     /// </param>
-    public RedisExpiryService(IConnectionMultiplexer connectionMultiplexer)
+    /// <param name="logger">The logger used to record subscription failures.</param>
+    public RedisExpiryService(
+        IConnectionMultiplexer connectionMultiplexer,
+        ILogger<RedisExpiryService> logger)
     {
         Cache = connectionMultiplexer.GetDatabase();
         Subscriber = connectionMultiplexer.GetSubscriber();
+        _logger = logger;
     }
 
     /// <summary>
@@ -43,21 +53,34 @@ public class RedisExpiryService : BackgroundService
     /// <returns>A task that represents the execution of the service.</returns>
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        await Subscriber.SubscribeAsync(RedisChannel.Literal("__keyevent@0__:expired"), async (_, message) =>
+        try
         {
-            var key = (string?)message;
-            if (!string.IsNullOrWhiteSpace(key))
+            var channel = RedisChannel.Literal($"__keyevent@{Cache.Database}__:expired");
+            await Subscriber.SubscribeAsync(channel, async (_, message) =>
             {
-                var match = KeyExpression.Match(key);
-                if (match.Success && match.Groups.Count == 3)
+                var key = (string?)message;
+                if (!string.IsNullOrWhiteSpace(key))
                 {
-                    await Cache.SortedSetRemoveAsync(
-                        match.Groups[1].Value, 
-                        match.Groups[2].Value
-                    );
+                    var match = KeyExpression.Match(key);
+                    if (match.Success && match.Groups.Count == 3)
+                    {
+                        await Cache.SortedSetRemoveAsync(
+                            match.Groups[1].Value,
+                            match.Groups[2].Value
+                        );
+                    }
                 }
-            }
-        });
+            });
+        }
+        catch (Exception exception)
+        {
+            _logger.LogError(
+                exception,
+                "ActionCache could not subscribe to Redis keyspace expiry notifications on database {Database}; " +
+                "sliding-expiration index cleanup will rely on lazy self-healing.",
+                Cache.Database);
+            return;
+        }
 
         await Task.Delay(Timeout.Infinite, stoppingToken);
     }

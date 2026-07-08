@@ -34,6 +34,16 @@ Use the `AddActionCache` extension method to register `RedisCache` as a cache st
         options.UseRedisCache(...);
     });
 
+> **Keyspace notifications:** ActionCache's Redis backend cleans up its sliding-
+> expiration index from Redis key-expired events. For that cleanup to run, the Redis
+> server must have keyspace event notifications enabled with the `Ex` flags:
+>
+>     redis-cli config set notify-keyspace-events Ex
+>
+> (or `notify-keyspace-events Ex` in `redis.conf`). The expiry listener targets the
+> database configured in your connection string. Without `Ex` the index self-heals
+> lazily on access instead — nothing breaks, cleanup is just deferred.
+
 ## Register with SqlServer
 
 Use the `AddActionCache` extension method to register `SqlServerCache` as a cache store. The configuration for `SqlServerCacheOptions` is exposed as a parameter to `UseSqlServerCache`.
