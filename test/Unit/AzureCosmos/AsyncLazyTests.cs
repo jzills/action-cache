@@ -6,7 +6,7 @@ namespace Unit.AzureCosmos;
 public class AsyncLazyTests
 {
     [Test]
-    public async Task Value_WhenAwaitedConcurrently_RunsFactoryExactlyOnce()
+    public async Task Value_WhenAccessedFromManyThreadsConcurrently_RunsFactoryExactlyOnce()
     {
         var invocations = 0;
         var lazy = new AsyncLazy<int>(async () =>
@@ -16,8 +16,13 @@ public class AsyncLazyTests
             return 42;
         });
 
-        var results = await Task.WhenAll(
-            Enumerable.Range(0, 25).Select(_ => lazy.Value));
+        // Dispatch each access on its own thread-pool task so they genuinely
+        // race on the lock, rather than being enumerated one-by-one on the test thread.
+        var accesses = Enumerable.Range(0, 25)
+            .Select(_ => Task.Run(() => lazy.Value))
+            .ToArray();
+
+        var results = await Task.WhenAll(accesses);
 
         invocations.Should().Be(1);
         results.Should().OnlyContain(value => value == 42);
