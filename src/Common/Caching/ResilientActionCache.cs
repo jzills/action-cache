@@ -121,15 +121,21 @@ public class ResilientActionCache : IActionCache
 
     private void Degrade(Exception exception, string operation)
     {
+        if (_failClosed)
+        {
+            _logger.LogError(
+                exception,
+                "ActionCache backend operation '{Operation}' failed for namespace '{Namespace}'; propagating (fail-closed).",
+                operation,
+                (string)_namespace);
+
+            ExceptionDispatchInfo.Capture(exception).Throw();
+        }
+
         _logger.LogWarning(
             exception,
             "ActionCache backend operation '{Operation}' failed for namespace '{Namespace}'; degrading gracefully.",
             operation,
             (string)_namespace);
-
-        if (_failClosed)
-        {
-            ExceptionDispatchInfo.Capture(exception).Throw();
-        }
     }
 }

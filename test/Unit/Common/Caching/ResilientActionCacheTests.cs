@@ -32,6 +32,14 @@ public class ResilientActionCacheTests
             It.IsAny<Exception?>(),
             It.IsAny<Func<It.IsAnyType, Exception?, string>>()), times);
 
+    private void VerifyErrorLogged(Times times) =>
+        _logger.Verify(logger => logger.Log(
+            LogLevel.Error,
+            It.IsAny<EventId>(),
+            It.IsAny<It.IsAnyType>(),
+            It.IsAny<Exception?>(),
+            It.IsAny<Func<It.IsAnyType, Exception?, string>>()), times);
+
     [Test]
     public async Task GetAsync_WhenInnerThrows_FailOpen_ReturnsDefaultAndLogsWarning()
     {
@@ -53,6 +61,19 @@ public class ResilientActionCacheTests
         var act = async () => await CreateSut(failClosed: true).GetAsync<string>("key");
 
         await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("backend down");
+    }
+
+    [Test]
+    public async Task GetAsync_WhenInnerThrows_FailClosed_LogsErrorAndRethrows()
+    {
+        _inner.Setup(cache => cache.GetAsync<string>(It.IsAny<string>()))
+              .ThrowsAsync(new InvalidOperationException("backend down"));
+
+        var act = async () => await CreateSut(failClosed: true).GetAsync<string>("key");
+
+        await act.Should().ThrowAsync<InvalidOperationException>();
+        VerifyErrorLogged(Times.Once());
+        VerifyWarningLogged(Times.Never());
     }
 
     [Test]
