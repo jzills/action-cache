@@ -38,4 +38,23 @@ public class AsyncLazyTests
 
         invocations.Should().Be(1);
     }
+
+    [Test]
+    public async Task Value_WhenFirstFactoryTaskFaults_RetriesOnNextAccess()
+    {
+        var attempts = 0;
+        var lazy = new AsyncLazy<int>(() =>
+        {
+            var attempt = Interlocked.Increment(ref attempts);
+            return attempt == 1
+                ? Task.FromException<int>(new InvalidOperationException("transient"))
+                : Task.FromResult(99);
+        });
+
+        var firstAccess = async () => await lazy.Value;
+        await firstAccess.Should().ThrowAsync<InvalidOperationException>();
+
+        (await lazy.Value).Should().Be(99);
+        attempts.Should().Be(2);
+    }
 }
