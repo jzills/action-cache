@@ -31,9 +31,15 @@ public class RedisExpiryService : BackgroundService
     private readonly ILogger<RedisExpiryService> _logger;
 
     /// <summary>
-    /// The delay between failed keyspace-subscription attempts. Defaults to 30 seconds.
+    /// The initial delay before retrying a failed keyspace subscription. Each subsequent
+    /// failure backs off exponentially up to <see cref="MaxRetryDelay"/>. Defaults to 1 second.
     /// </summary>
-    internal TimeSpan RetryDelay { get; set; } = TimeSpan.FromSeconds(30);
+    internal TimeSpan InitialRetryDelay { get; set; } = TimeSpan.FromSeconds(1);
+
+    /// <summary>
+    /// The upper bound the exponential retry delay backs off to. Defaults to 30 seconds.
+    /// </summary>
+    internal TimeSpan MaxRetryDelay { get; set; } = TimeSpan.FromSeconds(30);
 
     /// <summary>
     /// Initializes a new instance of the <see cref="RedisExpiryService"/> class.
@@ -59,6 +65,7 @@ public class RedisExpiryService : BackgroundService
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         var channel = RedisChannel.Literal($"__keyevent@{Cache.Database}__:expired");
+        var retryDelay = InitialRetryDelay;
 
         while (!stoppingToken.IsCancellationRequested)
         {
@@ -84,15 +91,19 @@ public class RedisExpiryService : BackgroundService
             {
                 // A backend outage at startup must not crash the host. StackExchange.Redis
                 // re-establishes an existing subscription automatically after a reconnect, so
-                // we only need to retry until the initial subscribe succeeds.
-                _logger.LogError(
+                // we only need to retry until the initial subscribe succeeds. Failing to reach
+                // the backend is a tolerated, fail-open condition, so it is logged at Warning
+                // (matching ResilientActionCache) and backs off exponentially so a sustained
+                // outage does not flood the logs.
+                _logger.LogWarning(
                     exception,
                     "ActionCache could not subscribe to Redis keyspace expiry notifications on database {Database}; " +
                     "retrying in {RetryDelay}. Until then, sliding-expiration index cleanup relies on lazy self-healing.",
                     Cache.Database,
-                    RetryDelay);
+                    retryDelay);
 
-                await DelayQuietly(RetryDelay, stoppingToken);
+                await DelayQuietly(retryDelay, stoppingToken);
+                retryDelay = NextRetryDelay(retryDelay);
                 continue;
             }
 
@@ -100,6 +111,17 @@ public class RedisExpiryService : BackgroundService
             await DelayQuietly(Timeout.InfiniteTimeSpan, stoppingToken);
             return;
         }
+    }
+
+    /// <summary>
+    /// Doubles the current retry delay, capped at <see cref="MaxRetryDelay"/>.
+    /// </summary>
+    /// <param name="current">The delay just waited.</param>
+    /// <returns>The next delay to wait, never exceeding <see cref="MaxRetryDelay"/>.</returns>
+    internal TimeSpan NextRetryDelay(TimeSpan current)
+    {
+        var doubled = current + current;
+        return doubled < MaxRetryDelay ? doubled : MaxRetryDelay;
     }
 
     /// <summary>

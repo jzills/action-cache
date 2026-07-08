@@ -279,7 +279,7 @@ public class RedisExpiryServiceTests
                 return Task.CompletedTask;
             });
 
-        _sut.RetryDelay = TimeSpan.FromMilliseconds(20);
+        _sut.InitialRetryDelay = TimeSpan.FromMilliseconds(20);
 
         using var cts = new CancellationTokenSource();
         await _sut.StartAsync(cts.Token);
@@ -291,5 +291,22 @@ public class RedisExpiryServiceTests
             It.IsAny<RedisChannel>(),
             It.IsAny<Action<RedisChannel, RedisValue>>(),
             It.IsAny<CommandFlags>()), Times.AtLeast(2));
+    }
+
+    [Test]
+    public void NextRetryDelay_DoublesEachTime_UntilCappedAtMaxRetryDelay()
+    {
+        _sut.InitialRetryDelay = TimeSpan.FromSeconds(1);
+        _sut.MaxRetryDelay = TimeSpan.FromSeconds(8);
+
+        var first = _sut.NextRetryDelay(_sut.InitialRetryDelay);
+        var second = _sut.NextRetryDelay(first);
+        var third = _sut.NextRetryDelay(second);
+        var fourth = _sut.NextRetryDelay(third);
+
+        first.Should().Be(TimeSpan.FromSeconds(2));
+        second.Should().Be(TimeSpan.FromSeconds(4));
+        third.Should().Be(TimeSpan.FromSeconds(8));   // capped
+        fourth.Should().Be(TimeSpan.FromSeconds(8));  // stays at cap
     }
 }
