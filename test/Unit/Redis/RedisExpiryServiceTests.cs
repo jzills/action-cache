@@ -256,4 +256,40 @@ public class RedisExpiryServiceTests
         _databaseMock.Verify(db => db.SortedSetRemoveAsync(
             It.IsAny<RedisKey>(), It.IsAny<RedisValue>(), It.IsAny<CommandFlags>()), Times.Once);
     }
+
+    [Test]
+    public async Task ExecuteAsync_WhenFirstSubscribeFails_RetriesUntilItSucceeds()
+    {
+        var secondAttempt = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var attempts = 0;
+        _subscriberMock
+            .Setup(subscriber => subscriber.SubscribeAsync(
+                It.IsAny<RedisChannel>(),
+                It.IsAny<Action<RedisChannel, RedisValue>>(),
+                It.IsAny<CommandFlags>()))
+            .Returns(() =>
+            {
+                attempts++;
+                if (attempts == 1)
+                {
+                    return Task.FromException(new InvalidOperationException("redis unavailable"));
+                }
+
+                secondAttempt.TrySetResult();
+                return Task.CompletedTask;
+            });
+
+        _sut.RetryDelay = TimeSpan.FromMilliseconds(20);
+
+        using var cts = new CancellationTokenSource();
+        await _sut.StartAsync(cts.Token);
+
+        await secondAttempt.Task.WaitAsync(TimeSpan.FromSeconds(5));
+
+        attempts.Should().BeGreaterThanOrEqualTo(2);
+        _subscriberMock.Verify(subscriber => subscriber.SubscribeAsync(
+            It.IsAny<RedisChannel>(),
+            It.IsAny<Action<RedisChannel, RedisValue>>(),
+            It.IsAny<CommandFlags>()), Times.AtLeast(2));
+    }
 }
