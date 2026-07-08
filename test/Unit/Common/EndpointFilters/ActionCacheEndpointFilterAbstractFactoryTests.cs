@@ -138,4 +138,14 @@ public class ActionCacheEndpointFilterAbstractFactoryTests
 
         act.Should().Throw<InvalidCacheInstanceException>();
     }
+
+    [Test]
+    public void AddCacheInstances_WhenFactoryReturnsCache_InvokesFactoryOnce()
+    {
+        var cacheInstances = new List<IActionCache>();
+
+        _sut.AddCacheInstances((Namespace)"Test", cacheInstances);
+
+        _cacheFactoryMock.Verify(factory => factory.Create(It.IsAny<Namespace>()), Times.Once);
+    }
 }
