@@ -36,16 +36,15 @@ internal static class IServiceCollectionExtensions
 
         return services
             .AddActionCacheCommon()
-            .AddScoped<AzureCosmosActionCacheProvider>()
-            .AddScoped<IActionCacheFactory, AzureCosmosActionCacheFactory>(serviceProvider => 
-                serviceProvider.GetRequiredService<AzureCosmosActionCacheProvider>()
-                    .CreateAsync(options.DatabaseId)
-                    .GetAwaiter()
-                    .GetResult()
-            )
-            .AddSingleton(serviceProvider => 
+            .AddSingleton<AzureCosmosActionCacheProvider>()
+            .AddSingleton(serviceProvider =>
+                new AsyncLazy<Container>(() => serviceProvider
+                    .GetRequiredService<AzureCosmosActionCacheProvider>()
+                    .CreateContainerAsync(options.DatabaseId)))
+            .AddScoped<IActionCacheFactory, AzureCosmosActionCacheFactory>()
+            .AddSingleton(serviceProvider =>
                 new CosmosClient(
-                    options.ConnectionString, 
+                    options.ConnectionString,
                     options.CosmosClientOptions));
     }
 }

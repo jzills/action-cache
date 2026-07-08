@@ -16,6 +16,12 @@ public class ActionCacheOptions
     public readonly ActionCacheEntryOptions EntryOptions = new();
 
     /// <summary>
+    /// Gets or sets a value indicating whether cache-backend failures propagate to
+    /// the caller (fail-closed). Defaults to <see langword="false"/> (fail-open).
+    /// </summary>
+    public bool FailClosed { get; set; }
+
+    /// <summary>
     /// Gets or sets a delegate to configure options for <see cref="MemoryCacheOptions"/>.
     /// </summary>
     public Action<MemoryCacheOptions>? ConfigureMemoryCacheOptions { get; set; }

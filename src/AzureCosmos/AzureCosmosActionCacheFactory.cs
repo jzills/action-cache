@@ -14,18 +14,18 @@ namespace ActionCache.AzureCosmos;
 public class AzureCosmosActionCacheFactory : ActionCacheFactoryBase
 {
     /// <summary>
-    /// The Azure Cosmos DB container used as the backing store for created cache instances.
+    /// The lazily-initialized Azure Cosmos DB container shared by created cache instances.
     /// </summary>
-    protected readonly Container Cache;
+    protected readonly AsyncLazy<Container> Cache;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="AzureCosmosActionCacheFactory"/> class.
     /// </summary>
-    /// <param name="cache">The Azure Cosmos Db container to use.</param>
+    /// <param name="cache">The lazily-initialized Azure Cosmos Db container to use.</param>
     /// <param name="entryOptions">The global entry options used for creation when expiration times are not supplied.</param>
-    /// <param name="refreshProvider">The refresh provider responsible for invoking cached controller actions.</param> 
+    /// <param name="refreshProvider">The refresh provider responsible for invoking cached controller actions.</param>
     public AzureCosmosActionCacheFactory(
-        Container cache,
+        AsyncLazy<Container> cache,
         IOptions<ActionCacheEntryOptions> entryOptions,
         IActionCacheRefreshProvider refreshProvider
     ) : base(entryOptions, refreshProvider)

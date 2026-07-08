@@ -1,4 +1,5 @@
 using ActionCache;
+using ActionCache.Common.Caching;
 using ActionCache.Common.Filters;
 using ActionCache.Filters;
 using ActionCache.Utilities;
@@ -6,6 +7,8 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.AspNetCore.Routing.Template;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 using Moq;
 
 namespace Unit.Common.Filters;
@@ -38,11 +41,15 @@ public class ActionCacheFilterFactoriesTests
             .BuildServiceProvider()
             .GetRequiredService<TemplateBinderFactory>();
 
+        var resilientDecorator = new ResilientCacheDecorator(
+            NullLoggerFactory.Instance,
+            Options.Create(new ActionCacheResilienceOptions()));
+
         var mvcAbstractFactory = new ActionCacheFilterAbstractFactory(
-            [cacheFactoryMock.Object], binderFactory);
+            [cacheFactoryMock.Object], binderFactory, resilientDecorator);
 
         var endpointAbstractFactory = new ActionCacheEndpointFilterAbstractFactory(
-            [cacheFactoryMock.Object], binderFactory);
+            [cacheFactoryMock.Object], binderFactory, resilientDecorator);
 
         var services = new ServiceCollection();
         services.AddSingleton<IActionCacheFilterAbstractFactory<IFilterMetadata>>(mvcAbstractFactory);

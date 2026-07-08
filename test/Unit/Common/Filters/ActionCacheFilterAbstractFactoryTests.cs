@@ -6,6 +6,8 @@ using ActionCache.Exceptions;
 using ActionCache.Utilities;
 using Microsoft.AspNetCore.Routing.Template;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 using Moq;
 
 namespace Unit.Common.Filters;
@@ -38,7 +40,12 @@ public class ActionCacheFilterAbstractFactoryTests
             .BuildServiceProvider()
             .GetRequiredService<TemplateBinderFactory>();
 
-        _sut = new ActionCacheFilterAbstractFactory([_cacheFactoryMock.Object], _binderFactory);
+        var resilientDecorator = new ResilientCacheDecorator(
+            NullLoggerFactory.Instance,
+            Options.Create(new ActionCacheResilienceOptions()));
+
+        _sut = new ActionCacheFilterAbstractFactory(
+            [_cacheFactoryMock.Object], _binderFactory, resilientDecorator);
     }
 
     [Test]
@@ -161,5 +168,15 @@ public class ActionCacheFilterAbstractFactoryTests
         Action act = () => _sut.AddCacheInstances((Namespace)"Test", cacheInstances);
 
         act.Should().Throw<InvalidCacheInstanceException>();
+    }
+
+    [Test]
+    public void AddCacheInstances_WhenFactoryReturnsCache_InvokesFactoryOnce()
+    {
+        var cacheInstances = new List<IActionCache>();
+
+        _sut.AddCacheInstances((Namespace)"Test", cacheInstances);
+
+        _cacheFactoryMock.Verify(factory => factory.Create(It.IsAny<Namespace>()), Times.Once);
     }
 }

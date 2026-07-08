@@ -75,6 +75,20 @@ public class ActionCacheOptionsBuilder
     }
 
     /// <summary>
+    /// Configures ActionCache to fail closed: cache-backend failures propagate to the
+    /// caller instead of being swallowed. By default ActionCache fails open.
+    /// </summary>
+    /// <param name="failClosed">
+    /// <see langword="true"/> (default) to fail closed; <see langword="false"/> to fail open.
+    /// </param>
+    /// <returns>Returns this instance of <see cref="ActionCacheOptionsBuilder"/>.</returns>
+    public ActionCacheOptionsBuilder FailClosed(bool failClosed = true)
+    {
+        Options.FailClosed = failClosed;
+        return this;
+    }
+
+    /// <summary>
     /// Builds the configured <see cref="ActionCacheOptions"/>.
     /// </summary>
     /// <returns>The configured <see cref="ActionCacheOptions"/>.</returns>

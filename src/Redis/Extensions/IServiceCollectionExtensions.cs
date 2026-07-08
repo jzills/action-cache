@@ -17,7 +17,7 @@ internal static class IServiceCollectionExtensions
     /// <param name="configureOptions">An Action to configure the RedisCacheOptions.</param>
     /// <returns>The updated IServiceCollection.</returns>
     internal static IServiceCollection AddActionCacheRedis(
-        this IServiceCollection services, 
+        this IServiceCollection services,
         Action<RedisCacheOptions> configureOptions
     )
     {
@@ -26,11 +26,27 @@ internal static class IServiceCollectionExtensions
 
         ArgumentException.ThrowIfNullOrWhiteSpace(options.Configuration);
 
+        var configurationOptions = BuildConfigurationOptions(options.Configuration);
+
         return services
             .AddActionCacheCommon()
             .AddScoped<IActionCacheFactory, RedisActionCacheFactory>()
             .AddStackExchangeRedisCache(configureOptions)
-            .AddSingleton<IConnectionMultiplexer>(ConnectionMultiplexer.Connect(options.Configuration))
+            .AddSingleton<IConnectionMultiplexer>(_ => ConnectionMultiplexer.Connect(configurationOptions))
             .AddHostedService<RedisExpiryService>();
+    }
+
+    /// <summary>
+    /// Parses the Redis configuration string and disables <c>AbortOnConnectFail</c> so
+    /// that a backend that is unreachable at startup does not prevent the app from
+    /// booting; the multiplexer reconnects in the background.
+    /// </summary>
+    /// <param name="configuration">The Redis configuration string.</param>
+    /// <returns>The parsed <see cref="ConfigurationOptions"/> with background reconnect enabled.</returns>
+    internal static ConfigurationOptions BuildConfigurationOptions(string configuration)
+    {
+        var configurationOptions = ConfigurationOptions.Parse(configuration);
+        configurationOptions.AbortOnConnectFail = false;
+        return configurationOptions;
     }
 }

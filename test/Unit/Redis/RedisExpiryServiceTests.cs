@@ -1,5 +1,6 @@
 using System.Text.RegularExpressions;
 using ActionCache.Redis;
+using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using StackExchange.Redis;
 
@@ -26,7 +27,7 @@ public class RedisExpiryServiceTests
             .Setup(multiplexer => multiplexer.GetSubscriber(It.IsAny<object?>()))
             .Returns(_subscriberMock.Object);
 
-        _sut = new RedisExpiryService(_multiplexerMock.Object);
+        _sut = new RedisExpiryService(_multiplexerMock.Object, NullLogger<RedisExpiryService>.Instance);
     }
 
     [TearDown]
@@ -58,6 +59,26 @@ public class RedisExpiryServiceTests
 
         _subscriberMock.Verify(subscriber => subscriber.SubscribeAsync(
             It.Is<RedisChannel>(channel => channel == RedisChannel.Literal("__keyevent@0__:expired")),
+            It.IsAny<Action<RedisChannel, RedisValue>>(),
+            It.IsAny<CommandFlags>()), Times.Once);
+    }
+
+    [Test]
+    public async Task StartAsync_WhenConnectionUsesNonZeroDatabase_SubscribesToThatDatabasesChannel()
+    {
+        _databaseMock.Setup(database => database.Database).Returns(3);
+        _subscriberMock
+            .Setup(subscriber => subscriber.SubscribeAsync(
+                It.IsAny<RedisChannel>(),
+                It.IsAny<Action<RedisChannel, RedisValue>>(),
+                It.IsAny<CommandFlags>()))
+            .Returns(Task.CompletedTask);
+
+        using var cts = new CancellationTokenSource();
+        await _sut.StartAsync(cts.Token);
+
+        _subscriberMock.Verify(subscriber => subscriber.SubscribeAsync(
+            It.Is<RedisChannel>(channel => channel == RedisChannel.Literal("__keyevent@3__:expired")),
             It.IsAny<Action<RedisChannel, RedisValue>>(),
             It.IsAny<CommandFlags>()), Times.Once);
     }
@@ -234,5 +255,58 @@ public class RedisExpiryServiceTests
 
         _databaseMock.Verify(db => db.SortedSetRemoveAsync(
             It.IsAny<RedisKey>(), It.IsAny<RedisValue>(), It.IsAny<CommandFlags>()), Times.Once);
+    }
+
+    [Test]
+    public async Task ExecuteAsync_WhenFirstSubscribeFails_RetriesUntilItSucceeds()
+    {
+        var secondAttempt = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var attempts = 0;
+        _subscriberMock
+            .Setup(subscriber => subscriber.SubscribeAsync(
+                It.IsAny<RedisChannel>(),
+                It.IsAny<Action<RedisChannel, RedisValue>>(),
+                It.IsAny<CommandFlags>()))
+            .Returns(() =>
+            {
+                attempts++;
+                if (attempts == 1)
+                {
+                    return Task.FromException(new InvalidOperationException("redis unavailable"));
+                }
+
+                secondAttempt.TrySetResult();
+                return Task.CompletedTask;
+            });
+
+        _sut.InitialRetryDelay = TimeSpan.FromMilliseconds(20);
+
+        using var cts = new CancellationTokenSource();
+        await _sut.StartAsync(cts.Token);
+
+        await secondAttempt.Task.WaitAsync(TimeSpan.FromSeconds(5));
+
+        attempts.Should().BeGreaterThanOrEqualTo(2);
+        _subscriberMock.Verify(subscriber => subscriber.SubscribeAsync(
+            It.IsAny<RedisChannel>(),
+            It.IsAny<Action<RedisChannel, RedisValue>>(),
+            It.IsAny<CommandFlags>()), Times.AtLeast(2));
+    }
+
+    [Test]
+    public void NextRetryDelay_DoublesEachTime_UntilCappedAtMaxRetryDelay()
+    {
+        _sut.InitialRetryDelay = TimeSpan.FromSeconds(1);
+        _sut.MaxRetryDelay = TimeSpan.FromSeconds(8);
+
+        var first = _sut.NextRetryDelay(_sut.InitialRetryDelay);
+        var second = _sut.NextRetryDelay(first);
+        var third = _sut.NextRetryDelay(second);
+        var fourth = _sut.NextRetryDelay(third);
+
+        first.Should().Be(TimeSpan.FromSeconds(2));
+        second.Should().Be(TimeSpan.FromSeconds(4));
+        third.Should().Be(TimeSpan.FromSeconds(8));   // capped
+        fourth.Should().Be(TimeSpan.FromSeconds(8));  // stays at cap
     }
 }

@@ -31,11 +31,14 @@ public static class IServiceCollectionExtensions
         configureOptions.Invoke(optionsBuilder);
 
         var options = optionsBuilder.Build();
-        services.Configure<ActionCacheEntryOptions>(configureOptions => 
+        services.Configure<ActionCacheEntryOptions>(configureOptions =>
         {
             configureOptions.SlidingExpiration = options.EntryOptions.SlidingExpiration;
             configureOptions.AbsoluteExpiration = options.EntryOptions.AbsoluteExpiration;
         });
+
+        services.Configure<ActionCacheResilienceOptions>(resilienceOptions =>
+            resilienceOptions.FailClosed = options.FailClosed);
 
         if (options.ConfigureMemoryCacheOptions is not null)
         {
@@ -70,6 +73,7 @@ public static class IServiceCollectionExtensions
     ) => services
             .AddControllerInfo()
             .AddSingleton<ActionCacheDescriptorProviderFactory>()
+            .AddSingleton<ResilientCacheDecorator>()
             .AddScoped<IActionCacheFilterAbstractFactory<IFilterMetadata>, ActionCacheFilterAbstractFactory>()
             .AddScoped<IActionCacheFilterAbstractFactory<IEndpointFilter>, ActionCacheEndpointFilterAbstractFactory>()
             .AddScoped<IActionCacheRefreshProvider, ActionCacheRefreshProvider>()
