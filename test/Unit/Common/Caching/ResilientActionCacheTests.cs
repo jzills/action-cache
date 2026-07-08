@@ -2,7 +2,6 @@ using ActionCache;
 using ActionCache.Common.Caching;
 using ActionCache.Utilities;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 
 namespace Unit.Common.Caching;
@@ -144,6 +143,39 @@ public class ResilientActionCacheTests
 
         await act.Should().NotThrowAsync();
         VerifyWarningLogged(Times.Once());
+    }
+
+    [Test]
+    public async Task GetKeysAsync_WhenInnerThrows_FailClosed_Rethrows()
+    {
+        _inner.Setup(cache => cache.GetKeysAsync())
+              .ThrowsAsync(new InvalidOperationException());
+
+        var act = async () => await CreateSut(failClosed: true).GetKeysAsync();
+
+        await act.Should().ThrowAsync<InvalidOperationException>();
+    }
+
+    [Test]
+    public async Task RemoveAsyncByKey_WhenInnerThrows_FailClosed_Rethrows()
+    {
+        _inner.Setup(cache => cache.RemoveAsync(It.IsAny<string>()))
+              .ThrowsAsync(new InvalidOperationException());
+
+        var act = async () => await CreateSut(failClosed: true).RemoveAsync("key");
+
+        await act.Should().ThrowAsync<InvalidOperationException>();
+    }
+
+    [Test]
+    public async Task RefreshAsync_WhenInnerThrows_FailClosed_Rethrows()
+    {
+        _inner.Setup(cache => cache.RefreshAsync())
+              .ThrowsAsync(new InvalidOperationException());
+
+        var act = async () => await CreateSut(failClosed: true).RefreshAsync();
+
+        await act.Should().ThrowAsync<InvalidOperationException>();
     }
 
     [Test]

@@ -12,6 +12,14 @@ namespace ActionCache.Common.Caching;
 /// without caching. When constructed with <c>failClosed: true</c>, the original
 /// exception is rethrown instead.
 /// </summary>
+/// <remarks>
+/// The guard deliberately catches every exception from the inner cache — not only
+/// backend I/O errors but also, on <see cref="RefreshAsync"/>, exceptions raised while
+/// re-invoking the cached action — treating any failure as a non-critical, degradable
+/// caching error. This includes <see cref="OperationCanceledException"/>; no
+/// <see cref="IActionCache"/> operation accepts a cancellation token, so ambient
+/// cancellation is not a concern here.
+/// </remarks>
 public class ResilientActionCache : IActionCache
 {
     private readonly IActionCache _inner;
@@ -37,7 +45,7 @@ public class ResilientActionCache : IActionCache
     }
 
     /// <inheritdoc/>
-    public Namespace GetNamespace() => _inner.GetNamespace();
+    public Namespace GetNamespace() => _namespace;
 
     /// <inheritdoc/>
     public async Task<IEnumerable<string>> GetKeysAsync()
