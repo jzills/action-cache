@@ -1,4 +1,5 @@
 using System.Runtime.ExceptionServices;
+using ActionCache.Common.Diagnostics;
 using ActionCache.Utilities;
 using Microsoft.Extensions.Logging;
 
@@ -66,7 +67,17 @@ public class ResilientActionCache : IActionCache
     {
         try
         {
-            return await _inner.GetAsync<TValue>(key);
+            var value = await _inner.GetAsync<TValue>(key);
+            if (value is not null)
+            {
+                ActionCacheLog.CacheHit(_logger, key, (string)_namespace);
+            }
+            else
+            {
+                ActionCacheLog.CacheMiss(_logger, key, (string)_namespace);
+            }
+
+            return value;
         }
         catch (Exception exception)
         {
@@ -81,6 +92,7 @@ public class ResilientActionCache : IActionCache
         try
         {
             await _inner.SetAsync(key, value);
+            ActionCacheLog.CacheSet(_logger, key, (string)_namespace);
         }
         catch (Exception exception)
         {
@@ -94,6 +106,7 @@ public class ResilientActionCache : IActionCache
         try
         {
             await _inner.RemoveAsync(key);
+            ActionCacheLog.CacheKeyRemoved(_logger, key, (string)_namespace);
         }
         catch (Exception exception)
         {
@@ -107,6 +120,7 @@ public class ResilientActionCache : IActionCache
         try
         {
             await _inner.RemoveAsync();
+            ActionCacheLog.CacheEvicted(_logger, (string)_namespace);
         }
         catch (Exception exception)
         {
@@ -120,6 +134,7 @@ public class ResilientActionCache : IActionCache
         try
         {
             await _inner.RefreshAsync();
+            ActionCacheLog.CacheRefreshed(_logger, (string)_namespace);
         }
         catch (Exception exception)
         {
@@ -131,19 +146,10 @@ public class ResilientActionCache : IActionCache
     {
         if (_failClosed)
         {
-            _logger.LogError(
-                exception,
-                "ActionCache backend operation '{Operation}' failed for namespace '{Namespace}'; propagating (fail-closed).",
-                operation,
-                (string)_namespace);
-
+            ActionCacheLog.OperationFailedClosed(_logger, exception, operation, (string)_namespace);
             ExceptionDispatchInfo.Capture(exception).Throw();
         }
 
-        _logger.LogWarning(
-            exception,
-            "ActionCache backend operation '{Operation}' failed for namespace '{Namespace}'; degrading gracefully.",
-            operation,
-            (string)_namespace);
+        ActionCacheLog.OperationDegraded(_logger, exception, operation, (string)_namespace);
     }
 }

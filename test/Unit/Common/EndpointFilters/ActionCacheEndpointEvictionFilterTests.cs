@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.AspNetCore.Routing.Template;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 
 namespace Unit.Common.EndpointFilters;
@@ -29,7 +30,7 @@ public class ActionCacheEndpointEvictionFilterTests
             .BuildServiceProvider()
             .GetRequiredService<TemplateBinderFactory>();
 
-        _sut = new ActionCacheEndpointEvictionFilter(_cacheMock.Object, _binderFactory);
+        _sut = new ActionCacheEndpointEvictionFilter(_cacheMock.Object, _binderFactory, NullLogger.Instance);
     }
 
     [Test]

@@ -4,6 +4,7 @@ using ActionCache.Common.Concurrency;
 using ActionCache.Common.Concurrency.Locks;
 using ActionCache.Utilities;
 using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace ActionCache.Memory;
@@ -29,13 +30,15 @@ public class MemoryActionCacheFactory : ActionCacheFactoryBase
     /// <param name="cache">The memory cache to use.</param>
     /// <param name="expirationTokens">The expiration token source to use.</param>
     /// <param name="entryOptions">The global entry options used for creation when expiration times are not supplied.</param>
-    /// <param name="refreshProvider">The refresh provider responsible for invoking cached controller actions.</param> 
+    /// <param name="refreshProvider">The refresh provider responsible for invoking cached controller actions.</param>
+    /// <param name="loggerFactory">The factory used to create the logger for this cache factory.</param>
     public MemoryActionCacheFactory(
         IMemoryCache cache,
         IExpirationTokenSources expirationTokens,
         IOptions<ActionCacheEntryOptions> entryOptions,
-        IActionCacheRefreshProvider refreshProvider
-    ) : base(entryOptions, refreshProvider)
+        IActionCacheRefreshProvider refreshProvider,
+        ILoggerFactory loggerFactory
+    ) : base(entryOptions, refreshProvider, loggerFactory)
     {
         Cache = cache;
         ExpirationTokens = expirationTokens;
@@ -58,6 +61,7 @@ public class MemoryActionCacheFactory : ActionCacheFactoryBase
         }
         else
         {
+            LogCreationFailed(@namespace);
             return default;
         }
     }
@@ -85,6 +89,7 @@ public class MemoryActionCacheFactory : ActionCacheFactoryBase
         }
         else
         {
+            LogCreationFailed(@namespace);
             return default;
         }
     }

@@ -5,6 +5,7 @@ using ActionCache.Filters;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.AspNetCore.Routing.Template;
+using Microsoft.Extensions.Logging;
 
 namespace ActionCache.EndpointFilters;
 
@@ -18,10 +19,12 @@ public class ActionCacheEndpointEvictionFilter : ActionCacheFilterBase, IEndpoin
     /// </summary>
     /// <param name="cache">The action cache used for storing or evicting cached responses.</param>
     /// <param name="binderFactory">The template binder factory used for route value extraction.</param>
+    /// <param name="logger">The logger used to record the cache status recorded by this filter.</param>
     public ActionCacheEndpointEvictionFilter(
-        IActionCache cache, 
-        TemplateBinderFactory binderFactory
-    ) : base(cache, binderFactory)
+        IActionCache cache,
+        TemplateBinderFactory binderFactory,
+        ILogger logger
+    ) : base(cache, binderFactory, logger)
     {
     }
 
@@ -39,6 +42,7 @@ public class ActionCacheEndpointEvictionFilter : ActionCacheFilterBase, IEndpoin
         {
             AttachRouteValues(context.HttpContext.GetRouteData().Values);
             context.HttpContext.Response.Headers.AddCacheStatus(CacheStatus.Evict);
+            LogCacheStatus(CacheStatus.Evict);
 
             await Cache.RemoveAsync();
         }

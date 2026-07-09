@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.AspNetCore.Routing.Template;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 
 namespace Unit.Common.Filters;
@@ -31,7 +32,7 @@ public class ActionCacheRefreshFilterTests
             .BuildServiceProvider()
             .GetRequiredService<TemplateBinderFactory>();
 
-        _sut = new ActionCacheRefreshFilter(_cacheMock.Object, _binderFactory);
+        _sut = new ActionCacheRefreshFilter(_cacheMock.Object, _binderFactory, NullLogger.Instance);
     }
 
     [Test]

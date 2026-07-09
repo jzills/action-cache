@@ -3,6 +3,7 @@ using ActionCache.Common.Extensions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.AspNetCore.Routing.Template;
+using Microsoft.Extensions.Logging;
 
 namespace ActionCache.Filters;
 
@@ -16,10 +17,12 @@ public class ActionCacheEvictionFilter : ActionCacheFilterBase, IAsyncActionFilt
     /// </summary>
     /// <param name="cache">The cache service used for removing cache entries.</param>
     /// <param name="binderFactory">The template binder for parsing route parameters for templated namespaces.</param>
+    /// <param name="logger">The logger used to record the cache status recorded by this filter.</param>
     public ActionCacheEvictionFilter(
-        IActionCache cache, 
-        TemplateBinderFactory binderFactory
-    ) : base(cache, binderFactory)
+        IActionCache cache,
+        TemplateBinderFactory binderFactory,
+        ILogger logger
+    ) : base(cache, binderFactory, logger)
     {
     }
 
@@ -39,6 +42,7 @@ public class ActionCacheEvictionFilter : ActionCacheFilterBase, IAsyncActionFilt
             AttachRouteValues(context.RouteData.Values);
 
             context.AddCacheStatus(CacheStatus.Evict);
+            LogCacheStatus(CacheStatus.Evict);
             await Cache.RemoveAsync();
         }
     }

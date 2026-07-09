@@ -5,6 +5,7 @@ using ActionCache.SqlServer.Concurrency.Locks;
 using ActionCache.Utilities;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Caching.SqlServer;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace ActionCache.SqlServer;
@@ -28,12 +29,14 @@ public class SqlServerActionCacheFactory : ActionCacheFactoryBase
     /// <param name="sqlServerCacheOptions">SQL Server cache options; the connection string is used by the locker.</param>
     /// <param name="entryOptions">Global entry options used when expiration is not specified per namespace.</param>
     /// <param name="refreshProvider">Provider responsible for refreshing cached action results.</param>
+    /// <param name="loggerFactory">The factory used to create the logger for this cache factory.</param>
     public SqlServerActionCacheFactory(
         IDistributedCache cache,
         IOptions<SqlServerCacheOptions> sqlServerCacheOptions,
         IOptions<ActionCacheEntryOptions> entryOptions,
-        IActionCacheRefreshProvider refreshProvider
-    ) : base(entryOptions, refreshProvider)
+        IActionCacheRefreshProvider refreshProvider,
+        ILoggerFactory loggerFactory
+    ) : base(entryOptions, refreshProvider, loggerFactory)
     {
         Cache = cache;
         ConnectionString = sqlServerCacheOptions.Value.ConnectionString

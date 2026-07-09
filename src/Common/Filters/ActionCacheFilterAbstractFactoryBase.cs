@@ -4,6 +4,7 @@ using ActionCache.Common.Extensions.Internal;
 using ActionCache.Exceptions;
 using ActionCache.Utilities;
 using Microsoft.AspNetCore.Routing.Template;
+using Microsoft.Extensions.Logging;
 
 namespace ActionCache.Common.Filters;
 
@@ -32,20 +33,28 @@ public abstract class ActionCacheFilterAbstractFactoryBase<TFilter> : IActionCac
     protected readonly ResilientCacheDecorator ResilientDecorator;
 
     /// <summary>
+    /// The factory used to create loggers for the filters this factory produces.
+    /// </summary>
+    protected readonly ILoggerFactory LoggerFactory;
+
+    /// <summary>
     /// Initializes a new instance of the <see cref="ActionCacheFilterAbstractFactoryBase{TFilter}"/> class.
     /// </summary>
     /// <param name="cacheFactories">The cache factories used to create caches.</param>
     /// <param name="binderFactory">The template binder for parsing route parameters for templated namespaces.</param>
     /// <param name="resilientDecorator">Wraps created caches for graceful degradation.</param>
+    /// <param name="loggerFactory">The factory used to create loggers for the filters this factory produces.</param>
     protected ActionCacheFilterAbstractFactoryBase(
         IEnumerable<IActionCacheFactory> cacheFactories,
         TemplateBinderFactory binderFactory,
-        ResilientCacheDecorator resilientDecorator
+        ResilientCacheDecorator resilientDecorator,
+        ILoggerFactory loggerFactory
     )
     {
         CacheFactories = cacheFactories;
         BinderFactory = binderFactory;
         ResilientDecorator = resilientDecorator;
+        LoggerFactory = loggerFactory;
     }
 
     /// <inheritdoc/>

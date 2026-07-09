@@ -1,6 +1,9 @@
+using ActionCache.Common.Diagnostics;
+using ActionCache.Common.Enums;
 using ActionCache.Common.Extensions.Internal;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.AspNetCore.Routing.Template;
+using Microsoft.Extensions.Logging;
 
 namespace ActionCache.Filters;
 
@@ -20,14 +23,21 @@ public abstract class ActionCacheFilterBase
     protected readonly TemplateBinderFactory BinderFactory;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="ActionCacheFilterBase"/> class with the specified cache and template binder factory.
+    /// The logger used to record the cache status recorded by this filter.
+    /// </summary>
+    private readonly ILogger _logger;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ActionCacheFilterBase"/> class with the specified cache, template binder factory, and logger.
     /// </summary>
     /// <param name="cache">The <see cref="IActionCache"/> instance used for caching actions.</param>
     /// <param name="binderFactory">The <see cref="TemplateBinderFactory"/> instance used for binding route templates.</param>
-    internal ActionCacheFilterBase(IActionCache cache, TemplateBinderFactory binderFactory)
+    /// <param name="logger">The logger used to record the cache status recorded by this filter.</param>
+    internal ActionCacheFilterBase(IActionCache cache, TemplateBinderFactory binderFactory, ILogger logger)
     {
         Cache = cache;
         BinderFactory = binderFactory;
+        _logger = logger;
     }
 
     /// <summary>
@@ -39,4 +49,11 @@ public abstract class ActionCacheFilterBase
         var @namespace = Cache.GetNamespace();
         @namespace.AttachRouteValues(routeValues, BinderFactory);
     }
+
+    /// <summary>
+    /// Records the cache status determined by this filter.
+    /// </summary>
+    /// <param name="status">The cache status to record.</param>
+    protected void LogCacheStatus(CacheStatus status) =>
+        ActionCacheLog.FilterCacheStatus(_logger, GetType().Name, status, (string)Cache.GetNamespace());
 }

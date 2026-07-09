@@ -4,6 +4,7 @@ using ActionCache.Common.Extensions.Internal;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.AspNetCore.Routing.Template;
+using Microsoft.Extensions.Logging;
 
 namespace ActionCache.Filters;
 
@@ -17,10 +18,12 @@ public class ActionCacheFilter : ActionCacheFilterBase, IAsyncActionFilter
     /// </summary>
     /// <param name="cache">The cache implementation to use.</param>
     /// <param name="binderFactory">The binder used for namespaces with route templates.</param>
+    /// <param name="logger">The logger used to record the cache status recorded by this filter.</param>
     public ActionCacheFilter(
-        IActionCache cache, 
-        TemplateBinderFactory binderFactory
-    ) : base(cache, binderFactory)
+        IActionCache cache,
+        TemplateBinderFactory binderFactory,
+        ILogger logger
+    ) : base(cache, binderFactory, logger)
     {
     }
 
@@ -40,6 +43,7 @@ public class ActionCacheFilter : ActionCacheFilterBase, IAsyncActionFilter
             if (cacheValue is not null)
             {
                 context.AddCacheStatus(CacheStatus.Hit);
+                LogCacheStatus(CacheStatus.Hit);
                 context.Result = cacheValue;
             }
             else
@@ -49,17 +53,20 @@ public class ActionCacheFilter : ActionCacheFilterBase, IAsyncActionFilter
                     actionExecutedContext.Result.IsCacheableResult())
                 {
                     context.AddCacheStatus(CacheStatus.Add);
+                    LogCacheStatus(CacheStatus.Add);
                     await Cache.SetAsync(key, actionExecutedContext.Result);
                 }
                 else
                 {
                     context.AddCacheStatus(CacheStatus.None);
+                    LogCacheStatus(CacheStatus.None);
                 }
             }
         }
         else
         {
             context.AddCacheStatus(CacheStatus.Miss);
+            LogCacheStatus(CacheStatus.Miss);
             await next();
         }
     }

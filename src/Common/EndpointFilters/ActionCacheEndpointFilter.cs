@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.AspNetCore.Routing.Template;
 using ActionCache.MinimalApi.Extensions.Internal;
+using Microsoft.Extensions.Logging;
 
 namespace ActionCache.Filters;
 
@@ -18,10 +19,12 @@ public class ActionCacheEndpointFilter : ActionCacheFilterBase, IEndpointFilter
     /// </summary>
     /// <param name="cache">The cache implementation to use.</param>
     /// <param name="binderFactory">The binder used for namespaces with route templates.</param>
+    /// <param name="logger">The logger used to record the cache status recorded by this filter.</param>
     public ActionCacheEndpointFilter(
-        IActionCache cache, 
-        TemplateBinderFactory binderFactory
-    ) : base(cache, binderFactory)
+        IActionCache cache,
+        TemplateBinderFactory binderFactory,
+        ILogger logger
+    ) : base(cache, binderFactory, logger)
     {
     }
 
@@ -42,6 +45,7 @@ public class ActionCacheEndpointFilter : ActionCacheFilterBase, IEndpointFilter
             if (cacheValue is not null)
             {
                 context.AddCacheStatus(CacheStatus.Hit);
+                LogCacheStatus(CacheStatus.Hit);
                 return cacheValue;
             }
             else
@@ -50,11 +54,13 @@ public class ActionCacheEndpointFilter : ActionCacheFilterBase, IEndpointFilter
                 if (result.IsSuccessfulEndpointResult())
                 {
                     context.AddCacheStatus(CacheStatus.Add);
+                    LogCacheStatus(CacheStatus.Add);
                     await Cache.SetAsync(key, result);
                 }
                 else
                 {
                     context.AddCacheStatus(CacheStatus.None);
+                    LogCacheStatus(CacheStatus.None);
                 }
 
                 return result;
@@ -63,6 +69,7 @@ public class ActionCacheEndpointFilter : ActionCacheFilterBase, IEndpointFilter
         else
         {
             context.AddCacheStatus(CacheStatus.Miss);
+            LogCacheStatus(CacheStatus.Miss);
             return await next(context);
         }
     }

@@ -5,6 +5,7 @@ using ActionCache.Exceptions;
 using ActionCache.Filters;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing.Template;
+using Microsoft.Extensions.Logging;
 
 namespace ActionCache.Common.Filters;
 
@@ -19,11 +20,13 @@ public class ActionCacheEndpointFilterAbstractFactory : ActionCacheFilterAbstrac
     /// <param name="cacheFactories">The cache factories used to create caches.</param>
     /// <param name="binderFactory">The template binder for parsing route parameters for templated namespaces.</param>
     /// <param name="resilientDecorator">Wraps created caches for graceful degradation.</param>
+    /// <param name="loggerFactory">The factory used to create loggers for the filters this factory produces.</param>
     public ActionCacheEndpointFilterAbstractFactory(
         IEnumerable<IActionCacheFactory> cacheFactories,
         TemplateBinderFactory binderFactory,
-        ResilientCacheDecorator resilientDecorator
-    ) : base(cacheFactories, binderFactory, resilientDecorator)
+        ResilientCacheDecorator resilientDecorator,
+        ILoggerFactory loggerFactory
+    ) : base(cacheFactories, binderFactory, resilientDecorator, loggerFactory)
     {
     }
 
@@ -31,8 +34,8 @@ public class ActionCacheEndpointFilterAbstractFactory : ActionCacheFilterAbstrac
     internal override IEndpointFilter CreateFilter(ActionCacheHandler cache, FilterType type) =>
         type switch
         {
-            FilterType.Add      => new ActionCacheEndpointFilter(cache, BinderFactory),
-            FilterType.Evict    => new ActionCacheEndpointEvictionFilter(cache, BinderFactory),
+            FilterType.Add      => new ActionCacheEndpointFilter(cache, BinderFactory, LoggerFactory.CreateLogger<ActionCacheEndpointFilter>()),
+            FilterType.Evict    => new ActionCacheEndpointEvictionFilter(cache, BinderFactory, LoggerFactory.CreateLogger<ActionCacheEndpointEvictionFilter>()),
             _                   => throw new FilterTypeNotSupportedException(type)
         };
 }

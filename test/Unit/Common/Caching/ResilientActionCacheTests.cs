@@ -18,6 +18,7 @@ public class ResilientActionCacheTests
         _inner = new Mock<IActionCache>();
         _inner.Setup(cache => cache.GetNamespace()).Returns(new Namespace("Test"));
         _logger = new Mock<ILogger>();
+        _logger.Setup(logger => logger.IsEnabled(It.IsAny<LogLevel>())).Returns(true);
     }
 
     private ResilientActionCache CreateSut(bool failClosed = false) =>

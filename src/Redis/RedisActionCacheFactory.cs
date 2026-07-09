@@ -3,6 +3,7 @@ using ActionCache.Common.Caching;
 using ActionCache.Common.Concurrency;
 using ActionCache.Common.Concurrency.Locks;
 using ActionCache.Utilities;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using StackExchange.Redis;
 
@@ -24,11 +25,13 @@ public class RedisActionCacheFactory : ActionCacheFactoryBase
     /// <param name="connectionMultiplexer">The Redis connection multiplexer used to obtain the database instance.</param>
     /// <param name="entryOptions">The global entry options used for creation when expiration times are not supplied.</param>
     /// <param name="refreshProvider">The refresh provider to handle cache refreshes.</param>
+    /// <param name="loggerFactory">The factory used to create the logger for this cache factory.</param>
     public RedisActionCacheFactory(
         IConnectionMultiplexer connectionMultiplexer,
         IOptions<ActionCacheEntryOptions> entryOptions,
-        IActionCacheRefreshProvider refreshProvider
-    ) : base(entryOptions, refreshProvider)
+        IActionCacheRefreshProvider refreshProvider,
+        ILoggerFactory loggerFactory
+    ) : base(entryOptions, refreshProvider, loggerFactory)
     {
         Cache = connectionMultiplexer.GetDatabase();
     }

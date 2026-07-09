@@ -19,7 +19,7 @@ dotnet test test/Unit/Unit.csproj
 dotnet test test/Integration/Integration.csproj
 ```
 
-The library targets both `net8.0` and `net9.0`.
+The library targets both `net8.0` and `net10.0`.
 
 ## What This Project Is
 

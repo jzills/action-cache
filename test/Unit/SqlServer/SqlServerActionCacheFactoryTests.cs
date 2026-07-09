@@ -6,6 +6,7 @@ using ActionCache.SqlServer;
 using ActionCache.Utilities;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Caching.SqlServer;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Moq;
 
@@ -34,7 +35,8 @@ public class SqlServerActionCacheFactoryTests
             _cacheMock.Object,
             _sqlServerOptions,
             _entryOptions,
-            _refreshProviderMock.Object);
+            _refreshProviderMock.Object,
+            NullLoggerFactory.Instance);
     }
 
     [Test]
@@ -97,7 +99,8 @@ public class SqlServerActionCacheFactoryTests
             _cacheMock.Object,
             _sqlServerOptions,
             configuredOptions,
-            _refreshProviderMock.Object);
+            _refreshProviderMock.Object,
+            NullLoggerFactory.Instance);
 
         var cache = factory.Create((Namespace)"TestNs", TimeSpan.FromMinutes(5), null);
 

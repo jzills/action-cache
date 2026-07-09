@@ -1,5 +1,6 @@
 using ActionCache.Common.Caching;
 using ActionCache.Utilities;
+using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 
 namespace Unit.Common.Caching;
@@ -14,7 +15,7 @@ public class ActionCacheRefreshProviderTests
     public void SetUp()
     {
         _descriptorProviderMock = new Mock<IActionCacheDescriptorProvider>();
-        _sut = new ActionCacheRefreshProvider(_descriptorProviderMock.Object);
+        _sut = new ActionCacheRefreshProvider(_descriptorProviderMock.Object, NullLogger<ActionCacheRefreshProvider>.Instance);
     }
 
     [Test]
