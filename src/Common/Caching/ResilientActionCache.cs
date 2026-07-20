@@ -68,13 +68,16 @@ public class ResilientActionCache : IActionCache
         try
         {
             var value = await _inner.GetAsync<TValue>(key);
-            if (value is not null)
+            if (_logger.IsEnabled(LogLevel.Debug))
             {
-                ActionCacheLog.CacheHit(_logger, key, (string)_namespace);
-            }
-            else
-            {
-                ActionCacheLog.CacheMiss(_logger, key, (string)_namespace);
+                if (value is not null)
+                {
+                    ActionCacheLog.CacheHit(_logger, key, (string)_namespace);
+                }
+                else
+                {
+                    ActionCacheLog.CacheMiss(_logger, key, (string)_namespace);
+                }
             }
 
             return value;
@@ -92,7 +95,10 @@ public class ResilientActionCache : IActionCache
         try
         {
             await _inner.SetAsync(key, value);
-            ActionCacheLog.CacheSet(_logger, key, (string)_namespace);
+            if (_logger.IsEnabled(LogLevel.Debug))
+            {
+                ActionCacheLog.CacheSet(_logger, key, (string)_namespace);
+            }
         }
         catch (Exception exception)
         {
@@ -106,7 +112,10 @@ public class ResilientActionCache : IActionCache
         try
         {
             await _inner.RemoveAsync(key);
-            ActionCacheLog.CacheKeyRemoved(_logger, key, (string)_namespace);
+            if (_logger.IsEnabled(LogLevel.Debug))
+            {
+                ActionCacheLog.CacheKeyRemoved(_logger, key, (string)_namespace);
+            }
         }
         catch (Exception exception)
         {
@@ -120,7 +129,10 @@ public class ResilientActionCache : IActionCache
         try
         {
             await _inner.RemoveAsync();
-            ActionCacheLog.CacheEvicted(_logger, (string)_namespace);
+            if (_logger.IsEnabled(LogLevel.Debug))
+            {
+                ActionCacheLog.CacheEvicted(_logger, (string)_namespace);
+            }
         }
         catch (Exception exception)
         {
@@ -134,7 +146,10 @@ public class ResilientActionCache : IActionCache
         try
         {
             await _inner.RefreshAsync();
-            ActionCacheLog.CacheRefreshed(_logger, (string)_namespace);
+            if (_logger.IsEnabled(LogLevel.Debug))
+            {
+                ActionCacheLog.CacheRefreshed(_logger, (string)_namespace);
+            }
         }
         catch (Exception exception)
         {

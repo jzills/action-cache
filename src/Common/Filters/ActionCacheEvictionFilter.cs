@@ -17,7 +17,7 @@ public class ActionCacheEvictionFilter : ActionCacheFilterBase, IAsyncActionFilt
     /// </summary>
     /// <param name="cache">The cache service used for removing cache entries.</param>
     /// <param name="binderFactory">The template binder for parsing route parameters for templated namespaces.</param>
-    /// <param name="logger">The logger used to record the cache status recorded by this filter.</param>
+    /// <param name="logger">The logger used to record filter-level conditions the cache layer cannot observe.</param>
     public ActionCacheEvictionFilter(
         IActionCache cache,
         TemplateBinderFactory binderFactory,
@@ -42,7 +42,6 @@ public class ActionCacheEvictionFilter : ActionCacheFilterBase, IAsyncActionFilt
             AttachRouteValues(context.RouteData.Values);
 
             context.AddCacheStatus(CacheStatus.Evict);
-            LogCacheStatus(CacheStatus.Evict);
             await Cache.RemoveAsync();
         }
     }

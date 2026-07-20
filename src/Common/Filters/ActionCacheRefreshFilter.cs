@@ -17,7 +17,7 @@ internal class ActionCacheRefreshFilter : ActionCacheFilterBase, IAsyncResultFil
     /// </summary>
     /// <param name="cache">The cache service used for refreshing cache entries.</param>
     /// <param name="binderFactory">The template binder for parsing route parameters for templated namespaces.</param>
-    /// <param name="logger">The logger used to record the cache status recorded by this filter.</param>
+    /// <param name="logger">The logger used to record filter-level conditions the cache layer cannot observe.</param>
     public ActionCacheRefreshFilter(
         IActionCache cache,
         TemplateBinderFactory binderFactory,
@@ -43,7 +43,6 @@ internal class ActionCacheRefreshFilter : ActionCacheFilterBase, IAsyncResultFil
             
             await Cache.RefreshAsync();
             context.AddCacheStatus(CacheStatus.Refresh);
-            LogCacheStatus(CacheStatus.Refresh);
         }
         
         await next();

@@ -1,5 +1,4 @@
 using ActionCache.Common.Diagnostics;
-using ActionCache.Common.Enums;
 using ActionCache.Common.Extensions.Internal;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.AspNetCore.Routing.Template;
@@ -23,7 +22,7 @@ public abstract class ActionCacheFilterBase
     protected readonly TemplateBinderFactory BinderFactory;
 
     /// <summary>
-    /// The logger used to record the cache status recorded by this filter.
+    /// The logger used to record filter-level conditions the cache layer cannot observe.
     /// </summary>
     private readonly ILogger _logger;
 
@@ -32,7 +31,7 @@ public abstract class ActionCacheFilterBase
     /// </summary>
     /// <param name="cache">The <see cref="IActionCache"/> instance used for caching actions.</param>
     /// <param name="binderFactory">The <see cref="TemplateBinderFactory"/> instance used for binding route templates.</param>
-    /// <param name="logger">The logger used to record the cache status recorded by this filter.</param>
+    /// <param name="logger">The logger used to record filter-level conditions the cache layer cannot observe.</param>
     internal ActionCacheFilterBase(IActionCache cache, TemplateBinderFactory binderFactory, ILogger logger)
     {
         Cache = cache;
@@ -51,9 +50,24 @@ public abstract class ActionCacheFilterBase
     }
 
     /// <summary>
-    /// Records the cache status determined by this filter.
+    /// Records that no cache key could be constructed for the current request, so it executed uncached.
     /// </summary>
-    /// <param name="status">The cache status to record.</param>
-    protected void LogCacheStatus(CacheStatus status) =>
-        ActionCacheLog.FilterCacheStatus(_logger, GetType().Name, status, (string)Cache.GetNamespace());
+    protected void LogCacheKeyUnavailable()
+    {
+        if (_logger.IsEnabled(LogLevel.Debug))
+        {
+            ActionCacheLog.FilterCacheKeyUnavailable(_logger, GetType().Name, (string)Cache.GetNamespace());
+        }
+    }
+
+    /// <summary>
+    /// Records that the action produced a result that was not cacheable, so no entry was stored.
+    /// </summary>
+    protected void LogResultNotCacheable()
+    {
+        if (_logger.IsEnabled(LogLevel.Debug))
+        {
+            ActionCacheLog.FilterResultNotCacheable(_logger, GetType().Name, (string)Cache.GetNamespace());
+        }
+    }
 }

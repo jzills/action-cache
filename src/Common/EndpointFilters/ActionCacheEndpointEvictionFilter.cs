@@ -19,7 +19,7 @@ public class ActionCacheEndpointEvictionFilter : ActionCacheFilterBase, IEndpoin
     /// </summary>
     /// <param name="cache">The action cache used for storing or evicting cached responses.</param>
     /// <param name="binderFactory">The template binder factory used for route value extraction.</param>
-    /// <param name="logger">The logger used to record the cache status recorded by this filter.</param>
+    /// <param name="logger">The logger used to record filter-level conditions the cache layer cannot observe.</param>
     public ActionCacheEndpointEvictionFilter(
         IActionCache cache,
         TemplateBinderFactory binderFactory,
@@ -42,7 +42,6 @@ public class ActionCacheEndpointEvictionFilter : ActionCacheFilterBase, IEndpoin
         {
             AttachRouteValues(context.HttpContext.GetRouteData().Values);
             context.HttpContext.Response.Headers.AddCacheStatus(CacheStatus.Evict);
-            LogCacheStatus(CacheStatus.Evict);
 
             await Cache.RemoveAsync();
         }

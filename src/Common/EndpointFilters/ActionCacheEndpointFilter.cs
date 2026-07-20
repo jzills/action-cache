@@ -19,7 +19,7 @@ public class ActionCacheEndpointFilter : ActionCacheFilterBase, IEndpointFilter
     /// </summary>
     /// <param name="cache">The cache implementation to use.</param>
     /// <param name="binderFactory">The binder used for namespaces with route templates.</param>
-    /// <param name="logger">The logger used to record the cache status recorded by this filter.</param>
+    /// <param name="logger">The logger used to record filter-level conditions the cache layer cannot observe.</param>
     public ActionCacheEndpointFilter(
         IActionCache cache,
         TemplateBinderFactory binderFactory,
@@ -45,7 +45,6 @@ public class ActionCacheEndpointFilter : ActionCacheFilterBase, IEndpointFilter
             if (cacheValue is not null)
             {
                 context.AddCacheStatus(CacheStatus.Hit);
-                LogCacheStatus(CacheStatus.Hit);
                 return cacheValue;
             }
             else
@@ -54,13 +53,12 @@ public class ActionCacheEndpointFilter : ActionCacheFilterBase, IEndpointFilter
                 if (result.IsSuccessfulEndpointResult())
                 {
                     context.AddCacheStatus(CacheStatus.Add);
-                    LogCacheStatus(CacheStatus.Add);
                     await Cache.SetAsync(key, result);
                 }
                 else
                 {
                     context.AddCacheStatus(CacheStatus.None);
-                    LogCacheStatus(CacheStatus.None);
+                    LogResultNotCacheable();
                 }
 
                 return result;
@@ -69,7 +67,7 @@ public class ActionCacheEndpointFilter : ActionCacheFilterBase, IEndpointFilter
         else
         {
             context.AddCacheStatus(CacheStatus.Miss);
-            LogCacheStatus(CacheStatus.Miss);
+            LogCacheKeyUnavailable();
             return await next(context);
         }
     }
