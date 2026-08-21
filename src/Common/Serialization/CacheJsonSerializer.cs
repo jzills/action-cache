@@ -1,44 +1,49 @@
-using Newtonsoft.Json;
+using System.Text.Json;
+using System.Text.Json.Serialization;
+using System.Text.Json.Serialization.Metadata;
 
 namespace ActionCache.Common.Serialization;
 
 /// <summary>
-/// Provides methods for serializing and deserializing JSON data with custom settings.
+/// Serializes the values ActionCache stores in a backend.
 /// </summary>
+/// <remarks>
+/// System.Text.Json with no polymorphism. Earlier versions used Newtonsoft with
+/// <c>TypeNameHandling.Auto</c> and a deny-list binder, so a cache entry could name the
+/// type to instantiate on read; responses are now stored as a
+/// <see cref="ActionCache.Common.Responses.CachedResponse"/> of primitives, and nothing
+/// in a cached payload can influence which types are constructed.
+/// </remarks>
 internal static class CacheJsonSerializer
 {
     /// <summary>
-    /// Gets the JSON serializer settings used for serialization and deserialization.
-    /// This includes settings for handling type names, avoiding reference loops, 
-    /// and using custom converters.
+    /// The options used for every value written to and read from a backend. The
+    /// source-generated context is tried first and reflection fills in for the
+    /// caller-supplied types that reach <see cref="ActionCache.IActionCache"/> directly.
     /// </summary>
-    internal static readonly JsonSerializerSettings SerializerSettings = new JsonSerializerSettings
+    internal static readonly JsonSerializerOptions SerializerOptions = new()
     {
-        // Auto only embeds $type when the runtime type differs from the declared type
-        // (e.g. IActionResult → OkObjectResult). A binder restricts which types may be
-        // instantiated from a $type field, blocking known deserialization gadget chains.
-        TypeNameHandling = TypeNameHandling.Auto,
-        SerializationBinder = new SafeSerializationBinder(),
-        ReferenceLoopHandling = ReferenceLoopHandling.Ignore,
-        Converters = new List<JsonConverter> { new ActionArgumentsConverter() }
+        TypeInfoResolver = JsonTypeInfoResolver.Combine(
+            CacheJsonSerializerContext.Default,
+            new DefaultJsonTypeInfoResolver()),
+        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
     };
 
     /// <summary>
-    /// Serializes an object to a JSON string using the predefined serializer settings.
+    /// Serializes a value to JSON.
     /// </summary>
-    /// <typeparam name="T">The type of the object to serialize.</typeparam>
-    /// <param name="obj">The object to serialize. Can be null.</param>
-    /// <returns>A JSON string representation of the object.</returns>
+    /// <typeparam name="T">The type of the value to serialize.</typeparam>
+    /// <param name="obj">The value to serialize. Can be null.</param>
+    /// <returns>A JSON string representation of the value.</returns>
     internal static string Serialize<T>(T? obj) =>
-        JsonConvert.SerializeObject(obj, typeof(T), SerializerSettings);
+        JsonSerializer.Serialize(obj, typeof(T), SerializerOptions);
 
     /// <summary>
-    /// Deserializes a JSON string to an object of type <typeparamref name="T"/> 
-    /// using the predefined serializer settings.
+    /// Deserializes a JSON string.
     /// </summary>
-    /// <typeparam name="T">The type to which the JSON string is deserialized.</typeparam>
+    /// <typeparam name="T">The type to deserialize into.</typeparam>
     /// <param name="json">The JSON string to deserialize.</param>
-    /// <returns>An object of type <typeparamref name="T"/>, or null if deserialization fails.</returns>
-    internal static T? Deserialize<T>(string json) => 
-        JsonConvert.DeserializeObject<T>(json, SerializerSettings);
+    /// <returns>The deserialized value, or <see langword="null"/> if it could not be read.</returns>
+    internal static T? Deserialize<T>(string json) =>
+        (T?)JsonSerializer.Deserialize(json, typeof(T), SerializerOptions);
 }

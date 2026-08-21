@@ -1,5 +1,6 @@
 using Unit.TestUtilities.Builders;
 using ActionCache;
+using ActionCache.Common.Responses;
 using ActionCache.Filters;
 using ActionCache.Utilities;
 using Microsoft.AspNetCore.Http;
@@ -31,7 +32,7 @@ public class ActionCacheEndpointFilterTests
             .BuildServiceProvider()
             .GetRequiredService<TemplateBinderFactory>();
 
-        _sut = new ActionCacheEndpointFilter(_cacheMock.Object, _binderFactory, NullLogger.Instance, SingleFlightBuilder.Build(), true, VaryByBuilder.Resolver(), VaryByBuilder.Options());
+        _sut = new ActionCacheEndpointFilter(_cacheMock.Object, _binderFactory, NullLogger.Instance, SingleFlightBuilder.Build(), true, VaryByBuilder.Resolver(), VaryByBuilder.Options(), ResponseFactoryBuilder.Build());
     }
 
     [Test]
@@ -58,7 +59,7 @@ public class ActionCacheEndpointFilterTests
     {
         var httpContext = BuildHttpContextWithEndpoint();
         var context = BuildContext(httpContext);
-        _cacheMock.Setup(cache => cache.GetAsync<object?>(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync("cached");
+        _cacheMock.Setup(cache => cache.GetAsync<CachedResponse>(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(new CachedResponse { StatusCode = 200, ContentType = "application/json", Body = "\"cached\"" });
 
         var nextCalled = false;
         EndpointFilterDelegate next = ctx =>
@@ -70,7 +71,9 @@ public class ActionCacheEndpointFilterTests
         var result = await _sut.InvokeAsync(context, next);
 
         nextCalled.Should().BeFalse();
-        result.Should().Be("cached");
+
+        // A hit now returns a result rebuilt from the stored envelope, not the raw value.
+        result.Should().BeAssignableTo<IResult>();
     }
 
     [Test]
@@ -78,7 +81,7 @@ public class ActionCacheEndpointFilterTests
     {
         var httpContext = BuildHttpContextWithEndpoint();
         var context = BuildContext(httpContext);
-        _cacheMock.Setup(cache => cache.GetAsync<object?>(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync((object?)null);
+        _cacheMock.Setup(cache => cache.GetAsync<CachedResponse>(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync((CachedResponse?)null);
 
         EndpointFilterDelegate next = ctx => ValueTask.FromResult<object?>("fresh-result");
 
@@ -93,7 +96,7 @@ public class ActionCacheEndpointFilterTests
     {
         var httpContext = BuildHttpContextWithEndpoint();
         var context = BuildContext(httpContext);
-        _cacheMock.Setup(cache => cache.GetAsync<object?>(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync((object?)null);
+        _cacheMock.Setup(cache => cache.GetAsync<CachedResponse>(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync((CachedResponse?)null);
 
         EndpointFilterDelegate next = ctx => ValueTask.FromResult<object?>(null);
 
@@ -108,7 +111,7 @@ public class ActionCacheEndpointFilterTests
     {
         var httpContext = BuildHttpContextWithEndpoint();
         var context = BuildContext(httpContext);
-        _cacheMock.Setup(cache => cache.GetAsync<object?>(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync((object?)null);
+        _cacheMock.Setup(cache => cache.GetAsync<CachedResponse>(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync((CachedResponse?)null);
 
         // TypedResults.NotFound() implements IStatusCodeHttpResult with status 404.
         EndpointFilterDelegate next = ctx => ValueTask.FromResult<object?>(TypedResults.NotFound());
@@ -123,7 +126,7 @@ public class ActionCacheEndpointFilterTests
     {
         var httpContext = BuildHttpContextWithEndpoint();
         var context = BuildContext(httpContext);
-        _cacheMock.Setup(cache => cache.GetAsync<object?>(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync((object?)null);
+        _cacheMock.Setup(cache => cache.GetAsync<CachedResponse>(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync((CachedResponse?)null);
 
         // TypedResults.Ok(value) implements IStatusCodeHttpResult with status 200.
         EndpointFilterDelegate next = ctx => ValueTask.FromResult<object?>(TypedResults.Ok("fresh"));

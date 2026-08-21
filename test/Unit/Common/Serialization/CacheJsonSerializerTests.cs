@@ -1,15 +1,12 @@
 using ActionCache.Common.Serialization;
-using Newtonsoft.Json;
 
 namespace Unit.Common.Serialization;
 
-// C1 fix: CacheJsonSerializer previously used TypeNameHandling.All which embedded $type in
-// every payload, making every cache value a potential RCE gadget target for anyone with
-// cache-write access. Fixed to TypeNameHandling.Auto + SafeSerializationBinder:
-//   - Auto: $type is only emitted when the runtime type differs from the declared type
-//     (i.e., only for genuine polymorphic scenarios such as IActionResult → OkObjectResult).
-//   - SafeSerializationBinder: restricts which types may be instantiated from $type,
-//     blocking known gadget-chain namespaces and unloaded assemblies.
+// CacheJsonSerializer serializes cache *values*. It is now System.Text.Json with no
+// polymorphism at all: responses are stored as a CachedResponse of primitives, so nothing
+// in a cached payload can name a type for deserialization to construct. The gadget-chain
+// tests that used to live here moved to KeyComponentSerializerTests, which covers the one
+// remaining Newtonsoft path (cache-key reversal, deleted when refresh stops reflecting).
 
 [TestFixture]
 public class CacheJsonSerializerTests
@@ -39,19 +36,6 @@ public class CacheJsonSerializerTests
         var json = CacheJsonSerializer.Serialize(new UserDto("Alice", 30));
 
         json.Should().NotContain(nameof(UserDto));
-    }
-
-    [Test]
-    public void Deserialize_BlockedGadgetChainType_ThrowsJsonSerializationException()
-    {
-        // An attacker who writes directly to the cache backend might plant a $type that
-        // references a known gadget-chain namespace. SafeSerializationBinder must reject it.
-        var maliciousPayload = """{"$type":"System.Windows.Data.ObjectDataProvider, PresentationFramework","MethodName":"Start"}""";
-
-        Action act = () => CacheJsonSerializer.Deserialize<object>(maliciousPayload);
-
-        act.Should().Throw<JsonSerializationException>()
-            .WithMessage("*Error resolving type*System.Windows*");
     }
 
     [Test]

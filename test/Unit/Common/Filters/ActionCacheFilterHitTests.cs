@@ -1,5 +1,6 @@
 using Unit.TestUtilities.Builders;
 using ActionCache;
+using ActionCache.Common.Responses;
 using ActionCache.Filters;
 using ActionCache.Utilities;
 using Microsoft.AspNetCore.Http;
@@ -33,15 +34,15 @@ public class ActionCacheFilterHitTests
             .BuildServiceProvider()
             .GetRequiredService<TemplateBinderFactory>();
 
-        _sut = new ActionCacheFilter(_cacheMock.Object, _binderFactory, NullLogger.Instance, SingleFlightBuilder.Build(), true, VaryByBuilder.Resolver(), VaryByBuilder.Options());
+        _sut = new ActionCacheFilter(_cacheMock.Object, _binderFactory, NullLogger.Instance, SingleFlightBuilder.Build(), true, VaryByBuilder.Resolver(), VaryByBuilder.Options(), ResponseFactoryBuilder.Build());
     }
 
     [Test]
     public async Task OnActionExecutionAsync_WhenCacheHit_ShortCircuitsWithCachedResult()
     {
-        var cachedResult = new OkObjectResult("cached");
-        _cacheMock.Setup(cache => cache.GetAsync<IActionResult?>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(cachedResult);
+        var cachedResponse = new CachedResponse { StatusCode = 200, ContentType = "application/json", Body = "\"cached\"" };
+        _cacheMock.Setup(cache => cache.GetAsync<CachedResponse>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(cachedResponse);
 
         var context = BuildActionExecutingContext();
         var nextCalled = false;
@@ -54,14 +55,18 @@ public class ActionCacheFilterHitTests
         await _sut.OnActionExecutionAsync(context, next);
 
         nextCalled.Should().BeFalse();
-        context.Result.Should().Be(cachedResult);
+        // The filter now rebuilds a ContentResult from the stored envelope rather than
+        // handing back a deserialized result graph.
+        var result = context.Result as ContentResult;
+        result!.StatusCode.Should().Be(200);
+        result.Content.Should().Be("\"cached\"");
     }
 
     [Test]
     public async Task OnActionExecutionAsync_WhenCacheMissAndResultIsNull_DoesNotSetCache()
     {
-        _cacheMock.Setup(cache => cache.GetAsync<IActionResult?>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((IActionResult?)null);
+        _cacheMock.Setup(cache => cache.GetAsync<CachedResponse>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((CachedResponse?)null);
 
         var context = BuildActionExecutingContext();
         ActionExecutionDelegate next = () =>
@@ -75,7 +80,7 @@ public class ActionCacheFilterHitTests
 
         await _sut.OnActionExecutionAsync(context, next);
 
-        _cacheMock.Verify(cache => cache.SetAsync(It.IsAny<string>(), It.IsAny<IActionResult>(), It.IsAny<CancellationToken>()), Times.Never);
+        _cacheMock.Verify(cache => cache.SetAsync(It.IsAny<string>(), It.IsAny<CachedResponse>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Test]
@@ -97,8 +102,8 @@ public class ActionCacheFilterHitTests
     [Test]
     public async Task OnActionExecutionAsync_WhenCacheMissAndResultIsNonNull_StoresCacheEntry()
     {
-        _cacheMock.Setup(cache => cache.GetAsync<IActionResult?>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((IActionResult?)null);
+        _cacheMock.Setup(cache => cache.GetAsync<CachedResponse>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((CachedResponse?)null);
 
         var context = BuildActionExecutingContext();
         ActionExecutionDelegate next = () =>
@@ -112,14 +117,14 @@ public class ActionCacheFilterHitTests
 
         await _sut.OnActionExecutionAsync(context, next);
 
-        _cacheMock.Verify(cache => cache.SetAsync(It.IsAny<string>(), It.IsAny<IActionResult>(), It.IsAny<CancellationToken>()), Times.Once);
+        _cacheMock.Verify(cache => cache.SetAsync(It.IsAny<string>(), It.IsAny<CachedResponse>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Test]
     public async Task OnActionExecutionAsync_WhenCacheMissAndResultIsError_DoesNotStoreCacheEntry()
     {
-        _cacheMock.Setup(cache => cache.GetAsync<IActionResult?>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((IActionResult?)null);
+        _cacheMock.Setup(cache => cache.GetAsync<CachedResponse>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((CachedResponse?)null);
 
         var context = BuildActionExecutingContext();
         ActionExecutionDelegate next = () =>
@@ -133,14 +138,14 @@ public class ActionCacheFilterHitTests
 
         await _sut.OnActionExecutionAsync(context, next);
 
-        _cacheMock.Verify(cache => cache.SetAsync(It.IsAny<string>(), It.IsAny<IActionResult>(), It.IsAny<CancellationToken>()), Times.Never);
+        _cacheMock.Verify(cache => cache.SetAsync(It.IsAny<string>(), It.IsAny<CachedResponse>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Test]
     public async Task OnActionExecutionAsync_WhenCacheMissAndResultIsPocoObjectResult_StoresCacheEntry()
     {
-        _cacheMock.Setup(cache => cache.GetAsync<IActionResult?>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((IActionResult?)null);
+        _cacheMock.Setup(cache => cache.GetAsync<CachedResponse>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((CachedResponse?)null);
 
         var context = BuildActionExecutingContext();
         ActionExecutionDelegate next = () =>
@@ -155,14 +160,14 @@ public class ActionCacheFilterHitTests
 
         await _sut.OnActionExecutionAsync(context, next);
 
-        _cacheMock.Verify(cache => cache.SetAsync(It.IsAny<string>(), It.IsAny<IActionResult>(), It.IsAny<CancellationToken>()), Times.Once);
+        _cacheMock.Verify(cache => cache.SetAsync(It.IsAny<string>(), It.IsAny<CachedResponse>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Test]
     public async Task OnActionExecutionAsync_WhenCacheMissAndResultIsSuccessfulJsonResult_StoresCacheEntry()
     {
-        _cacheMock.Setup(cache => cache.GetAsync<IActionResult?>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((IActionResult?)null);
+        _cacheMock.Setup(cache => cache.GetAsync<CachedResponse>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((CachedResponse?)null);
 
         var context = BuildActionExecutingContext();
         ActionExecutionDelegate next = () =>
@@ -178,14 +183,14 @@ public class ActionCacheFilterHitTests
 
         await _sut.OnActionExecutionAsync(context, next);
 
-        _cacheMock.Verify(cache => cache.SetAsync(It.IsAny<string>(), It.IsAny<IActionResult>(), It.IsAny<CancellationToken>()), Times.Once);
+        _cacheMock.Verify(cache => cache.SetAsync(It.IsAny<string>(), It.IsAny<CachedResponse>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Test]
     public async Task OnActionExecutionAsync_WhenCacheMissAndResultIsErrorJsonResult_DoesNotStoreCacheEntry()
     {
-        _cacheMock.Setup(cache => cache.GetAsync<IActionResult?>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((IActionResult?)null);
+        _cacheMock.Setup(cache => cache.GetAsync<CachedResponse>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((CachedResponse?)null);
 
         var context = BuildActionExecutingContext();
         ActionExecutionDelegate next = () =>
@@ -199,7 +204,7 @@ public class ActionCacheFilterHitTests
 
         await _sut.OnActionExecutionAsync(context, next);
 
-        _cacheMock.Verify(cache => cache.SetAsync(It.IsAny<string>(), It.IsAny<IActionResult>(), It.IsAny<CancellationToken>()), Times.Never);
+        _cacheMock.Verify(cache => cache.SetAsync(It.IsAny<string>(), It.IsAny<CachedResponse>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     private static ActionExecutingContext BuildActionExecutingContext(

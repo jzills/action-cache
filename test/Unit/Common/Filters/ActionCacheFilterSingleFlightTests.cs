@@ -1,6 +1,7 @@
 using Unit.TestUtilities.Builders;
 using ActionCache;
 using ActionCache.Common.Concurrency;
+using ActionCache.Common.Responses;
 using ActionCache.Common.Enums;
 using ActionCache.Filters;
 using ActionCache.Utilities;
@@ -72,7 +73,7 @@ public class ActionCacheFilterSingleFlightTests
     }
 
     private ActionCacheFilter CreateFilter(IActionCache cache, IActionCacheSingleFlight singleFlight, bool enabled) =>
-        new(cache, _binderFactory, NullLogger.Instance, singleFlight, enabled, VaryByBuilder.Resolver(), VaryByBuilder.Options());
+        new(cache, _binderFactory, NullLogger.Instance, singleFlight, enabled, VaryByBuilder.Resolver(), VaryByBuilder.Options(), ResponseFactoryBuilder.Build());
 
     private static InProcessSingleFlight CreateSingleFlight() =>
         new(new ActionCacheSingleFlightOptions(), NullLogger<InProcessSingleFlight>.Instance);
@@ -128,7 +129,7 @@ public class ActionCacheFilterSingleFlightTests
         });
 
         waiterExecuted.Should().BeFalse();
-        waiterContext.Result.Should().Be(leaderResult);
+        (waiterContext.Result as ContentResult)!.Content.Should().Be("\"fresh\"");
         waiterContext.HttpContext.Response.Headers[CacheHeaders.CacheStatus]
             .ToString().Should().Be(nameof(CacheStatus.Hit));
     }

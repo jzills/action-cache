@@ -1,5 +1,6 @@
 using Unit.TestUtilities.Builders;
 using ActionCache;
+using ActionCache.Common.Responses;
 using ActionCache.Filters;
 using ActionCache.Utilities;
 using Microsoft.AspNetCore.Http;
@@ -40,7 +41,7 @@ public class ActionCacheFilterLoggingTests
             .GetRequiredService<TemplateBinderFactory>();
 
         _logger = new CapturingLogger();
-        _sut = new ActionCacheFilter(_cacheMock.Object, binderFactory, _logger, SingleFlightBuilder.Build(), true, VaryByBuilder.Resolver(), VaryByBuilder.Options());
+        _sut = new ActionCacheFilter(_cacheMock.Object, binderFactory, _logger, SingleFlightBuilder.Build(), true, VaryByBuilder.Resolver(), VaryByBuilder.Options(), ResponseFactoryBuilder.Build());
     }
 
     [Test]
@@ -76,8 +77,8 @@ public class ActionCacheFilterLoggingTests
     [Test]
     public async Task OnActionExecutionAsync_WhenResultNotCacheable_LogsResultNotCacheable()
     {
-        _cacheMock.Setup(cache => cache.GetAsync<IActionResult?>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((IActionResult?)null);
+        _cacheMock.Setup(cache => cache.GetAsync<CachedResponse>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((CachedResponse?)null);
 
         var context = BuildActionExecutingContext();
         ActionExecutionDelegate next = () =>
@@ -100,8 +101,8 @@ public class ActionCacheFilterLoggingTests
     [Test]
     public async Task OnActionExecutionAsync_WhenCacheHit_LogsNothingAtFilterLevel()
     {
-        _cacheMock.Setup(cache => cache.GetAsync<IActionResult?>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new OkObjectResult("cached"));
+        _cacheMock.Setup(cache => cache.GetAsync<CachedResponse>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CachedResponse { StatusCode = 200, ContentType = "application/json", Body = "\"cached\"" });
 
         var context = BuildActionExecutingContext();
         ActionExecutionDelegate next = () =>
@@ -115,8 +116,8 @@ public class ActionCacheFilterLoggingTests
     [Test]
     public async Task OnActionExecutionAsync_WhenResultIsCached_LogsNothingAtFilterLevel()
     {
-        _cacheMock.Setup(cache => cache.GetAsync<IActionResult?>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((IActionResult?)null);
+        _cacheMock.Setup(cache => cache.GetAsync<CachedResponse>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((CachedResponse?)null);
 
         var context = BuildActionExecutingContext();
         ActionExecutionDelegate next = () =>

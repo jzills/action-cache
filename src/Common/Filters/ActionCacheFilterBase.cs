@@ -1,6 +1,7 @@
 using ActionCache.Common.Concurrency;
 using ActionCache.Common.Diagnostics;
 using ActionCache.Common.Keys.VaryBy;
+using ActionCache.Common.Responses;
 using ActionCache.Common.Extensions.Internal;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.AspNetCore.Routing.Template;
@@ -45,6 +46,11 @@ public abstract class ActionCacheFilterBase
     protected readonly VaryByOptions VaryByOptions;
 
     /// <summary>
+    /// Converts between endpoint results and the responses stored in a backend.
+    /// </summary>
+    protected readonly CachedResponseFactory ResponseFactory;
+
+    /// <summary>
     /// The logger used to record filter-level conditions the cache layer cannot observe.
     /// </summary>
     private readonly ILogger _logger;
@@ -59,6 +65,7 @@ public abstract class ActionCacheFilterBase
     /// <param name="singleFlightEnabled">Whether this endpoint opted into single-flight.</param>
     /// <param name="varyByResolver">Resolves the request dimensions that form part of the cache key.</param>
     /// <param name="varyByOptions">Which request dimensions this endpoint varies its cache key by.</param>
+    /// <param name="responseFactory">Converts between endpoint results and stored responses.</param>
     internal ActionCacheFilterBase(
         IActionCache cache,
         TemplateBinderFactory binderFactory,
@@ -66,7 +73,8 @@ public abstract class ActionCacheFilterBase
         IActionCacheSingleFlight singleFlight,
         bool singleFlightEnabled,
         ActionCacheVaryByResolver varyByResolver,
-        VaryByOptions varyByOptions)
+        VaryByOptions varyByOptions,
+        CachedResponseFactory responseFactory)
     {
         Cache = cache;
         BinderFactory = binderFactory;
@@ -75,6 +83,7 @@ public abstract class ActionCacheFilterBase
         SingleFlightEnabled = singleFlightEnabled;
         VaryByResolver = varyByResolver;
         VaryByOptions = varyByOptions;
+        ResponseFactory = responseFactory;
     }
 
     /// <summary>
@@ -86,7 +95,7 @@ public abstract class ActionCacheFilterBase
     /// <param name="logger">The logger used to record filter-level conditions the cache layer cannot observe.</param>
     internal ActionCacheFilterBase(IActionCache cache, TemplateBinderFactory binderFactory, ILogger logger)
         : this(cache, binderFactory, logger, NullActionCacheSingleFlight.Instance, singleFlightEnabled: false,
-               ActionCacheVaryByResolver.None, new VaryByOptions())
+               ActionCacheVaryByResolver.None, new VaryByOptions(), CachedResponseFactory.None)
     {
     }
 
