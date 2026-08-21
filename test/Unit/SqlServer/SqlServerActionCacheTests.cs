@@ -5,6 +5,7 @@ using ActionCache.SqlServer;
 using ActionCache.SqlServer.Concurrency.Locks;
 using ActionCache.Utilities;
 using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using System.Collections.Concurrent;
 using System.Text;
@@ -40,7 +41,7 @@ public class SqlServerActionCacheTests
         {
             Namespace = new Namespace("TestNs"),
             EntryOptions = new ActionCacheEntryOptions(),
-            RefreshProvider = new ActionCacheRefreshProvider(new ActionCacheDescriptorProviderNull()),
+            RefreshProvider = new ActionCacheRefreshProvider(new ActionCacheDescriptorProviderNull(), NullLogger<ActionCacheRefreshProvider>.Instance),
             CacheLocker = _lockerMock.Object
         };
 

@@ -3,6 +3,7 @@ using ActionCache.Common.Extensions;
 using ActionCache.Common.Extensions.Internal;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.AspNetCore.Routing.Template;
+using Microsoft.Extensions.Logging;
 
 namespace ActionCache.Filters;
 
@@ -16,10 +17,12 @@ internal class ActionCacheRefreshFilter : ActionCacheFilterBase, IAsyncResultFil
     /// </summary>
     /// <param name="cache">The cache service used for refreshing cache entries.</param>
     /// <param name="binderFactory">The template binder for parsing route parameters for templated namespaces.</param>
+    /// <param name="logger">The logger used to record filter-level conditions the cache layer cannot observe.</param>
     public ActionCacheRefreshFilter(
-        IActionCache cache, 
-        TemplateBinderFactory binderFactory
-    ) : base(cache, binderFactory)
+        IActionCache cache,
+        TemplateBinderFactory binderFactory,
+        ILogger logger
+    ) : base(cache, binderFactory, logger)
     {
     }
     

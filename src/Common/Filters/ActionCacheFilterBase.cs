@@ -1,6 +1,8 @@
+using ActionCache.Common.Diagnostics;
 using ActionCache.Common.Extensions.Internal;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.AspNetCore.Routing.Template;
+using Microsoft.Extensions.Logging;
 
 namespace ActionCache.Filters;
 
@@ -20,14 +22,21 @@ public abstract class ActionCacheFilterBase
     protected readonly TemplateBinderFactory BinderFactory;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="ActionCacheFilterBase"/> class with the specified cache and template binder factory.
+    /// The logger used to record filter-level conditions the cache layer cannot observe.
+    /// </summary>
+    private readonly ILogger _logger;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ActionCacheFilterBase"/> class with the specified cache, template binder factory, and logger.
     /// </summary>
     /// <param name="cache">The <see cref="IActionCache"/> instance used for caching actions.</param>
     /// <param name="binderFactory">The <see cref="TemplateBinderFactory"/> instance used for binding route templates.</param>
-    internal ActionCacheFilterBase(IActionCache cache, TemplateBinderFactory binderFactory)
+    /// <param name="logger">The logger used to record filter-level conditions the cache layer cannot observe.</param>
+    internal ActionCacheFilterBase(IActionCache cache, TemplateBinderFactory binderFactory, ILogger logger)
     {
         Cache = cache;
         BinderFactory = binderFactory;
+        _logger = logger;
     }
 
     /// <summary>
@@ -38,5 +47,27 @@ public abstract class ActionCacheFilterBase
     {
         var @namespace = Cache.GetNamespace();
         @namespace.AttachRouteValues(routeValues, BinderFactory);
+    }
+
+    /// <summary>
+    /// Records that no cache key could be constructed for the current request, so it executed uncached.
+    /// </summary>
+    protected void LogCacheKeyUnavailable()
+    {
+        if (_logger.IsEnabled(LogLevel.Debug))
+        {
+            ActionCacheLog.FilterCacheKeyUnavailable(_logger, GetType().Name, (string)Cache.GetNamespace());
+        }
+    }
+
+    /// <summary>
+    /// Records that the action produced a result that was not cacheable, so no entry was stored.
+    /// </summary>
+    protected void LogResultNotCacheable()
+    {
+        if (_logger.IsEnabled(LogLevel.Debug))
+        {
+            ActionCacheLog.FilterResultNotCacheable(_logger, GetType().Name, (string)Cache.GetNamespace());
+        }
     }
 }

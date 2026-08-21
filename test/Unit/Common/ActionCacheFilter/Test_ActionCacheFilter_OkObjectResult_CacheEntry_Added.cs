@@ -10,6 +10,7 @@ using ActionCache;
 using ActionCache.Common.Keys;
 using Microsoft.AspNetCore.Routing.Template;
 using Unit.TestUtilities.Builders;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Unit.Common;
 
@@ -66,7 +67,7 @@ public class ActionCacheFilterTests
         };
 
         _cache = _factory.Create(@namespace)!;
-        var filter = new ActionCacheFilter(_cache, _binderFactory);
+        var filter = new ActionCacheFilter(_cache, _binderFactory, NullLogger.Instance);
 
         await filter.OnActionExecutionAsync(actionExecutingContext, next);
 

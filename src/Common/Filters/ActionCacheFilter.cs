@@ -4,6 +4,7 @@ using ActionCache.Common.Extensions.Internal;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.AspNetCore.Routing.Template;
+using Microsoft.Extensions.Logging;
 
 namespace ActionCache.Filters;
 
@@ -17,10 +18,12 @@ public class ActionCacheFilter : ActionCacheFilterBase, IAsyncActionFilter
     /// </summary>
     /// <param name="cache">The cache implementation to use.</param>
     /// <param name="binderFactory">The binder used for namespaces with route templates.</param>
+    /// <param name="logger">The logger used to record filter-level conditions the cache layer cannot observe.</param>
     public ActionCacheFilter(
-        IActionCache cache, 
-        TemplateBinderFactory binderFactory
-    ) : base(cache, binderFactory)
+        IActionCache cache,
+        TemplateBinderFactory binderFactory,
+        ILogger logger
+    ) : base(cache, binderFactory, logger)
     {
     }
 
@@ -54,12 +57,14 @@ public class ActionCacheFilter : ActionCacheFilterBase, IAsyncActionFilter
                 else
                 {
                     context.AddCacheStatus(CacheStatus.None);
+                    LogResultNotCacheable();
                 }
             }
         }
         else
         {
             context.AddCacheStatus(CacheStatus.Miss);
+            LogCacheKeyUnavailable();
             await next();
         }
     }

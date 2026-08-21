@@ -46,10 +46,10 @@ public class ActionCacheFilterFactoriesTests
             Options.Create(new ActionCacheResilienceOptions()));
 
         var mvcAbstractFactory = new ActionCacheFilterAbstractFactory(
-            [cacheFactoryMock.Object], binderFactory, resilientDecorator);
+            [cacheFactoryMock.Object], binderFactory, resilientDecorator, NullLoggerFactory.Instance);
 
         var endpointAbstractFactory = new ActionCacheEndpointFilterAbstractFactory(
-            [cacheFactoryMock.Object], binderFactory, resilientDecorator);
+            [cacheFactoryMock.Object], binderFactory, resilientDecorator, NullLoggerFactory.Instance);
 
         var services = new ServiceCollection();
         services.AddSingleton<IActionCacheFilterAbstractFactory<IFilterMetadata>>(mvcAbstractFactory);

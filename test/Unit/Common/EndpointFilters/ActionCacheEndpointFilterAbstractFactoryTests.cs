@@ -45,7 +45,7 @@ public class ActionCacheEndpointFilterAbstractFactoryTests
             Options.Create(new ActionCacheResilienceOptions()));
 
         _sut = new ActionCacheEndpointFilterAbstractFactory(
-            [_cacheFactoryMock.Object], _binderFactory, resilientDecorator);
+            [_cacheFactoryMock.Object], _binderFactory, resilientDecorator, NullLoggerFactory.Instance);
     }
 
     [Test]

@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using ActionCache.Common.Diagnostics;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using StackExchange.Redis;
@@ -95,12 +96,7 @@ public class RedisExpiryService : BackgroundService
                 // the backend is a tolerated, fail-open condition, so it is logged at Warning
                 // (matching ResilientActionCache) and backs off exponentially so a sustained
                 // outage does not flood the logs.
-                _logger.LogWarning(
-                    exception,
-                    "ActionCache could not subscribe to Redis keyspace expiry notifications on database {Database}; " +
-                    "retrying in {RetryDelay}. Until then, sliding-expiration index cleanup relies on lazy self-healing.",
-                    Cache.Database,
-                    retryDelay);
+                ActionCacheLog.RedisExpirySubscriptionFailed(_logger, exception, Cache.Database, retryDelay);
 
                 await DelayQuietly(retryDelay, stoppingToken);
                 retryDelay = NextRetryDelay(retryDelay);

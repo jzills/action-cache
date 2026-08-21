@@ -3,6 +3,7 @@ using ActionCache.Common;
 using ActionCache.Common.Caching;
 using ActionCache.Memory;
 using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 
 namespace Unit.TestUtilities.Builders;
@@ -16,6 +17,7 @@ internal static class MemoryActionCacheFactoryBuilder
             memoryCache,
             new ExpirationTokenSourcesValidated(new ExpirationTokenSources(memoryCache)),
             Options.Create(new ActionCacheEntryOptions()),
-            new ActionCacheRefreshProvider(new ActionCacheDescriptorProviderNull()));
+            new ActionCacheRefreshProvider(new ActionCacheDescriptorProviderNull(), NullLogger<ActionCacheRefreshProvider>.Instance),
+            NullLoggerFactory.Instance);
     }
 }

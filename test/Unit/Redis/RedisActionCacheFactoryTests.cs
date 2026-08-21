@@ -1,5 +1,6 @@
 using System.Reflection;
 using ActionCache;
+using Microsoft.Extensions.Logging.Abstractions;
 using ActionCache.Common;
 using ActionCache.Common.Caching;
 using ActionCache.Redis;
@@ -29,7 +30,7 @@ public class RedisActionCacheFactoryTests
 
         _refreshProviderMock = new Mock<IActionCacheRefreshProvider>();
         _entryOptions = Options.Create(new ActionCacheEntryOptions());
-        _sut = new RedisActionCacheFactory(_multiplexerMock.Object, _entryOptions, _refreshProviderMock.Object);
+        _sut = new RedisActionCacheFactory(_multiplexerMock.Object, _entryOptions, _refreshProviderMock.Object, NullLoggerFactory.Instance);
     }
 
     [Test]
@@ -94,7 +95,8 @@ public class RedisActionCacheFactoryTests
         var factory = new RedisActionCacheFactory(
             _multiplexerMock.Object,
             configuredOptions,
-            _refreshProviderMock.Object);
+            _refreshProviderMock.Object,
+            NullLoggerFactory.Instance);
 
         var cache = factory.Create((Namespace)"TestNs", TimeSpan.FromMinutes(5), null);
 
@@ -115,7 +117,8 @@ public class RedisActionCacheFactoryTests
         var factory = new RedisActionCacheFactory(
             _multiplexerMock.Object,
             configuredOptions,
-            _refreshProviderMock.Object);
+            _refreshProviderMock.Object,
+            NullLoggerFactory.Instance);
 
         var cache = factory.Create((Namespace)"TestNs", TimeSpan.FromMinutes(5), null);
 

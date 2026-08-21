@@ -4,6 +4,7 @@ using ActionCache.Common.Concurrency;
 using ActionCache.Common.Concurrency.Locks;
 using ActionCache.Utilities;
 using Microsoft.Azure.Cosmos;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace ActionCache.AzureCosmos;
@@ -24,11 +25,13 @@ public class AzureCosmosActionCacheFactory : ActionCacheFactoryBase
     /// <param name="cache">The lazily-initialized Azure Cosmos Db container to use.</param>
     /// <param name="entryOptions">The global entry options used for creation when expiration times are not supplied.</param>
     /// <param name="refreshProvider">The refresh provider responsible for invoking cached controller actions.</param>
+    /// <param name="loggerFactory">The factory used to create the logger for this cache factory.</param>
     public AzureCosmosActionCacheFactory(
         AsyncLazy<Container> cache,
         IOptions<ActionCacheEntryOptions> entryOptions,
-        IActionCacheRefreshProvider refreshProvider
-    ) : base(entryOptions, refreshProvider)
+        IActionCacheRefreshProvider refreshProvider,
+        ILoggerFactory loggerFactory
+    ) : base(entryOptions, refreshProvider, loggerFactory)
     {
         Cache = cache;
     }

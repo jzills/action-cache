@@ -9,6 +9,7 @@ using ActionCache.Filters;
 using ActionCache;
 using Microsoft.AspNetCore.Routing.Template;
 using Unit.TestUtilities.Builders;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Unit.Common;
 
@@ -63,7 +64,7 @@ public class ActionCacheEvictionFilterTests
 
         await cache.SetAsync("someArea:someController:someAction", "Foo");
 
-        var filter = new ActionCacheEvictionFilter(cache, _binderFactory);
+        var filter = new ActionCacheEvictionFilter(cache, _binderFactory, NullLogger.Instance);
         await filter.OnActionExecutionAsync(actionExecutingContext, next);
 
         var result = await cache.GetAsync<string>("someArea:someController:someAction");

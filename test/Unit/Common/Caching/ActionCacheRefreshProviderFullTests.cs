@@ -4,6 +4,7 @@ using ActionCache.Utilities;
 using Microsoft.AspNetCore.Routing;
 using Moq;
 using System.Reflection;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Unit.Common.Caching;
 
@@ -17,7 +18,7 @@ public class ActionCacheRefreshProviderFullTests
     public void SetUp()
     {
         _descriptorProviderMock = new Mock<IActionCacheDescriptorProvider>();
-        _sut = new ActionCacheRefreshProvider(_descriptorProviderMock.Object);
+        _sut = new ActionCacheRefreshProvider(_descriptorProviderMock.Object, NullLogger<ActionCacheRefreshProvider>.Instance);
     }
 
     [Test]
