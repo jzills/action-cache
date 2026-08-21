@@ -116,17 +116,16 @@ public static class IServiceCollectionExtensions
             return new CachedResponseFactory(mvcOptions ?? httpOptions ?? JsonSerializerOptions.Default);
         });
 
+        // Note what is no longer here: AddControllerInfo, which registered every controller
+        // in the application's container as scoped purely so the old reflection-based
+        // refresh could resolve one. Replay uses the endpoint's own RequestDelegate, so the
+        // library no longer needs to modify the app's DI graph to refresh a cache entry.
         return services
-            .AddControllerInfo()
             .AddScoped<ActionCacheVaryByResolver>()
-            .AddSingleton<ActionCacheDescriptorProviderFactory>()
             .AddSingleton<ResilientCacheDecorator>()
             .AddScoped<IActionCacheFilterAbstractFactory<IFilterMetadata>, ActionCacheFilterAbstractFactory>()
             .AddScoped<IActionCacheFilterAbstractFactory<IEndpointFilter>, ActionCacheEndpointFilterAbstractFactory>()
-            .AddScoped<IActionCacheRefreshProvider, ActionCacheRefreshProvider>()
-            .AddScoped(serviceProvider => serviceProvider
-                .GetRequiredService<ActionCacheDescriptorProviderFactory>()
-                .Create());
+            .AddScoped<IActionCacheRefreshProvider, EndpointReplayRefreshProvider>();
     }
 
     /// <summary>

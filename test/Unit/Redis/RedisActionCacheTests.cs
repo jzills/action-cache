@@ -1,5 +1,6 @@
 using ActionCache.Common;
 using ActionCache.Common.Caching;
+using Unit.TestUtilities;
 using ActionCache.Common.Concurrency;
 using ActionCache.Common.Concurrency.Locks;
 using ActionCache.Redis;
@@ -24,7 +25,7 @@ public class RedisActionCacheTests
         {
             Namespace = new Namespace("TestNs"),
             EntryOptions = new ActionCacheEntryOptions(),
-            RefreshProvider = new ActionCacheRefreshProvider(new ActionCacheDescriptorProviderNull(), NullLogger<ActionCacheRefreshProvider>.Instance),
+            RefreshProvider = NullRefreshProvider.Instance,
             CacheLocker = new NullCacheLocker()
         };
         _sut = new RedisActionCache(_databaseMock.Object, context);

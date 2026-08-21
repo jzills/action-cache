@@ -41,8 +41,8 @@ public class ActionCacheKeyBuilderTests
         var decodedKey = new KeyEncoder().Decode(key);
 
         decodedKey.Should().Be(
-            $"{ActionCacheKeyComponents.RouteValuesKey}={KeyComponentSerializer.Serialize(routeValues)}" +
-            $"&{ActionCacheKeyComponents.ActionArgumentsKey}={KeyComponentSerializer.Serialize(actionArguments)}"
+            $"{ActionCacheKeyComponents.RouteValuesKey}={CacheJsonSerializer.Serialize(routeValues)}" +
+            $"&{ActionCacheKeyComponents.ActionArgumentsKey}={CacheJsonSerializer.Serialize(actionArguments)}"
         );
     }
 }

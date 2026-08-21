@@ -1,3 +1,4 @@
+using ActionCache.Common.Caching;
 using ActionCache.Common.Concurrency;
 using ActionCache.Common.Enums;
 using ActionCache.Common.Keys.VaryBy;
@@ -49,6 +50,14 @@ public class ActionCacheFilter : ActionCacheFilterBase, IAsyncActionFilter
     public async Task OnActionExecutionAsync(ActionExecutingContext context, ActionExecutionDelegate next)
     {
         var cancellationToken = context.HttpContext.RequestAborted;
+
+        // A refresh replay must reach the action: serving it from cache would hand it the
+        // stale entry it exists to replace. The refresh loop stores what it produces.
+        if (ActionCacheReplayMarker.IsReplay(context.HttpContext))
+        {
+            await next();
+            return;
+        }
 
         AttachRouteValues(context.RouteData.Values);
 

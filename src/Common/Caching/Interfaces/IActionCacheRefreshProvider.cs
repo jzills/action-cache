@@ -1,17 +1,21 @@
-using ActionCache.Utilities;
+using ActionCache.Common.Responses;
 
 namespace ActionCache.Common.Caching;
 
 /// <summary>
-/// A class responsible for executing controller actions for cache keys
+/// Re-issues the request that produced a cache entry so the entry can be refreshed with a
+/// current response.
 /// </summary>
 public interface IActionCacheRefreshProvider
 {
     /// <summary>
-    /// Invokes the method representing a controller action on the specified namespace and keys. 
+    /// Replays a recorded request and returns the response it produced.
     /// </summary>
-    /// <param name="namespace">The namespace to refresh against.</param>
-    /// <param name="keys">The keys to be checked against.</param>
-    /// <returns>A readonly dictionary of results where the key is the cache entry key and the value is the result of executing the controller action stored for that key.</returns>
-    IReadOnlyDictionary<string, object?> GetRefreshResults(Namespace @namespace, IEnumerable<string> keys);
+    /// <param name="request">The request line recorded when the entry was cached.</param>
+    /// <param name="cancellationToken">A token to observe while waiting for the operation to complete.</param>
+    /// <returns>
+    /// The response the replayed request produced, or <see langword="null"/> when it could
+    /// not be replayed — no endpoint matched, or the response was not cacheable.
+    /// </returns>
+    Task<CachedResponse?> ReplayAsync(CachedRequest request, CancellationToken cancellationToken = default);
 }

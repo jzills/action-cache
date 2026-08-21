@@ -1,4 +1,7 @@
 using ActionCache.Common.Concurrency;
+using ActionCache.Common.Diagnostics;
+using ActionCache.Common.Responses;
+using Microsoft.Extensions.Logging;
 using ActionCache.Utilities;
 
 namespace ActionCache.Common.Caching;
@@ -29,6 +32,11 @@ public abstract class ActionCacheBase<TLock> : IActionCache where TLock : CacheL
     protected readonly ICacheLocker<TLock> CacheLocker;
 
     /// <summary>
+    /// The logger used to record refresh outcomes.
+    /// </summary>
+    protected readonly ILogger Logger;
+
+    /// <summary>
     /// Initializes a new instance of the <see cref="ActionCacheBase{TLock}"/> class.
     /// </summary>
     /// <param name="context">The context containing necessary dependencies for cache operations.</param>
@@ -38,6 +46,7 @@ public abstract class ActionCacheBase<TLock> : IActionCache where TLock : CacheL
         EntryOptions = context.EntryOptions;
         RefreshProvider = context.RefreshProvider;
         CacheLocker = context.CacheLocker;
+        Logger = context.Logger;
     }
 
     /// <inheritdoc/>
@@ -52,10 +61,46 @@ public abstract class ActionCacheBase<TLock> : IActionCache where TLock : CacheL
     /// <inheritdoc/>
     public async Task RefreshAsync(CancellationToken cancellationToken = default)
     {
+        var namespaceValue = (string)Namespace;
         var keys = await GetKeysAsync(cancellationToken);
-        var refreshResults = RefreshProvider.GetRefreshResults(Namespace.Value, keys);
-        await Task.WhenAll(refreshResults.Select(result => 
-            SetAsync(result.Key, result.Value, cancellationToken)));
+        var refreshed = 0;
+        var requested = 0;
+
+        foreach (var key in keys)
+        {
+            requested++;
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var entry = await GetAsync<CachedResponse>(key, cancellationToken);
+            if (entry is null)
+            {
+                continue;
+            }
+
+            if (entry.VariesByRequest)
+            {
+                // Replaying another caller's request would mean impersonating them.
+                ActionCacheLog.RefreshKeySkippedVaryBy(Logger, key, namespaceValue);
+                continue;
+            }
+
+            if (entry.Request is null)
+            {
+                ActionCacheLog.RefreshKeySkipped(Logger, key, namespaceValue, "no request was recorded for it");
+                continue;
+            }
+
+            var replayed = await RefreshProvider.ReplayAsync(entry.Request, cancellationToken);
+            if (replayed is null)
+            {
+                continue;
+            }
+
+            await SetAsync(key, replayed, cancellationToken);
+            refreshed++;
+        }
+
+        ActionCacheLog.RefreshSummary(Logger, namespaceValue, refreshed, requested);
     }
 
     /// <inheritdoc/>

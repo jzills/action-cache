@@ -165,21 +165,6 @@ public class VaryByTests
             .Should().Be(new ActionCacheKeyBuilder().WithVaryByValues(b).Build());
     }
 
-    [Test]
-    public async Task VaryByValues_RoundTripThroughTheKeyComponentsBuilder()
-    {
-        var varyBy = await _resolver.ResolveAsync(Authenticated("user-1"), new VaryByOptions(), CancellationToken.None);
-        var key = new ActionCacheKeyBuilder()
-            .WithRouteValues(new Microsoft.AspNetCore.Routing.RouteValueDictionary { { "controller", "Account" } })
-            .WithVaryByValues(varyBy)
-            .Build();
-
-        var components = new ActionCacheKeyComponentsBuilder(key).Build();
-
-        components.VaryByValues.Should().NotBeNull();
-        components.VaryByValues!["user"].Should().Be("user-1");
-    }
-
     private sealed class StubContributor : IActionCacheKeyContributor
     {
         private readonly string _key;

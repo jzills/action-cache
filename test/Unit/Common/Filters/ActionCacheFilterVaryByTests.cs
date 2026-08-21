@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using ActionCache;
 using ActionCache.Common.Keys.VaryBy;
+using ActionCache.Common.Caching;
 using ActionCache.Common.Responses;
 using ActionCache.Filters;
 using ActionCache.Utilities;
@@ -172,5 +173,32 @@ public class ActionCacheFilterVaryByTests
 
         executed.Should().BeFalse("anonymous callers have no identity to separate");
         (secondContext.Result as ContentResult)!.Content.Should().Be("\"anonymous-response\"");
+    }
+
+    [Test]
+    public async Task ARefreshReplay_ReachesTheActionInsteadOfBeingServedFromCache()
+    {
+        // Without this bypass a replay runs through the very filter that produced the
+        // entry, is handed the stale value it exists to replace, and writes it straight
+        // back — refresh becomes a silent no-op.
+        var cache = new StubCache();
+        var options = new VaryByOptions();
+
+        await InvokeAsync(CreateFilter(cache, options), ContextFor(null), "stale");
+
+        var replayContext = ContextFor(null);
+        ActionCacheReplayMarkerAccessor.Mark(replayContext.HttpContext);
+        var reachedTheAction = false;
+
+        await CreateFilter(cache, options).OnActionExecutionAsync(replayContext, () =>
+        {
+            reachedTheAction = true;
+            return Task.FromResult(new ActionExecutedContext(replayContext, [], new object())
+            {
+                Result = new OkObjectResult("fresh")
+            });
+        });
+
+        reachedTheAction.Should().BeTrue();
     }
 }

@@ -71,4 +71,7 @@ internal static partial class ActionCacheLog
 
     [LoggerMessage(EventId = 7001, Level = LogLevel.Warning, Message = "ActionCache refresh skipped key '{Key}' in namespace '{Namespace}' because it varies by request context that refresh cannot reproduce.")]
     public static partial void RefreshKeySkippedVaryBy(ILogger logger, string key, string @namespace);
+
+    [LoggerMessage(EventId = 3003, Level = LogLevel.Warning, Message = "ActionCache refresh could not replay '{Method} {Path}': no endpoint matched.")]
+    public static partial void RefreshReplayNoEndpoint(ILogger logger, string method, string path);
 }

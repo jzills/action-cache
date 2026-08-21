@@ -44,6 +44,7 @@ public class RedisActionCacheFactory : ActionCacheFactoryBase
             Namespace = @namespace,
             EntryOptions = EntryOptions,
             RefreshProvider = RefreshProvider,
+                Logger = Logger,
             CacheLocker = new NullCacheLocker()
         };
 
@@ -63,6 +64,7 @@ public class RedisActionCacheFactory : ActionCacheFactoryBase
                 LockTimeout = EntryOptions.LockTimeout
             },
             RefreshProvider = RefreshProvider,
+                Logger = Logger,
             CacheLocker = new NullCacheLocker()
         };
 
