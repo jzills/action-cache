@@ -22,6 +22,13 @@ public class ActionCacheOptions
     public bool FailClosed { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether single-flight coalescing is coordinated
+    /// across every instance of the application using a backend's distributed lock,
+    /// rather than only within one process. Defaults to <see langword="false"/>.
+    /// </summary>
+    public bool UseDistributedSingleFlight { get; set; }
+
+    /// <summary>
     /// Gets or sets a delegate to configure options for <see cref="MemoryCacheOptions"/>.
     /// </summary>
     public Action<MemoryCacheOptions>? ConfigureMemoryCacheOptions { get; set; }

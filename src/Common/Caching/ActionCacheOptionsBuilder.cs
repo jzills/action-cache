@@ -89,6 +89,22 @@ public class ActionCacheOptionsBuilder
     }
 
     /// <summary>
+    /// Coordinates single-flight across every instance of the application using the
+    /// configured Redis or SQL Server backend's distributed lock, instead of coalescing
+    /// only within one process.
+    /// </summary>
+    /// <returns>Returns this instance of <see cref="ActionCacheOptionsBuilder"/>.</returns>
+    /// <remarks>
+    /// Every cache miss then costs a lock round-trip to the backend. Requires Redis or SQL
+    /// Server to be configured; Redis is preferred when both are.
+    /// </remarks>
+    public ActionCacheOptionsBuilder UseDistributedSingleFlight()
+    {
+        Options.UseDistributedSingleFlight = true;
+        return this;
+    }
+
+    /// <summary>
     /// Builds the configured <see cref="ActionCacheOptions"/>.
     /// </summary>
     /// <returns>The configured <see cref="ActionCacheOptions"/>.</returns>
