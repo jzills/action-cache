@@ -11,7 +11,7 @@ namespace ActionCache.Memory;
 /// <summary>
 /// Represents a memory action cache implementation.
 /// </summary>
-public class MemoryActionCache : ActionCacheBase<NullCacheLock>
+public class MemoryActionCache : ActionCacheBase<SemaphoreSlimLock>
 {
     /// <summary>
     /// A memory cache implementation.
@@ -32,7 +32,7 @@ public class MemoryActionCache : ActionCacheBase<NullCacheLock>
     public MemoryActionCache(
         IMemoryCache cache,
         CancellationTokenSource cancellationTokenSource,
-        ActionCacheContext<NullCacheLock> context
+        ActionCacheContext<SemaphoreSlimLock> context
     ) : base(context)
     {
         Cache = cache;
@@ -50,6 +50,16 @@ public class MemoryActionCache : ActionCacheBase<NullCacheLock>
             SlidingExpiration = EntryOptions.SlidingExpiration,
             AbsoluteExpiration = EntryOptions.GetAbsoluteExpirationFromUtcNow()
         }.AddExpirationToken(new CancellationChangeToken(CancellationTokenSource.Token));
+
+    /// <summary>
+    /// Creates the entry options used for the namespace's key index. The index is owned by
+    /// the namespace lifecycle, so it carries the namespace expiration token but never a
+    /// caller's absolute or sliding expiration.
+    /// </summary>
+    /// <returns>The cache entry options applied to the namespace key index.</returns>
+    private MemoryCacheEntryOptions CreateIndexOptions() =>
+        new MemoryCacheEntryOptions { Size = 1 }
+            .AddExpirationToken(new CancellationChangeToken(CancellationTokenSource.Token));
 
     /// <summary>
     /// Asynchronously gets a value from the cache.
@@ -72,7 +82,7 @@ public class MemoryActionCache : ActionCacheBase<NullCacheLock>
         Cache.Set(Namespace.Create(key), value, entryOptions);
 
         return CacheLocker.WaitForLockThenAsync(Namespace,
-            () => Cache.SetKey(Namespace, key, entryOptions));
+            () => Cache.SetKey(Namespace, key, EntryOptions.GetAbsoluteExpirationFromUtcNow(), CreateIndexOptions()));
     }
 
     /// <summary>
@@ -84,7 +94,7 @@ public class MemoryActionCache : ActionCacheBase<NullCacheLock>
         Cache.Remove(Namespace.Create(key));
 
         return CacheLocker.WaitForLockThenAsync(Namespace, 
-            () => Cache.RemoveKey(Namespace, key, CreateEntryOptions()));
+            () => Cache.RemoveKey(Namespace, key, CreateIndexOptions()));
     }
 
     /// <summary>
@@ -104,7 +114,7 @@ public class MemoryActionCache : ActionCacheBase<NullCacheLock>
     public override async Task<IEnumerable<string>> GetKeysAsync()
     {
         var keysWithAbsoluteExpiration = await CacheLocker.WaitForLockThenAsync(Namespace,
-            () => Cache.GetKeys(Namespace, CreateEntryOptions()));
+            () => Cache.GetKeys(Namespace, CreateIndexOptions()));
 
         return keysWithAbsoluteExpiration?.Keys.AsEnumerable() ?? [];
     }

@@ -1,6 +1,7 @@
 using ActionCache;
 using ActionCache.Common;
 using ActionCache.Common.Caching;
+using ActionCache.Common.Concurrency;
 using ActionCache.Memory;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -18,6 +19,7 @@ internal static class MemoryActionCacheFactoryBuilder
             new ExpirationTokenSourcesValidated(new ExpirationTokenSources(memoryCache)),
             Options.Create(new ActionCacheEntryOptions()),
             new ActionCacheRefreshProvider(new ActionCacheDescriptorProviderNull(), NullLogger<ActionCacheRefreshProvider>.Instance),
-            NullLoggerFactory.Instance);
+            NullLoggerFactory.Instance,
+            new SemaphoreSlimCacheLocker(TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(10)));
     }
 }

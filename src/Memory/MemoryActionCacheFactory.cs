@@ -25,6 +25,11 @@ public class MemoryActionCacheFactory : ActionCacheFactoryBase
     protected readonly IExpirationTokenSources ExpirationTokens;
 
     /// <summary>
+    /// The shared, process-wide locker guarding each namespace's key index.
+    /// </summary>
+    protected readonly SemaphoreSlimCacheLocker Locker;
+
+    /// <summary>
     /// Initializes a new instance of the <see cref="MemoryActionCacheFactory"/> class.
     /// </summary>
     /// <param name="cache">The memory cache to use.</param>
@@ -32,16 +37,19 @@ public class MemoryActionCacheFactory : ActionCacheFactoryBase
     /// <param name="entryOptions">The global entry options used for creation when expiration times are not supplied.</param>
     /// <param name="refreshProvider">The refresh provider responsible for invoking cached controller actions.</param>
     /// <param name="loggerFactory">The factory used to create the logger for this cache factory.</param>
+    /// <param name="locker">The shared locker guarding each namespace's key index. Must be the process-wide singleton: caches are created per request, so a locker created here would guard nothing.</param>
     public MemoryActionCacheFactory(
         IMemoryCache cache,
         IExpirationTokenSources expirationTokens,
         IOptions<ActionCacheEntryOptions> entryOptions,
         IActionCacheRefreshProvider refreshProvider,
-        ILoggerFactory loggerFactory
+        ILoggerFactory loggerFactory,
+        SemaphoreSlimCacheLocker locker
     ) : base(entryOptions, refreshProvider, loggerFactory)
     {
         Cache = cache;
         ExpirationTokens = expirationTokens;
+        Locker = locker;
     }
 
     /// <inheritdoc/>
@@ -49,12 +57,12 @@ public class MemoryActionCacheFactory : ActionCacheFactoryBase
     {
         if (ExpirationTokens.TryGetOrAdd(@namespace, out var expirationTokenSource))
         {
-            var context = new ActionCacheContext<NullCacheLock>
+            var context = new ActionCacheContext<SemaphoreSlimLock>
             {
                 Namespace = @namespace,
                 EntryOptions = EntryOptions,
                 RefreshProvider = RefreshProvider,
-                CacheLocker = new NullCacheLocker()
+                CacheLocker = Locker
             };
 
             return new MemoryActionCache(Cache, expirationTokenSource, context);
@@ -71,7 +79,7 @@ public class MemoryActionCacheFactory : ActionCacheFactoryBase
     {
         if (ExpirationTokens.TryGetOrAdd(@namespace, out var expirationTokenSource))
         {
-            var context = new ActionCacheContext<NullCacheLock>
+            var context = new ActionCacheContext<SemaphoreSlimLock>
             {
                 Namespace = @namespace,
                 EntryOptions = new ActionCacheEntryOptions
@@ -82,7 +90,7 @@ public class MemoryActionCacheFactory : ActionCacheFactoryBase
                     LockTimeout = EntryOptions.LockTimeout
                 },
                 RefreshProvider = RefreshProvider,
-                CacheLocker = new NullCacheLocker()
+                CacheLocker = Locker
             };
 
             return new MemoryActionCache(Cache, expirationTokenSource, context);
