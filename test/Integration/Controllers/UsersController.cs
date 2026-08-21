@@ -28,6 +28,25 @@ public class UsersController : Controller
             new { Id = 4, Name = "Vanessa" }
         });
 
+    /// <summary>
+    /// Counts how many times <see cref="GetSingleFlight"/> actually ran, so a test can
+    /// assert that concurrent requests coalesced onto one execution.
+    /// </summary>
+    public static int SingleFlightInvocations;
+
+    [HttpGet("single-flight")]
+    [ActionCache(Namespace = "SingleFlight")]
+    public async Task<IActionResult> GetSingleFlight()
+    {
+        Interlocked.Increment(ref SingleFlightInvocations);
+
+        // A little latency widens the window every concurrent request would otherwise
+        // race through, which is what makes the stampede observable.
+        await Task.Delay(50);
+
+        return Ok(new { Value = "single-flight" });
+    }
+
     [HttpPost("")]
     [ActionCacheRefresh(Namespace = "Users")]
     public IActionResult Post() => Ok();
