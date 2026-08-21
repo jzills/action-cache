@@ -48,8 +48,18 @@ public class ActionCacheRefreshProvider : IActionCacheRefreshProvider
         {
             foreach (var key in requestedKeys)
             {
-                // Recreate the key components from the encrypted key value
+                // Recreate the key components from the encoded key value
                 var keyComponents = new ActionCacheKeyComponentsBuilder(key).Build();
+
+                // Refresh re-invokes actions by reflection with no HttpContext, so it cannot
+                // reproduce the request context a varied entry was built from — it would warm
+                // every variant with one identical value. Leaving them untouched is the only
+                // correct option until refresh runs through the real pipeline.
+                if (keyComponents.VaryByValues is { Count: > 0 })
+                {
+                    ActionCacheLog.RefreshKeySkippedVaryBy(_logger, key, namespaceValue);
+                    continue;
+                }
 
                 // Deconstruct the route values used as a key into the methodInfo
                 // for a given controller action
