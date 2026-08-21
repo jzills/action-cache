@@ -47,6 +47,11 @@ public class UsersController : Controller
         return Ok(new { Value = "single-flight" });
     }
 
+    [HttpGet("me")]
+    [ActionCache(Namespace = "VaryByUser")]
+    public IActionResult GetMe() =>
+        Ok(new { Name = User.Identity?.Name ?? "anonymous" });
+
     [HttpPost("")]
     [ActionCacheRefresh(Namespace = "Users")]
     public IActionResult Post() => Ok();
