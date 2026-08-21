@@ -58,7 +58,7 @@ public class ActionCacheEndpointFilterTests
     {
         var httpContext = BuildHttpContextWithEndpoint();
         var context = BuildContext(httpContext);
-        _cacheMock.Setup(cache => cache.GetAsync<object?>(It.IsAny<string>())).ReturnsAsync("cached");
+        _cacheMock.Setup(cache => cache.GetAsync<object?>(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync("cached");
 
         var nextCalled = false;
         EndpointFilterDelegate next = ctx =>
@@ -78,14 +78,14 @@ public class ActionCacheEndpointFilterTests
     {
         var httpContext = BuildHttpContextWithEndpoint();
         var context = BuildContext(httpContext);
-        _cacheMock.Setup(cache => cache.GetAsync<object?>(It.IsAny<string>())).ReturnsAsync((object?)null);
+        _cacheMock.Setup(cache => cache.GetAsync<object?>(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync((object?)null);
 
         EndpointFilterDelegate next = ctx => ValueTask.FromResult<object?>("fresh-result");
 
         var result = await _sut.InvokeAsync(context, next);
 
         result.Should().Be("fresh-result");
-        _cacheMock.Verify(cache => cache.SetAsync(It.IsAny<string>(), It.IsAny<object?>()), Times.Once);
+        _cacheMock.Verify(cache => cache.SetAsync(It.IsAny<string>(), It.IsAny<object?>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Test]
@@ -93,14 +93,14 @@ public class ActionCacheEndpointFilterTests
     {
         var httpContext = BuildHttpContextWithEndpoint();
         var context = BuildContext(httpContext);
-        _cacheMock.Setup(cache => cache.GetAsync<object?>(It.IsAny<string>())).ReturnsAsync((object?)null);
+        _cacheMock.Setup(cache => cache.GetAsync<object?>(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync((object?)null);
 
         EndpointFilterDelegate next = ctx => ValueTask.FromResult<object?>(null);
 
         var result = await _sut.InvokeAsync(context, next);
 
         result.Should().BeNull();
-        _cacheMock.Verify(cache => cache.SetAsync(It.IsAny<string>(), It.IsAny<object?>()), Times.Never);
+        _cacheMock.Verify(cache => cache.SetAsync(It.IsAny<string>(), It.IsAny<object?>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Test]
@@ -108,14 +108,14 @@ public class ActionCacheEndpointFilterTests
     {
         var httpContext = BuildHttpContextWithEndpoint();
         var context = BuildContext(httpContext);
-        _cacheMock.Setup(cache => cache.GetAsync<object?>(It.IsAny<string>())).ReturnsAsync((object?)null);
+        _cacheMock.Setup(cache => cache.GetAsync<object?>(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync((object?)null);
 
         // TypedResults.NotFound() implements IStatusCodeHttpResult with status 404.
         EndpointFilterDelegate next = ctx => ValueTask.FromResult<object?>(TypedResults.NotFound());
 
         var result = await _sut.InvokeAsync(context, next);
 
-        _cacheMock.Verify(cache => cache.SetAsync(It.IsAny<string>(), It.IsAny<object?>()), Times.Never);
+        _cacheMock.Verify(cache => cache.SetAsync(It.IsAny<string>(), It.IsAny<object?>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Test]
@@ -123,14 +123,14 @@ public class ActionCacheEndpointFilterTests
     {
         var httpContext = BuildHttpContextWithEndpoint();
         var context = BuildContext(httpContext);
-        _cacheMock.Setup(cache => cache.GetAsync<object?>(It.IsAny<string>())).ReturnsAsync((object?)null);
+        _cacheMock.Setup(cache => cache.GetAsync<object?>(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync((object?)null);
 
         // TypedResults.Ok(value) implements IStatusCodeHttpResult with status 200.
         EndpointFilterDelegate next = ctx => ValueTask.FromResult<object?>(TypedResults.Ok("fresh"));
 
         var result = await _sut.InvokeAsync(context, next);
 
-        _cacheMock.Verify(cache => cache.SetAsync(It.IsAny<string>(), It.IsAny<object?>()), Times.Once);
+        _cacheMock.Verify(cache => cache.SetAsync(It.IsAny<string>(), It.IsAny<object?>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     private static DefaultHttpContext BuildHttpContextWithEndpoint()

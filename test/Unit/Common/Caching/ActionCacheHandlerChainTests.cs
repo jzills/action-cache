@@ -19,23 +19,23 @@ public class ActionCacheHandlerChainTests
 
         public Namespace GetNamespace() => new("Test");
 
-        public Task<TValue?> GetAsync<TValue>(string key)
+        public Task<TValue?> GetAsync<TValue>(string key, CancellationToken cancellationToken = default)
         {
             GetCalls++;
             return Task.FromResult(_entries.TryGetValue(key, out var value) ? (TValue?)value : default);
         }
 
-        public Task SetAsync<TValue>(string key, TValue? value)
+        public Task SetAsync<TValue>(string key, TValue? value, CancellationToken cancellationToken = default)
         {
             SetCalls++;
             _entries[key] = value;
             return Task.CompletedTask;
         }
 
-        public Task<IEnumerable<string>> GetKeysAsync() => Task.FromResult(_entries.Keys.AsEnumerable());
-        public Task RemoveAsync(string key) { _entries.Remove(key); return Task.CompletedTask; }
-        public Task RemoveAsync() { _entries.Clear(); return Task.CompletedTask; }
-        public Task RefreshAsync() => Task.CompletedTask;
+        public Task<IEnumerable<string>> GetKeysAsync(CancellationToken cancellationToken = default) => Task.FromResult(_entries.Keys.AsEnumerable());
+        public Task RemoveAsync(string key, CancellationToken cancellationToken = default) { _entries.Remove(key); return Task.CompletedTask; }
+        public Task RemoveAsync(CancellationToken cancellationToken = default) { _entries.Clear(); return Task.CompletedTask; }
+        public Task RefreshAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
     }
 
     private static (ActionCacheHandler Handler, FakeCache L1, FakeCache L2) BuildChain()

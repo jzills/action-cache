@@ -43,7 +43,7 @@ public class ActionCacheRefreshFilterTests
 
         await _sut.OnResultExecutionAsync(context, next);
 
-        _cacheMock.Verify(cache => cache.RefreshAsync(), Times.Once);
+        _cacheMock.Verify(cache => cache.RefreshAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Test]
@@ -54,7 +54,7 @@ public class ActionCacheRefreshFilterTests
 
         await _sut.OnResultExecutionAsync(context, next);
 
-        _cacheMock.Verify(cache => cache.RefreshAsync(), Times.Never);
+        _cacheMock.Verify(cache => cache.RefreshAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Test]
@@ -81,7 +81,7 @@ public class ActionCacheRefreshFilterTests
 
         await _sut.OnResultExecutionAsync(context, next);
 
-        _cacheMock.Verify(cache => cache.RefreshAsync(), Times.Once);
+        _cacheMock.Verify(cache => cache.RefreshAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
     private static ResultExecutingContext BuildResultExecutingContext(IActionResult result)

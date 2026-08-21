@@ -39,8 +39,10 @@ public class RedisActionCache : ActionCacheBase<NullCacheLock>
     /// Removes the cached item with the specified key.
     /// </summary>
     /// <param name="key">The key of the item to remove from the cache.</param>
-    public override async Task RemoveAsync(string key)
+    /// <param name="cancellationToken">A token to observe while waiting for the operation to complete.</param>
+    public override async Task RemoveAsync(string key, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         if (Assembly.TryGetResourceAsText(LuaResources.Remove, out var script))
         {
             await Cache.ScriptEvaluateAsync(script, [(string)Namespace, key], flags: CommandFlags.FireAndForget);
@@ -58,16 +60,18 @@ public class RedisActionCache : ActionCacheBase<NullCacheLock>
     /// <summary>
     /// Removes all items in the cache associated with the current namespace.
     /// </summary>
-    public override async Task RemoveAsync()
+    /// <param name="cancellationToken">A token to observe while waiting for the operation to complete.</param>
+    public override async Task RemoveAsync(CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         if (Assembly.TryGetResourceAsText(LuaResources.RemoveNamespace, out var script))
         {
             await Cache.ScriptEvaluateAsync(script, [(string)Namespace], flags: CommandFlags.FireAndForget);
         }
         else
         {
-            var keys = await GetKeysAsync();
-            await Task.WhenAll(keys.Select(RemoveAsync));
+            var keys = await GetKeysAsync(cancellationToken);
+            await Task.WhenAll(keys.Select(key => RemoveAsync(key, cancellationToken)));
         }
     }
 
@@ -76,8 +80,10 @@ public class RedisActionCache : ActionCacheBase<NullCacheLock>
     /// </summary>
     /// <param name="key">The key of the item to set in the cache.</param>
     /// <param name="value">The value of the item to set in the cache.</param>
-    public override async Task SetAsync<TValue>(string key, [AllowNull] TValue value)
+    /// <param name="cancellationToken">A token to observe while waiting for the operation to complete.</param>
+    public override async Task SetAsync<TValue>(string key, [AllowNull] TValue value, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         RedisValue redisValue = CacheJsonSerializer.Serialize(value);
 
         var (absoluteExpiration, slidingExpiration, ttl) = EntryOptions;
@@ -111,10 +117,12 @@ public class RedisActionCache : ActionCacheBase<NullCacheLock>
     /// Gets a cached item of type TValue with the specified key.
     /// </summary>
     /// <param name="key">The key of the item to retrieve from the cache.</param>
+    /// <param name="cancellationToken">A token to observe while waiting for the operation to complete.</param>
     /// <returns>The cached item if found, otherwise default.</returns>
 #pragma warning disable CS8609
-    public override async Task<TValue> GetAsync<TValue>(string key)
+    public override async Task<TValue> GetAsync<TValue>(string key, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         var namespaceKey = Namespace.Create(key);
         var hashEntries = await Cache.HashGetAllAsync(namespaceKey);
         if (hashEntries is null || hashEntries.Length == 0)
@@ -148,8 +156,9 @@ public class RedisActionCache : ActionCacheBase<NullCacheLock>
 #pragma warning restore CS8609
 
     /// <inheritdoc/>
-    public override async Task<IEnumerable<string>> GetKeysAsync()
+    public override async Task<IEnumerable<string>> GetKeysAsync(CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         await Cache.SortedSetRemoveRangeByScoreAsync(
             (string)Namespace, 
             ActionCacheEntryOptions.NoExpiration,

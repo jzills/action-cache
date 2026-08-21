@@ -30,7 +30,7 @@ public class ResilientActionCacheLoggingTests
     [Test]
     public async Task GetAsync_WhenValueFound_LogsCacheHit()
     {
-        _inner.Setup(cache => cache.GetAsync<string>("key")).ReturnsAsync("value");
+        _inner.Setup(cache => cache.GetAsync<string>("key", It.IsAny<CancellationToken>())).ReturnsAsync("value");
 
         await _sut.GetAsync<string>("key");
 
@@ -43,7 +43,7 @@ public class ResilientActionCacheLoggingTests
     [Test]
     public async Task GetAsync_WhenValueMissing_LogsCacheMiss()
     {
-        _inner.Setup(cache => cache.GetAsync<string>("key")).ReturnsAsync((string?)null);
+        _inner.Setup(cache => cache.GetAsync<string>("key", It.IsAny<CancellationToken>())).ReturnsAsync((string?)null);
 
         await _sut.GetAsync<string>("key");
 
@@ -65,7 +65,7 @@ public class ResilientActionCacheLoggingTests
     [Test]
     public async Task SetAsync_WhenInnerThrows_LogsDegradationInsteadOfCacheSet()
     {
-        _inner.Setup(cache => cache.SetAsync(It.IsAny<string>(), It.IsAny<string?>()))
+        _inner.Setup(cache => cache.SetAsync(It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
               .ThrowsAsync(new InvalidOperationException("backend down"));
 
         await _sut.SetAsync("key", "value");

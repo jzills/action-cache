@@ -40,23 +40,29 @@ public class AzureCosmosActionCache : ActionCacheBase<NullCacheLock>
     /// Asynchronously gets a value from the cache.
     /// </summary>
     /// <param name="key">The key of the cache entry.</param>
+    /// <param name="cancellationToken">A token to observe while waiting for the operation to complete.</param>
     /// <returns>The cached value or null if not found.</returns>
 #pragma warning disable CS8609
-    public override async Task<TValue> GetAsync<TValue>(string key)
+    public override async Task<TValue> GetAsync<TValue>(string key, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         var container = await Cache.Value;
         try
         {
             var response = await container.ReadItemAsync<AzureCosmosEntry>(
                 Namespace.Create(key),
-                PartitionKey
+                PartitionKey,
+                requestOptions: null,
+                cancellationToken
             );
 
             if (ActionCacheEntryOptions.HasExpiredAbsoluteExpiration(response.Resource.AbsoluteExpiration))
             {
                 await container.DeleteItemAsync<AzureCosmosEntry>(
                     Namespace.Create(key),
-                    PartitionKey
+                    PartitionKey,
+                    requestOptions: null,
+                    cancellationToken
                 );
 
                 return default!;
@@ -86,8 +92,10 @@ public class AzureCosmosActionCache : ActionCacheBase<NullCacheLock>
     /// </summary>
     /// <param name="key">The cache key to set the value for.</param>
     /// <param name="value">The value to set in the cache.</param>
-    public override async Task SetAsync<TValue>(string key, [AllowNull] TValue value)
+    /// <param name="cancellationToken">A token to observe while waiting for the operation to complete.</param>
+    public override async Task SetAsync<TValue>(string key, [AllowNull] TValue value, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         var container = await Cache.Value;
         var (absoluteExpiration, slidingExpiration, ttl) = EntryOptions;
 
@@ -100,21 +108,25 @@ public class AzureCosmosActionCache : ActionCacheBase<NullCacheLock>
             AbsoluteExpiration = absoluteExpiration,
             SlidingExpiration = slidingExpiration,
             TTL = ttl == ActionCacheEntryOptions.NoExpiration ? -1 : (long)Math.Ceiling(ttl / 1000.0)
-        }, PartitionKey);
+        }, PartitionKey, requestOptions: null, cancellationToken);
     }
 
     /// <summary>
     /// Asynchronously removes a value from the cache.
     /// </summary>
     /// <param name="key">The key of the cache entry to remove.</param>
-    public override async Task RemoveAsync(string key)
+    /// <param name="cancellationToken">A token to observe while waiting for the operation to complete.</param>
+    public override async Task RemoveAsync(string key, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         var container = await Cache.Value;
         try
         {
             await container.DeleteItemAsync<AzureCosmosEntry>(
                 Namespace.Create(key),
-                PartitionKey
+                PartitionKey,
+                requestOptions: null,
+                cancellationToken
             );
         }
         catch (CosmosException ex) when (ex.StatusCode == HttpStatusCode.NotFound)
@@ -126,8 +138,10 @@ public class AzureCosmosActionCache : ActionCacheBase<NullCacheLock>
     /// <summary>
     /// Asynchronously removes all values from the cache.
     /// </summary>
-    public override async Task RemoveAsync()
+    /// <param name="cancellationToken">A token to observe while waiting for the operation to complete.</param>
+    public override async Task RemoveAsync(CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         var container = await Cache.Value;
         var response = await container.DeleteAllItemsByPartitionKeyStreamAsync(PartitionKey);
         if (response.StatusCode == HttpStatusCode.BadRequest)
@@ -143,9 +157,11 @@ public class AzureCosmosActionCache : ActionCacheBase<NullCacheLock>
     /// <summary>
     /// Retrieves all keys associated with this cache.
     /// </summary>
+    /// <param name="cancellationToken">A token to observe while waiting for the operation to complete.</param>
     /// <returns>An enumerable of strings representing current cache entry keys.</returns>
-    public override async Task<IEnumerable<string>> GetKeysAsync()
+    public override async Task<IEnumerable<string>> GetKeysAsync(CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         var container = await Cache.Value;
         var items = await container.GetItemsAsync(Namespace);
         if (items.Any())

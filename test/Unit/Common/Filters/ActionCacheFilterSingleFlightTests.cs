@@ -39,7 +39,7 @@ public class ActionCacheFilterSingleFlightTests
 
         public Namespace GetNamespace() => new("Test");
 
-        public Task<TValue?> GetAsync<TValue>(string key)
+        public Task<TValue?> GetAsync<TValue>(string key, CancellationToken cancellationToken = default)
         {
             lock (_gate)
             {
@@ -47,7 +47,7 @@ public class ActionCacheFilterSingleFlightTests
             }
         }
 
-        public Task SetAsync<TValue>(string key, TValue? value)
+        public Task SetAsync<TValue>(string key, TValue? value, CancellationToken cancellationToken = default)
         {
             lock (_gate)
             {
@@ -57,7 +57,7 @@ public class ActionCacheFilterSingleFlightTests
             return Task.CompletedTask;
         }
 
-        public Task<IEnumerable<string>> GetKeysAsync()
+        public Task<IEnumerable<string>> GetKeysAsync(CancellationToken cancellationToken = default)
         {
             lock (_gate)
             {
@@ -65,9 +65,9 @@ public class ActionCacheFilterSingleFlightTests
             }
         }
 
-        public Task RemoveAsync(string key) => Task.CompletedTask;
-        public Task RemoveAsync() => Task.CompletedTask;
-        public Task RefreshAsync() => Task.CompletedTask;
+        public Task RemoveAsync(string key, CancellationToken cancellationToken = default) => Task.CompletedTask;
+        public Task RemoveAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
+        public Task RefreshAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
     }
 
     private ActionCacheFilter CreateFilter(IActionCache cache, IActionCacheSingleFlight singleFlight, bool enabled) =>

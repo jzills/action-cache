@@ -41,29 +41,29 @@ public abstract class ActionCacheBase<TLock> : IActionCache where TLock : CacheL
     }
 
     /// <inheritdoc/>
-    public abstract Task<TValue?> GetAsync<TValue>(string key);
+    public abstract Task<TValue?> GetAsync<TValue>(string key, CancellationToken cancellationToken = default);
 
     /// <inheritdoc/>
-    public abstract Task<IEnumerable<string>> GetKeysAsync();
+    public abstract Task<IEnumerable<string>> GetKeysAsync(CancellationToken cancellationToken = default);
 
     /// <inheritdoc/>
     public Namespace GetNamespace() => Namespace;
 
     /// <inheritdoc/>
-    public async Task RefreshAsync()
+    public async Task RefreshAsync(CancellationToken cancellationToken = default)
     {
-        var keys = await GetKeysAsync();
+        var keys = await GetKeysAsync(cancellationToken);
         var refreshResults = RefreshProvider.GetRefreshResults(Namespace.Value, keys);
         await Task.WhenAll(refreshResults.Select(result => 
-            SetAsync(result.Key, result.Value)));
+            SetAsync(result.Key, result.Value, cancellationToken)));
     }
 
     /// <inheritdoc/>
-    public abstract Task RemoveAsync(string key);
+    public abstract Task RemoveAsync(string key, CancellationToken cancellationToken = default);
 
     /// <inheritdoc/>
-    public abstract Task RemoveAsync();
+    public abstract Task RemoveAsync(CancellationToken cancellationToken = default);
 
     /// <inheritdoc/>
-    public abstract Task SetAsync<TValue>(string key, TValue? value);
+    public abstract Task SetAsync<TValue>(string key, TValue? value, CancellationToken cancellationToken = default);
 }

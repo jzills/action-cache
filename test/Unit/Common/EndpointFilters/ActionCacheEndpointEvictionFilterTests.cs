@@ -42,7 +42,7 @@ public class ActionCacheEndpointEvictionFilterTests
 
         await _sut.InvokeAsync(context, next);
 
-        _cacheMock.Verify(cache => cache.RemoveAsync(), Times.Once);
+        _cacheMock.Verify(cache => cache.RemoveAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Test]
@@ -54,7 +54,7 @@ public class ActionCacheEndpointEvictionFilterTests
 
         await _sut.InvokeAsync(context, next);
 
-        _cacheMock.Verify(cache => cache.RemoveAsync(), Times.Never);
+        _cacheMock.Verify(cache => cache.RemoveAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Test]

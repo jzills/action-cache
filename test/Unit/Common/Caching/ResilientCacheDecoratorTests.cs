@@ -31,7 +31,7 @@ public class ResilientCacheDecoratorTests
     {
         var inner = new Mock<IActionCache>();
         inner.Setup(cache => cache.GetNamespace()).Returns(new Namespace("Test"));
-        inner.Setup(cache => cache.GetAsync<string>(It.IsAny<string>()))
+        inner.Setup(cache => cache.GetAsync<string>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
              .ThrowsAsync(new InvalidOperationException());
 
         var result = await CreateSut(failClosed: false).Decorate(inner.Object).GetAsync<string>("key");
@@ -44,7 +44,7 @@ public class ResilientCacheDecoratorTests
     {
         var inner = new Mock<IActionCache>();
         inner.Setup(cache => cache.GetNamespace()).Returns(new Namespace("Test"));
-        inner.Setup(cache => cache.GetAsync<string>(It.IsAny<string>()))
+        inner.Setup(cache => cache.GetAsync<string>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
              .ThrowsAsync(new InvalidOperationException());
 
         var act = async () => await CreateSut(failClosed: true).Decorate(inner.Object).GetAsync<string>("key");
