@@ -1,5 +1,6 @@
 using ActionCache.Common.Concurrency;
 using ActionCache.Common.Enums;
+using ActionCache.Common.Keys.VaryBy;
 using ActionCache.Common.Extensions;
 using ActionCache.Common.Extensions.Internal;
 using Microsoft.AspNetCore.Http;
@@ -23,13 +24,17 @@ public class ActionCacheEndpointFilter : ActionCacheFilterBase, IEndpointFilter
     /// <param name="logger">The logger used to record filter-level conditions the cache layer cannot observe.</param>
     /// <param name="singleFlight">Coalesces concurrent misses for the same key.</param>
     /// <param name="singleFlightEnabled">Whether this endpoint opted into single-flight.</param>
+    /// <param name="varyByResolver">Resolves the request dimensions that form part of the cache key.</param>
+    /// <param name="varyByOptions">Which request dimensions this endpoint varies its cache key by.</param>
     public ActionCacheEndpointFilter(
         IActionCache cache,
         TemplateBinderFactory binderFactory,
         ILogger logger,
         IActionCacheSingleFlight singleFlight,
-        bool singleFlightEnabled
-    ) : base(cache, binderFactory, logger, singleFlight, singleFlightEnabled)
+        bool singleFlightEnabled,
+        ActionCacheVaryByResolver varyByResolver,
+        VaryByOptions varyByOptions
+    ) : base(cache, binderFactory, logger, singleFlight, singleFlightEnabled, varyByResolver, varyByOptions)
     {
     }
 
@@ -46,7 +51,9 @@ public class ActionCacheEndpointFilter : ActionCacheFilterBase, IEndpointFilter
 
         AttachRouteValues(context.HttpContext.GetRouteData().Values);
 
-        if (!context.TryGetKey(out var key))
+        var varyByValues = await VaryByResolver.ResolveAsync(context.HttpContext, VaryByOptions, cancellationToken);
+
+        if (!context.TryGetKey(out var key, varyByValues))
         {
             context.AddCacheStatus(CacheStatus.Miss);
             LogCacheKeyUnavailable();

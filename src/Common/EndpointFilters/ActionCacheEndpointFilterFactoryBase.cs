@@ -1,6 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using ActionCache.Common;
 using ActionCache.Common.Enums;
+using ActionCache.Common.Keys.VaryBy;
 using ActionCache.Common.Filters;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
@@ -34,12 +35,14 @@ public abstract class ActionCacheEndpointFilterFactoryBase : Attribute
     /// <param name="absoluteExpiration">The absolute expiration duration for a cache entry, or <see langword="null"/> for no absolute expiration.</param>
     /// <param name="slidingExpiration">The sliding expiration duration for a cache entry, or <see langword="null"/> for no sliding expiration.</param>
     /// <param name="singleFlight">Whether concurrent misses for one key are coalesced so the endpoint runs once.</param>
+    /// <param name="varyByOptions">Which request dimensions form part of the cache key.</param>
     /// <returns>An <see cref="IEndpointFilter"/> instance representing the resolved cache filter.</returns>
     protected IEndpointFilter CreateInstance(IServiceProvider serviceProvider, 
         FilterType type,
         TimeSpan? absoluteExpiration = null, 
         TimeSpan? slidingExpiration = null,
-        bool singleFlight = true
+        bool singleFlight = true,
+        VaryByOptions? varyByOptions = null
     )
     {
         var noExpiration = TimeSpan.FromMilliseconds(ActionCacheEntryOptions.NoExpiration);
@@ -59,7 +62,8 @@ public abstract class ActionCacheEndpointFilterFactoryBase : Attribute
                 absoluteExpiration, 
                 slidingExpiration, 
                 type,
-                singleFlight
+                singleFlight,
+                varyByOptions ?? new VaryByOptions()
             );
     }
 }

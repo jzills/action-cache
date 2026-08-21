@@ -31,6 +31,13 @@ public class ActionCacheVaryByResolver
 
     private static readonly char[] Separator = [','];
 
+    /// <summary>
+    /// A resolver with no contributors, used by the filters that never build cache keys —
+    /// eviction and refresh — so they need not carry a dependency they would never call.
+    /// </summary>
+    internal static readonly ActionCacheVaryByResolver None =
+        new([], Microsoft.Extensions.Logging.Abstractions.NullLogger<ActionCacheVaryByResolver>.Instance);
+
     private readonly IEnumerable<IActionCacheKeyContributor> _contributors;
     private readonly ILogger<ActionCacheVaryByResolver> _logger;
 

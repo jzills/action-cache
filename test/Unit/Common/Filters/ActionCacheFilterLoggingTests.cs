@@ -40,7 +40,7 @@ public class ActionCacheFilterLoggingTests
             .GetRequiredService<TemplateBinderFactory>();
 
         _logger = new CapturingLogger();
-        _sut = new ActionCacheFilter(_cacheMock.Object, binderFactory, _logger, SingleFlightBuilder.Build(), true);
+        _sut = new ActionCacheFilter(_cacheMock.Object, binderFactory, _logger, SingleFlightBuilder.Build(), true, VaryByBuilder.Resolver(), VaryByBuilder.Options());
     }
 
     [Test]

@@ -46,7 +46,7 @@ public class ActionCacheEndpointFilterAbstractFactoryTests
             Options.Create(new ActionCacheResilienceOptions()));
 
         _sut = new ActionCacheEndpointFilterAbstractFactory(
-            [_cacheFactoryMock.Object], _binderFactory, resilientDecorator, NullLoggerFactory.Instance, SingleFlightBuilder.Build());
+            [_cacheFactoryMock.Object], _binderFactory, resilientDecorator, NullLoggerFactory.Instance, SingleFlightBuilder.Build(), VaryByBuilder.Resolver());
     }
 
     [Test]
@@ -105,7 +105,7 @@ public class ActionCacheEndpointFilterAbstractFactoryTests
     {
         var handler = new ActionCacheHandler(_cacheMock.Object);
 
-        Action act = () => _sut.CreateFilter(handler, (FilterType)99, true);
+        Action act = () => _sut.CreateFilter(handler, (FilterType)99, true, VaryByBuilder.Options());
 
         act.Should().Throw<FilterTypeNotSupportedException>();
     }

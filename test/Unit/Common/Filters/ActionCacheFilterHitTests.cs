@@ -33,7 +33,7 @@ public class ActionCacheFilterHitTests
             .BuildServiceProvider()
             .GetRequiredService<TemplateBinderFactory>();
 
-        _sut = new ActionCacheFilter(_cacheMock.Object, _binderFactory, NullLogger.Instance, SingleFlightBuilder.Build(), true);
+        _sut = new ActionCacheFilter(_cacheMock.Object, _binderFactory, NullLogger.Instance, SingleFlightBuilder.Build(), true, VaryByBuilder.Resolver(), VaryByBuilder.Options());
     }
 
     [Test]

@@ -1,6 +1,7 @@
 using ActionCache.Common.Enums;
 using ActionCache.Common.Extensions.Internal;
 using ActionCache.Common.Keys;
+using ActionCache.Common.Keys.VaryBy;
 using Microsoft.AspNetCore.Mvc.Filters;
 
 namespace ActionCache.Common.Extensions;
@@ -15,12 +16,17 @@ internal static class ActionExecutingContextExtensions
     /// </summary>
     /// <param name="context">The action executing context containing necessary data.</param>
     /// <param name="key">Outputs the generated cache key.</param>
+    /// <param name="varyByValues">The resolved vary-by values that must separate one cached response from another.</param>
     /// <returns>True if a key is successfully generated, otherwise false.</returns>
-    internal static bool TryGetKey(this ActionExecutingContext context, out string key) 
+    internal static bool TryGetKey(
+        this ActionExecutingContext context,
+        out string key,
+        SortedDictionary<string, string?>? varyByValues = null) 
     {
         key = new ActionCacheKeyBuilder()
             .WithRouteValues(context.RouteData.Values)
             .WithActionArguments(context.ActionArguments)
+            .WithVaryByValues(varyByValues)
             .Build();
 
         if (string.IsNullOrWhiteSpace(key))

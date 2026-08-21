@@ -1,6 +1,7 @@
 using ActionCache.Common.Enums;
 using ActionCache.Common.Extensions.Internal;
 using ActionCache.Common.Keys;
+using ActionCache.Common.Keys.VaryBy;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 
@@ -16,8 +17,12 @@ internal static class EndpointFilterInvocationContextExtensions
     /// </summary>
     /// <param name="context">The endpoint filter invocation context containing necessary data.</param>
     /// <param name="key">Outputs the generated cache key.</param>
+    /// <param name="varyByValues">The resolved vary-by values that must separate one cached response from another.</param>
     /// <returns>True if a key is successfully generated, otherwise false.</returns>
-    internal static bool TryGetKey(this EndpointFilterInvocationContext context, out string key) 
+    internal static bool TryGetKey(
+        this EndpointFilterInvocationContext context,
+        out string key,
+        SortedDictionary<string, string?>? varyByValues = null) 
     {
         var endpoint = context.HttpContext.GetEndpoint();
         if (endpoint is null)
@@ -36,6 +41,7 @@ internal static class EndpointFilterInvocationContextExtensions
             key = new ActionCacheKeyBuilder()
                 .WithRouteValues(context.HttpContext.GetRouteData().Values)
                 .WithActionArguments(actionArguments ?? [])
+                .WithVaryByValues(varyByValues)
                 .Build();
 
             if (string.IsNullOrWhiteSpace(key))

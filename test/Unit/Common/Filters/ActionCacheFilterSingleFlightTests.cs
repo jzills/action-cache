@@ -1,3 +1,4 @@
+using Unit.TestUtilities.Builders;
 using ActionCache;
 using ActionCache.Common.Concurrency;
 using ActionCache.Common.Enums;
@@ -71,7 +72,7 @@ public class ActionCacheFilterSingleFlightTests
     }
 
     private ActionCacheFilter CreateFilter(IActionCache cache, IActionCacheSingleFlight singleFlight, bool enabled) =>
-        new(cache, _binderFactory, NullLogger.Instance, singleFlight, enabled);
+        new(cache, _binderFactory, NullLogger.Instance, singleFlight, enabled, VaryByBuilder.Resolver(), VaryByBuilder.Options());
 
     private static InProcessSingleFlight CreateSingleFlight() =>
         new(new ActionCacheSingleFlightOptions(), NullLogger<InProcessSingleFlight>.Instance);

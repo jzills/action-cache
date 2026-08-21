@@ -1,4 +1,5 @@
 using ActionCache.Common.Enums;
+using ActionCache.Common.Keys.VaryBy;
 using ActionCache.Utilities;
 using Microsoft.AspNetCore.Mvc.Filters;
 
@@ -35,6 +36,7 @@ public interface IActionCacheFilterAbstractFactory<T>
     /// <param name="slidingExpiration">The sliding expiration in milliseconds for a cache entry.</param>
     /// <param name="type">The filter type to create.</param>
     /// <param name="singleFlight">Whether concurrent misses for one key are coalesced so the action runs once.</param>
+    /// <param name="varyByOptions">Which request dimensions form part of the cache key.</param>
     /// <returns>An implementation of the filter abstraction.</returns>
-    T CreateInstance(Namespace @namespace, TimeSpan? absoluteExpiration, TimeSpan? slidingExpiration, FilterType type, bool singleFlight);
+    T CreateInstance(Namespace @namespace, TimeSpan? absoluteExpiration, TimeSpan? slidingExpiration, FilterType type, bool singleFlight, VaryByOptions varyByOptions);
 }
