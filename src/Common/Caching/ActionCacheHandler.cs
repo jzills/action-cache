@@ -19,22 +19,46 @@ public class ActionCacheHandler : ActionCacheHandlerBase, IActionCache
     public ActionCacheHandler(IActionCache cache) => Cache = cache;
 
     /// <summary>
-    /// Retrieves an item from the cache by key. If the item is not found in this cache, attempts to retrieve it from the next cache in the chain.
+    /// Retrieves an item by key, falling through to the next cache in the chain and promoting
+    /// what it finds into this one.
     /// </summary>
     /// <typeparam name="TValue">The type of the cached value.</typeparam>
     /// <param name="key">The key of the cached item.</param>
     /// <returns>The cached value if found; otherwise, <c>null</c>.</returns>
-    public async Task<TValue?> GetAsync<TValue>(string key) =>
-        await Cache.GetAsync<TValue?>(key) ?? 
-            await NextIfExists(next => next.GetAsync<TValue?>(key));
+    public async Task<TValue?> GetAsync<TValue>(string key)
+    {
+        var value = await Cache.GetAsync<TValue?>(key);
+        if (value is not null)
+        {
+            return value;
+        }
+
+        var next = await NextIfExists(cache => cache.GetAsync<TValue?>(key));
+        if (next is not null)
+        {
+            // Promote so later reads are served by the faster layer. The copy expires on
+            // this layer's schedule, which may be shorter than the authoritative layer's —
+            // that is the intended relationship: L1 caches L2, it does not replicate it.
+            await Cache.SetAsync(key, next);
+        }
+
+        return next;
+    }
 
     /// <summary>
-    /// Retrieves all cache keys available in this cache. If no keys are found, attempts to retrieve keys from the next cache in the chain.
+    /// Retrieves every cache key across all layers of the chain.
     /// </summary>
-    /// <returns>An enumerable of cache keys.</returns>
-    public async Task<IEnumerable<string>> GetKeysAsync() =>
-        await Cache.GetKeysAsync() ?? 
-            await NextIfExists(next => next.GetKeysAsync()) ?? [];
+    /// <returns>The union of the keys held by each layer.</returns>
+    public async Task<IEnumerable<string>> GetKeysAsync()
+    {
+        var keys = await Cache.GetKeysAsync() ?? [];
+        var next = await NextIfExists(cache => cache.GetKeysAsync()) ?? [];
+
+        // Union, not Concat: the same key normally lives in several layers, and callers use
+        // this to drive per-key removal and refresh — duplicates mean duplicated work, and
+        // for refresh, duplicated action invocations.
+        return keys.Union(next);
+    }
 
     /// <summary>
     /// Gets the namespace associated with this cache.
