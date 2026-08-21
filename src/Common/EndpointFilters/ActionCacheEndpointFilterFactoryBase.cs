@@ -33,11 +33,13 @@ public abstract class ActionCacheEndpointFilterFactoryBase : Attribute
     /// <param name="type">The type of filter to be created.</param>
     /// <param name="absoluteExpiration">The absolute expiration duration for a cache entry, or <see langword="null"/> for no absolute expiration.</param>
     /// <param name="slidingExpiration">The sliding expiration duration for a cache entry, or <see langword="null"/> for no sliding expiration.</param>
+    /// <param name="singleFlight">Whether concurrent misses for one key are coalesced so the endpoint runs once.</param>
     /// <returns>An <see cref="IEndpointFilter"/> instance representing the resolved cache filter.</returns>
     protected IEndpointFilter CreateInstance(IServiceProvider serviceProvider, 
         FilterType type,
         TimeSpan? absoluteExpiration = null, 
-        TimeSpan? slidingExpiration = null 
+        TimeSpan? slidingExpiration = null,
+        bool singleFlight = true
     )
     {
         var noExpiration = TimeSpan.FromMilliseconds(ActionCacheEntryOptions.NoExpiration);
@@ -56,7 +58,8 @@ public abstract class ActionCacheEndpointFilterFactoryBase : Attribute
             .CreateInstance(Namespace, 
                 absoluteExpiration, 
                 slidingExpiration, 
-                type
+                type,
+                singleFlight
             );
     }
 }

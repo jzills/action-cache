@@ -1,5 +1,6 @@
 using ActionCache.AzureCosmos.Extensions;
 using ActionCache.Common.Caching;
+using ActionCache.Common.Concurrency;
 using ActionCache.Common.Extensions.Internal;
 using ActionCache.Common.Filters;
 using ActionCache.Memory.Extensions;
@@ -8,6 +9,9 @@ using ActionCache.SqlServer.Extensions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace ActionCache.Common.Extensions;
 
@@ -70,7 +74,16 @@ public static class IServiceCollectionExtensions
     /// <returns>The IServiceCollection with common ActionCache services added.</returns>
     internal static IServiceCollection AddActionCacheCommon(
         this IServiceCollection services
-    ) => services
+    )
+    {
+        // Every backend's registration extension calls this, so single-flight is registered
+        // with Try* semantics: one shared instance, however many backends are configured.
+        services.TryAddSingleton<IActionCacheSingleFlight>(serviceProvider =>
+            new InProcessSingleFlight(
+                serviceProvider.GetRequiredService<IOptions<ActionCacheEntryOptions>>().Value,
+                serviceProvider.GetRequiredService<ILogger<InProcessSingleFlight>>()));
+
+        return services
             .AddControllerInfo()
             .AddSingleton<ActionCacheDescriptorProviderFactory>()
             .AddSingleton<ResilientCacheDecorator>()
@@ -80,4 +93,5 @@ public static class IServiceCollectionExtensions
             .AddScoped(serviceProvider => serviceProvider
                 .GetRequiredService<ActionCacheDescriptorProviderFactory>()
                 .Create());
+    }
 }
