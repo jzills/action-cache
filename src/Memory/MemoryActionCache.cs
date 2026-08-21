@@ -19,24 +19,35 @@ public class MemoryActionCache : ActionCacheBase<SemaphoreSlimLock>
     protected readonly IMemoryCache Cache;
 
     /// <summary>
-    /// A source of tokens used to combine cache entries for actions like namespace eviction.
+    /// The source of the namespace's expiration token. Resolved per operation so this cache
+    /// can never write entries against a token that a prior eviction already cancelled.
     /// </summary>
-    protected CancellationTokenSource CancellationTokenSource;
+    protected readonly IExpirationTokenSources ExpirationTokens;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="MemoryActionCache"/> class.
     /// </summary>
     /// <param name="cache">The memory cache instance.</param>
-    /// <param name="cancellationTokenSource">The source for cancellation tokens used to expire cache entries.</param>
+    /// <param name="expirationTokens">The source of the namespace's expiration token.</param>
     /// <param name="context">The cache context.</param>  
     public MemoryActionCache(
         IMemoryCache cache,
-        CancellationTokenSource cancellationTokenSource,
+        IExpirationTokenSources expirationTokens,
         ActionCacheContext<SemaphoreSlimLock> context
     ) : base(context)
     {
         Cache = cache;
-        CancellationTokenSource = cancellationTokenSource;
+        ExpirationTokens = expirationTokens;
+    }
+
+    /// <summary>
+    /// Resolves the namespace's current expiration token.
+    /// </summary>
+    /// <returns>A change token tied to the namespace's live <see cref="CancellationTokenSource"/>.</returns>
+    private CancellationChangeToken CreateExpirationToken()
+    {
+        ExpirationTokens.TryGetOrAdd(Namespace, out var cancellationTokenSource);
+        return new CancellationChangeToken(cancellationTokenSource.Token);
     }
 
     /// <summary>
@@ -49,7 +60,7 @@ public class MemoryActionCache : ActionCacheBase<SemaphoreSlimLock>
             Size = 1,
             SlidingExpiration = EntryOptions.SlidingExpiration,
             AbsoluteExpiration = EntryOptions.GetAbsoluteExpirationFromUtcNow()
-        }.AddExpirationToken(new CancellationChangeToken(CancellationTokenSource.Token));
+        }.AddExpirationToken(CreateExpirationToken());
 
     /// <summary>
     /// Creates the entry options used for the namespace's key index. The index is owned by
@@ -59,7 +70,7 @@ public class MemoryActionCache : ActionCacheBase<SemaphoreSlimLock>
     /// <returns>The cache entry options applied to the namespace key index.</returns>
     private MemoryCacheEntryOptions CreateIndexOptions() =>
         new MemoryCacheEntryOptions { Size = 1 }
-            .AddExpirationToken(new CancellationChangeToken(CancellationTokenSource.Token));
+            .AddExpirationToken(CreateExpirationToken());
 
     /// <summary>
     /// Asynchronously gets a value from the cache.
@@ -100,11 +111,12 @@ public class MemoryActionCache : ActionCacheBase<SemaphoreSlimLock>
     /// <summary>
     /// Asynchronously removes all values from the cache.
     /// </summary>
-    public override async Task RemoveAsync()
+    public override Task RemoveAsync()
     {
-        await CancellationTokenSource.CancelAsync();
-        CancellationTokenSource.Dispose();
-        CancellationTokenSource = new CancellationTokenSource();
+        // Cancelling the namespace's token source evicts every entry carrying it, the key
+        // index included. Lifecycle lives in the token source, which owns the store.
+        ExpirationTokens.Reset(Namespace);
+        return Task.CompletedTask;
     }
 
     /// <summary>

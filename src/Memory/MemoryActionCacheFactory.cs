@@ -55,7 +55,7 @@ public class MemoryActionCacheFactory : ActionCacheFactoryBase
     /// <inheritdoc/>
     public override IActionCache? Create(Namespace @namespace)
     {
-        if (ExpirationTokens.TryGetOrAdd(@namespace, out var expirationTokenSource))
+        if (ExpirationTokens.TryGetOrAdd(@namespace, out _))
         {
             var context = new ActionCacheContext<SemaphoreSlimLock>
             {
@@ -65,7 +65,7 @@ public class MemoryActionCacheFactory : ActionCacheFactoryBase
                 CacheLocker = Locker
             };
 
-            return new MemoryActionCache(Cache, expirationTokenSource, context);
+            return new MemoryActionCache(Cache, ExpirationTokens, context);
         }
         else
         {
@@ -77,7 +77,7 @@ public class MemoryActionCacheFactory : ActionCacheFactoryBase
     /// <inheritdoc/>
     public override IActionCache? Create(Namespace @namespace, TimeSpan? absoluteExpiration = null, TimeSpan? slidingExpiration = null)
     {
-        if (ExpirationTokens.TryGetOrAdd(@namespace, out var expirationTokenSource))
+        if (ExpirationTokens.TryGetOrAdd(@namespace, out _))
         {
             var context = new ActionCacheContext<SemaphoreSlimLock>
             {
@@ -93,7 +93,7 @@ public class MemoryActionCacheFactory : ActionCacheFactoryBase
                 CacheLocker = Locker
             };
 
-            return new MemoryActionCache(Cache, expirationTokenSource, context);
+            return new MemoryActionCache(Cache, ExpirationTokens, context);
         }
         else
         {

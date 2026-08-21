@@ -45,4 +45,20 @@ public class ExpirationTokenSources : IExpirationTokenSources
         
         return true;
     }
+
+    /// <inheritdoc/>
+    public void Reset(string key)
+    {
+        if (!Cache.TryGetValue<CancellationTokenSource>(key, out var cancellationTokenSource) ||
+            cancellationTokenSource is null)
+        {
+            return;
+        }
+
+        // Deliberately not disposed. Cancellation already releases the registrations and
+        // self-evicts this entry (its expiration token is this very source), while other
+        // requests may still hold the instance — disposing it would make their next read
+        // of .Token throw ObjectDisposedException.
+        cancellationTokenSource.Cancel();
+    }
 }
