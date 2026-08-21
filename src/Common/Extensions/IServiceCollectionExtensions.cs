@@ -46,7 +46,10 @@ public static class IServiceCollectionExtensions
         });
 
         services.Configure<ActionCacheResilienceOptions>(resilienceOptions =>
-            resilienceOptions.FailClosed = options.FailClosed);
+        {
+            resilienceOptions.FailClosed = options.FailClosed;
+            resilienceOptions.OperationTimeout = options.OperationTimeout;
+        });
 
         // Validated here so a lease that cannot coalesce anything fails at startup rather
         // than degrading silently under load.
