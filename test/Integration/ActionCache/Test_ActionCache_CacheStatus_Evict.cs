@@ -31,24 +31,27 @@ public class Test_ActionCache_Eviction
     }
 
     [Test]
-    public async Task Test()
+    public async Task Eviction_RemovesTheEntry_SoTheNextRequestRepopulatesIt()
     {
-        var response = await Client.GetAsync("/users");
-        response.EnsureSuccessStatusCode();
+        var first = await Client.GetAsync("/users");
+        first.EnsureSuccessStatusCode();
+        var originalBody = await first.Content.ReadAsStringAsync();
 
-        // Cache hit
-        response = await Client.GetAsync("/users");
-        response.EnsureSuccessStatusCode();
+        var hit = await Client.GetAsync("/users");
+        hit.EnsureSuccessStatusCode();
+        Assert.That(hit.Headers.GetValues(CacheHeaders.CacheStatus).First(), Is.EqualTo(nameof(CacheStatus.Hit)));
 
-        Assert.That(response.Headers.Contains(CacheHeaders.CacheStatus));
-        Assert.That(response.Headers.GetValues(CacheHeaders.CacheStatus).First(), Is.EqualTo(Enum.GetName(CacheStatus.Hit)));
+        var eviction = await Client.DeleteAsync("/users");
+        eviction.EnsureSuccessStatusCode();
+        Assert.That(eviction.Headers.GetValues(CacheHeaders.CacheStatus).First(), Is.EqualTo(nameof(CacheStatus.Evict)));
 
-        // Cache eviction
-        response = await Client.DeleteAsync("/users");
-        response.EnsureSuccessStatusCode();
-
-        Assert.That(response.Headers.Contains(CacheHeaders.CacheStatus));
-        Assert.That(response.Headers.GetValues(CacheHeaders.CacheStatus).First(), Is.EqualTo(Enum.GetName(CacheStatus.Evict)));
+        // The header only says eviction ran. This says the entry is gone: a repopulating
+        // request reports Add, not Hit.
+        var afterEviction = await Client.GetAsync("/users");
+        afterEviction.EnsureSuccessStatusCode();
+        Assert.That(afterEviction.Headers.GetValues(CacheHeaders.CacheStatus).First(),
+            Is.EqualTo(nameof(CacheStatus.Add)), "the evicted entry must no longer be served from cache");
+        Assert.That(await afterEviction.Content.ReadAsStringAsync(), Is.EqualTo(originalBody));
     }
 
     [TearDown]

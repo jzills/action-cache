@@ -33,17 +33,17 @@ public class Test_ActionCacheEndpointFilter_Hit
     }
 
     [Test]
-    public async Task Test()
+    public async Task Hit_ServesTheSameResponseThatWasCached()
     {
-        var route = "teams/1";
-        var response = await Client.GetAsync(route);
-        response.EnsureSuccessStatusCode();
+        var first = await Client.GetAsync("/teams/1");
+        first.EnsureSuccessStatusCode();
+        var originalBody = await first.Content.ReadAsStringAsync();
 
-        response = await Client.GetAsync(route);
-        response.EnsureSuccessStatusCode();
+        var second = await Client.GetAsync("/teams/1");
+        second.EnsureSuccessStatusCode();
 
-        Assert.That(response.Headers.Contains(CacheHeaders.CacheStatus));
-        Assert.That(response.Headers.GetValues(CacheHeaders.CacheStatus).First(), Is.EqualTo(Enum.GetName(CacheStatus.Hit)));
+        Assert.That(second.Headers.GetValues(CacheHeaders.CacheStatus).First(), Is.EqualTo(nameof(CacheStatus.Hit)));
+        Assert.That(await second.Content.ReadAsStringAsync(), Is.EqualTo(originalBody));
     }
 
     [TearDown]

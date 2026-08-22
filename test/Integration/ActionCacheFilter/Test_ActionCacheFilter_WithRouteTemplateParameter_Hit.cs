@@ -31,17 +31,28 @@ public class Test_ActionCacheFilter_WithRouteTemplateParameter
     }
 
     [Test]
-    public async Task Test()
+    public async Task Hit_ServesEachResourcesOwnResponse()
     {
-        var route = $"{Guid.NewGuid()}/teams/{Guid.NewGuid()}";
-        var response = await Client.GetAsync(route);
-        response.EnsureSuccessStatusCode();
+        var accountId = Guid.NewGuid();
+        var teamA = Guid.NewGuid();
+        var teamB = Guid.NewGuid();
 
-        response = await Client.GetAsync(route);
-        response.EnsureSuccessStatusCode();
+        var firstA = await Client.GetAsync($"{accountId}/teams/{teamA}");
+        firstA.EnsureSuccessStatusCode();
+        var bodyA = await firstA.Content.ReadAsStringAsync();
 
-        Assert.That(response.Headers.Contains(CacheHeaders.CacheStatus));
-        Assert.That(response.Headers.GetValues(CacheHeaders.CacheStatus).First(), Is.EqualTo(Enum.GetName(CacheStatus.Hit)));
+        var firstB = await Client.GetAsync($"{accountId}/teams/{teamB}");
+        firstB.EnsureSuccessStatusCode();
+        var bodyB = await firstB.Content.ReadAsStringAsync();
+
+        Assert.That(bodyA, Is.Not.EqualTo(bodyB), "the two teams must not share a cache entry");
+
+        var hitA = await Client.GetAsync($"{accountId}/teams/{teamA}");
+        hitA.EnsureSuccessStatusCode();
+
+        Assert.That(hitA.Headers.GetValues(CacheHeaders.CacheStatus).First(), Is.EqualTo(nameof(CacheStatus.Hit)));
+        Assert.That(await hitA.Content.ReadAsStringAsync(), Is.EqualTo(bodyA),
+            "a hit must return the entry for the requested team, not another one");
     }
 
     [TearDown]

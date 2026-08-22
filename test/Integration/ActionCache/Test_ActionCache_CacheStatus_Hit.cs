@@ -31,17 +31,22 @@ public class Test_ActionCache_CacheStatus_Hit
     }
 
     [Test]
-    public async Task Test()
+    public async Task Hit_ServesTheSameResponseThatWasCached()
     {
-        var response = await Client.GetAsync("/users");
-        response.EnsureSuccessStatusCode();
+        var first = await Client.GetAsync("/users");
+        first.EnsureSuccessStatusCode();
+        var originalBody = await first.Content.ReadAsStringAsync();
 
-        // Cache hit
-        response = await Client.GetAsync("/users");
-        response.EnsureSuccessStatusCode();
+        var second = await Client.GetAsync("/users");
+        second.EnsureSuccessStatusCode();
 
-        Assert.That(response.Headers.Contains(CacheHeaders.CacheStatus));
-        Assert.That(response.Headers.GetValues(CacheHeaders.CacheStatus).First(), Is.EqualTo(Enum.GetName(CacheStatus.Hit)));
+        Assert.That(second.Headers.GetValues(CacheHeaders.CacheStatus).First(), Is.EqualTo(nameof(CacheStatus.Hit)));
+
+        // A Hit header proves the lookup succeeded; this proves it returned the right thing.
+        Assert.That(await second.Content.ReadAsStringAsync(), Is.EqualTo(originalBody));
+        Assert.That(second.Content.Headers.ContentType?.MediaType,
+            Is.EqualTo(first.Content.Headers.ContentType?.MediaType),
+            "a cached response must reproduce its content type");
     }
 
     [TearDown]

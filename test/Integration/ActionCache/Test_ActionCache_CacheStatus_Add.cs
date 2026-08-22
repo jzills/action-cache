@@ -31,31 +31,24 @@ public class Test_ActionCache_CacheStatus_Add
     }
 
     [Test]
-    public async Task Test()
+    public async Task FirstRequest_ReportsAdd_AndPopulatesTheCache()
     {
-        var response = await Client.GetAsync("/users");
-        response.EnsureSuccessStatusCode();
+        var first = await Client.GetAsync("/users");
+        first.EnsureSuccessStatusCode();
 
-        // Cache hit
-        response = await Client.GetAsync("/users");
-        response.EnsureSuccessStatusCode();
+        Assert.That(first.Headers.GetValues(CacheHeaders.CacheStatus).First(),
+            Is.EqualTo(nameof(CacheStatus.Add)), "an uncached request stores the response");
 
-        Assert.That(response.Headers.Contains(CacheHeaders.CacheStatus));
-        Assert.That(response.Headers.GetValues(CacheHeaders.CacheStatus).First(), Is.EqualTo(Enum.GetName(CacheStatus.Hit)));
+        // Populating is the claim worth checking — the entry has to be readable afterwards.
+        var cacheFactory = App.Services.GetRequiredService<IActionCacheFactory>();
+        var keys = await cacheFactory.Create("Users")!.GetKeysAsync();
 
-        // Cache eviction
-        response = await Client.DeleteAsync("/users");
-        response.EnsureSuccessStatusCode();
+        Assert.That(keys.Count(), Is.EqualTo(1));
 
-        Assert.That(response.Headers.Contains(CacheHeaders.CacheStatus));
-        Assert.That(response.Headers.GetValues(CacheHeaders.CacheStatus).First(), Is.EqualTo(Enum.GetName(CacheStatus.Evict)));
-
-        // Cache miss
-        response = await Client.GetAsync("/users");
-        response.EnsureSuccessStatusCode();
-
-        Assert.That(response.Headers.Contains(CacheHeaders.CacheStatus));
-        Assert.That(response.Headers.GetValues(CacheHeaders.CacheStatus).First(), Is.EqualTo(Enum.GetName(CacheStatus.Add)));
+        var second = await Client.GetAsync("/users");
+        second.EnsureSuccessStatusCode();
+        Assert.That(second.Headers.GetValues(CacheHeaders.CacheStatus).First(), Is.EqualTo(nameof(CacheStatus.Hit)));
+        Assert.That(await second.Content.ReadAsStringAsync(), Is.EqualTo(await first.Content.ReadAsStringAsync()));
     }
 
     [TearDown]
