@@ -1,4 +1,5 @@
 using ActionCache;
+using Unit.TestUtilities;
 using Unit.TestUtilities.Builders;
 
 namespace Unit.Common;
@@ -28,16 +29,25 @@ public class ActionCacheSlidingExpirationTests
         resultBefore.Should().Be("Value_1");
         keysBefore.Should().HaveCount(1);
 
-        await Task.Delay(TimeSpan.FromSeconds(10));
+        // Clock deadlines rather than Task.Delay: this test only means something if ten
+        // seconds of *wall* clock really pass before the touch, and the host clock does not
+        // always agree with an interval. See WallClock.
+        await WallClock.WaitUntilPast(DateTimeOffset.UtcNow.AddSeconds(10));
 
         // Access within the sliding window resets the expiry
         await _cache.GetAsync<string?>("Key_Expiration_1");
         await _cache.GetKeysAsync();
 
-        await Task.Delay(TimeSpan.FromSeconds(10));
+        var touchedAt = DateTimeOffset.UtcNow;
+        await WallClock.WaitUntilPast(touchedAt.AddSeconds(10));
 
         var resultAfter = await _cache.GetAsync<string?>("Key_Expiration_1");
         var keysAfter = await _cache.GetKeysAsync();
+
+        // If the clock jumped forward past the whole window the entry expired legitimately
+        // and the failure is the environment's, not the cache's — say which.
+        (DateTimeOffset.UtcNow - touchedAt).Should().BeLessThan(TimeSpan.FromSeconds(15),
+            "the wall clock must stay inside the sliding window for this assertion to mean anything");
 
         resultAfter.Should().NotBeNull();
         keysAfter.Should().HaveCount(1);
