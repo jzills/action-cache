@@ -66,6 +66,21 @@ public class UsersController : Controller
     public IActionResult GetMe() =>
         Ok(new { Name = User.Identity?.Name ?? "anonymous" });
 
+    /// <summary>
+    /// A body-bearing cached action whose response tracks mutable source data, so a test
+    /// can tell a genuinely refreshed entry from one that was merely left alone.
+    /// </summary>
+    public static string RefreshableBodyValue = "original";
+
+    [HttpPost("query-refreshable")]
+    [ActionCache(Namespace = "BodyReplay")]
+    public IActionResult GetRefreshableWithBody([FromBody] Query query) =>
+        Ok(new { Value = RefreshableBodyValue, ShowAll = query.ShowAll });
+
+    [HttpPost("query-refreshable/refresh")]
+    [ActionCacheRefresh(Namespace = "BodyReplay")]
+    public IActionResult RefreshBodyReplay() => Ok();
+
     [HttpPost("")]
     [ActionCacheRefresh(Namespace = "Users")]
     public IActionResult Post() => Ok();

@@ -74,4 +74,7 @@ internal static partial class ActionCacheLog
 
     [LoggerMessage(EventId = 3003, Level = LogLevel.Warning, Message = "ActionCache refresh could not replay '{Method} {Path}': no endpoint matched.")]
     public static partial void RefreshReplayNoEndpoint(ILogger logger, string method, string path);
+
+    [LoggerMessage(EventId = 3004, Level = LogLevel.Warning, Message = "ActionCache refresh replayed '{Method} {Path}' but it returned {StatusCode}; the cached entry was left unchanged.")]
+    public static partial void RefreshReplayNotSuccessful(ILogger logger, string method, string path, int statusCode);
 }

@@ -7,6 +7,8 @@ using ActionCache.Common.Responses;
 using ActionCache.Common.Extensions;
 using ActionCache.Common.Extensions.Internal;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Controllers;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.AspNetCore.Routing.Template;
 using Microsoft.Extensions.Logging;
@@ -129,7 +131,7 @@ public class ActionCacheFilter : ActionCacheFilterBase, IAsyncActionFilter
             actionExecutedContext.Result.IsCacheableResult() &&
             ResponseFactory.TryCreate(
                 actionExecutedContext.Result,
-                CachedResponseFactory.CreateRequest(context.HttpContext),
+                ResponseFactory.CreateRequest(context.HttpContext, GetBoundBody(context)),
                 variesByRequest,
                 out var cachedResponse))
         {
@@ -141,5 +143,34 @@ public class ActionCacheFilter : ActionCacheFilterBase, IAsyncActionFilter
             context.AddCacheStatus(CacheStatus.None);
             LogResultNotCacheable();
         }
+    }
+
+    /// <summary>
+    /// Finds the argument bound from the request body, if the action takes one.
+    /// </summary>
+    /// <param name="context">The action executing context.</param>
+    /// <returns>The bound body model, or <see langword="null"/> when the action has no body parameter.</returns>
+    /// <remarks>
+    /// Refresh replays the recorded request, so an action with a <c>[FromBody]</c> parameter
+    /// has to carry its payload or the replay binds nothing and the endpoint answers 415 —
+    /// overwriting a good cache entry with an error.
+    /// </remarks>
+    private static object? GetBoundBody(ActionExecutingContext context)
+    {
+        if (context.ActionDescriptor is not ControllerActionDescriptor descriptor)
+        {
+            return null;
+        }
+
+        foreach (var parameter in descriptor.Parameters)
+        {
+            if (parameter.BindingInfo?.BindingSource == BindingSource.Body &&
+                context.ActionArguments.TryGetValue(parameter.Name, out var value))
+            {
+                return value;
+            }
+        }
+
+        return null;
     }
 }

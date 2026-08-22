@@ -164,17 +164,26 @@ public class CachedResponseFactory
             statusCode: cachedResponse.StatusCode);
 
     /// <summary>
-    /// Records the request line of the current request, for refresh to replay.
+    /// Records the current request so refresh can replay it.
     /// </summary>
     /// <param name="httpContext">The current request.</param>
-    /// <returns>The recorded request line.</returns>
-    public static CachedRequest CreateRequest(HttpContext httpContext) => new()
+    /// <param name="body">The bound body model, or <see langword="null"/> when the request had none.</param>
+    /// <returns>The recorded request.</returns>
+    /// <remarks>
+    /// The body is re-serialized from the bound model rather than read from the request
+    /// stream, which model binding has already consumed by the time a cache filter runs.
+    /// Reading the raw bytes instead would mean enabling buffering before binding, and so
+    /// inserting middleware into the host's pipeline.
+    /// </remarks>
+    public CachedRequest CreateRequest(HttpContext httpContext, object? body = null) => new()
     {
         Method = httpContext.Request.Method,
         Path = httpContext.Request.Path.Value ?? "/",
         QueryString = httpContext.Request.QueryString.HasValue
             ? httpContext.Request.QueryString.Value
-            : null
+            : null,
+        Body = body is null ? null : Serialize(body),
+        ContentType = body is null ? null : DefaultContentType
     };
 
     private string? Serialize(object? value) =>

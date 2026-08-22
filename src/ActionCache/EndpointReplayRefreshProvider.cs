@@ -67,11 +67,23 @@ public class EndpointReplayRefreshProvider : IActionCacheRefreshProvider
         var httpContext = CreateHttpContext(request, scope, body, routeValues, endpoint!, cancellationToken);
 
         await endpoint!.RequestDelegate!(httpContext);
-        activity?.SetTag("http.response.status_code", httpContext.Response.StatusCode);
+
+        var statusCode = httpContext.Response.StatusCode;
+        activity?.SetTag("http.response.status_code", statusCode);
+
+        // Only a successful replay may replace an entry. A transient 500, a 404 from a
+        // deleted resource, or a binding failure would otherwise overwrite a good cached
+        // response with an error and serve it until expiry — refresh actively making things
+        // worse than doing nothing.
+        if (statusCode < StatusCodes.Status200OK || statusCode > StatusCodes.Status226IMUsed)
+        {
+            ActionCacheLog.RefreshReplayNotSuccessful(_logger, request.Method, request.Path, statusCode);
+            return null;
+        }
 
         return new CachedResponse
         {
-            StatusCode = httpContext.Response.StatusCode,
+            StatusCode = statusCode,
             ContentType = httpContext.Response.ContentType,
             Body = ReadBody(body),
             Request = request
@@ -137,6 +149,14 @@ public class EndpointReplayRefreshProvider : IActionCacheRefreshProvider
         httpContext.Request.QueryString = request.QueryString is null
             ? QueryString.Empty
             : new QueryString(request.QueryString);
+
+        if (request.Body is not null)
+        {
+            var payload = System.Text.Encoding.UTF8.GetBytes(request.Body);
+            httpContext.Request.Body = new MemoryStream(payload);
+            httpContext.Request.ContentLength = payload.Length;
+            httpContext.Request.ContentType = request.ContentType;
+        }
 
         httpContext.Response.Body = body;
         httpContext.Features.Set<IRoutingFeature>(new RoutingFeature { RouteData = new RouteData(routeValues) });

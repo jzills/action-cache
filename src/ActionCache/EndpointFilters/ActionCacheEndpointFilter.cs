@@ -124,7 +124,7 @@ public class ActionCacheEndpointFilter : ActionCacheFilterBase, IEndpointFilter
         if (result.IsSuccessfulEndpointResult() &&
             ResponseFactory.TryCreateFromEndpointResult(
                 result,
-                CachedResponseFactory.CreateRequest(context.HttpContext),
+                ResponseFactory.CreateRequest(context.HttpContext),
                 variesByRequest,
                 out var cachedResponse))
         {
