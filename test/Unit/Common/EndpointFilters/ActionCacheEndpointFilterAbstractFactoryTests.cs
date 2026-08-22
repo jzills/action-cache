@@ -1,3 +1,4 @@
+using ActionCache.Common.Keys;
 using Unit.TestUtilities.Builders;
 using ActionCache;
 using ActionCache.Common.Caching;
@@ -46,7 +47,7 @@ public class ActionCacheEndpointFilterAbstractFactoryTests
             Options.Create(new ActionCacheResilienceOptions()));
 
         _sut = new ActionCacheEndpointFilterAbstractFactory(
-            [_cacheFactoryMock.Object], _binderFactory, resilientDecorator, NullLoggerFactory.Instance, SingleFlightBuilder.Build(), VaryByBuilder.Resolver(), ResponseFactoryBuilder.Build());
+            [_cacheFactoryMock.Object], _binderFactory, resilientDecorator, NullLoggerFactory.Instance, SingleFlightBuilder.Build(), VaryByBuilder.Resolver(), ResponseFactoryBuilder.Build(), new ActionCacheKeyOptions());
     }
 
     [Test]

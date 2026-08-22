@@ -1,3 +1,4 @@
+using ActionCache.Common.Keys;
 using Unit.TestUtilities.Builders;
 using ActionCache;
 using ActionCache.Common.Responses;
@@ -34,7 +35,7 @@ public class ActionCacheFilterHitTests
             .BuildServiceProvider()
             .GetRequiredService<TemplateBinderFactory>();
 
-        _sut = new ActionCacheFilter(_cacheMock.Object, _binderFactory, NullLogger.Instance, SingleFlightBuilder.Build(), true, VaryByBuilder.Resolver(), VaryByBuilder.Options(), ResponseFactoryBuilder.Build());
+        _sut = new ActionCacheFilter(_cacheMock.Object, _binderFactory, NullLogger.Instance, SingleFlightBuilder.Build(), true, VaryByBuilder.Resolver(), VaryByBuilder.Options(), ResponseFactoryBuilder.Build(), new ActionCacheKeyOptions());
     }
 
     [Test]

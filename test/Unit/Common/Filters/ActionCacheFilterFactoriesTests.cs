@@ -1,3 +1,4 @@
+using ActionCache.Common.Keys;
 using Unit.TestUtilities.Builders;
 using ActionCache;
 using ActionCache.Common.Caching;
@@ -47,10 +48,10 @@ public class ActionCacheFilterFactoriesTests
             Options.Create(new ActionCacheResilienceOptions()));
 
         var mvcAbstractFactory = new ActionCacheFilterAbstractFactory(
-            [cacheFactoryMock.Object], binderFactory, resilientDecorator, NullLoggerFactory.Instance, SingleFlightBuilder.Build(), VaryByBuilder.Resolver(), ResponseFactoryBuilder.Build());
+            [cacheFactoryMock.Object], binderFactory, resilientDecorator, NullLoggerFactory.Instance, SingleFlightBuilder.Build(), VaryByBuilder.Resolver(), ResponseFactoryBuilder.Build(), new ActionCacheKeyOptions());
 
         var endpointAbstractFactory = new ActionCacheEndpointFilterAbstractFactory(
-            [cacheFactoryMock.Object], binderFactory, resilientDecorator, NullLoggerFactory.Instance, SingleFlightBuilder.Build(), VaryByBuilder.Resolver(), ResponseFactoryBuilder.Build());
+            [cacheFactoryMock.Object], binderFactory, resilientDecorator, NullLoggerFactory.Instance, SingleFlightBuilder.Build(), VaryByBuilder.Resolver(), ResponseFactoryBuilder.Build(), new ActionCacheKeyOptions());
 
         var services = new ServiceCollection();
         services.AddSingleton<IActionCacheFilterAbstractFactory<IFilterMetadata>>(mvcAbstractFactory);

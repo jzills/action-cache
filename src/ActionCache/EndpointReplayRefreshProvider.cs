@@ -60,12 +60,14 @@ public class EndpointReplayRefreshProvider : IActionCacheRefreshProvider
             return null;
         }
 
+        using var activity = ActionCacheDiagnostics.StartOperation("RefreshReplay", request.Path);
         using var scope = _scopeFactory.CreateScope();
         using var body = new MemoryStream();
 
         var httpContext = CreateHttpContext(request, scope, body, routeValues, endpoint!, cancellationToken);
 
         await endpoint!.RequestDelegate!(httpContext);
+        activity?.SetTag("http.response.status_code", httpContext.Response.StatusCode);
 
         return new CachedResponse
         {

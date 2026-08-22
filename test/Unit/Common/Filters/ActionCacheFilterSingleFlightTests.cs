@@ -1,3 +1,4 @@
+using ActionCache.Common.Keys;
 using Unit.TestUtilities.Builders;
 using ActionCache;
 using ActionCache.Common.Concurrency;
@@ -73,7 +74,7 @@ public class ActionCacheFilterSingleFlightTests
     }
 
     private ActionCacheFilter CreateFilter(IActionCache cache, IActionCacheSingleFlight singleFlight, bool enabled) =>
-        new(cache, _binderFactory, NullLogger.Instance, singleFlight, enabled, VaryByBuilder.Resolver(), VaryByBuilder.Options(), ResponseFactoryBuilder.Build());
+        new(cache, _binderFactory, NullLogger.Instance, singleFlight, enabled, VaryByBuilder.Resolver(), VaryByBuilder.Options(), ResponseFactoryBuilder.Build(), new ActionCacheKeyOptions());
 
     private static InProcessSingleFlight CreateSingleFlight() =>
         new(new ActionCacheSingleFlightOptions(), NullLogger<InProcessSingleFlight>.Instance);

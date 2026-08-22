@@ -1,3 +1,4 @@
+using ActionCache;
 using ActionCache.Common;
 using ActionCache.Common.Concurrency;
 using ActionCache.Common.Keys.VaryBy;
@@ -28,4 +29,11 @@ internal static class ResponseFactoryBuilder
 {
     internal static CachedResponseFactory Build() =>
         new(new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
+}
+
+internal static class ResilientCacheBuilder
+{
+    internal static IActionCache Decorate(IActionCache cache) =>
+        new ActionCache.Common.Caching.ResilientActionCache(
+            cache, NullLogger.Instance, failClosed: false);
 }

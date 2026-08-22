@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Runtime.ExceptionServices;
 using ActionCache.Common.Diagnostics;
 using ActionCache.Utilities;
@@ -73,6 +74,7 @@ public class ResilientActionCache : IActionCache
     public async Task<IEnumerable<string>> GetKeysAsync(CancellationToken cancellationToken = default)
     {
         using var timeout = CreateTimeoutSource(cancellationToken);
+        using var activity = ActionCacheDiagnostics.StartOperation(nameof(GetKeysAsync), _namespace);
 
         try
         {
@@ -93,10 +95,16 @@ public class ResilientActionCache : IActionCache
     public async Task<TValue?> GetAsync<TValue>(string key, CancellationToken cancellationToken = default)
     {
         using var timeout = CreateTimeoutSource(cancellationToken);
+        using var activity = ActionCacheDiagnostics.StartOperation(nameof(GetAsync), _namespace);
+        var stopwatch = ValueStopwatch.Start();
 
         try
         {
             var value = await _inner.GetAsync<TValue>(key, timeout?.Token ?? cancellationToken);
+
+            ActionCacheDiagnostics.RecordRequest(_namespace, value is not null ? "hit" : "miss");
+            ActionCacheDiagnostics.RecordDuration(_namespace, nameof(GetAsync), stopwatch.Elapsed);
+            activity?.SetTag("actioncache.hit", value is not null);
             if (_logger.IsEnabled(LogLevel.Debug))
             {
                 if (value is not null)
@@ -126,6 +134,7 @@ public class ResilientActionCache : IActionCache
     public async Task SetAsync<TValue>(string key, TValue? value, CancellationToken cancellationToken = default)
     {
         using var timeout = CreateTimeoutSource(cancellationToken);
+        using var activity = ActionCacheDiagnostics.StartOperation(nameof(SetAsync), _namespace);
 
         try
         {
@@ -149,6 +158,7 @@ public class ResilientActionCache : IActionCache
     public async Task RemoveAsync(string key, CancellationToken cancellationToken = default)
     {
         using var timeout = CreateTimeoutSource(cancellationToken);
+        using var activity = ActionCacheDiagnostics.StartOperation(nameof(RemoveAsync), _namespace);
 
         try
         {
@@ -180,6 +190,8 @@ public class ResilientActionCache : IActionCache
         try
         {
             await _inner.RemoveAsync(timeout?.Token ?? cancellationToken);
+            ActionCacheDiagnostics.Evictions.Add(1,
+                new KeyValuePair<string, object?>("namespace", (string)_namespace));
             if (_logger.IsEnabled(LogLevel.Debug))
             {
                 ActionCacheLog.CacheEvicted(_logger, (string)_namespace);
@@ -195,6 +207,7 @@ public class ResilientActionCache : IActionCache
     public async Task RefreshAsync(CancellationToken cancellationToken = default)
     {
         using var timeout = CreateTimeoutSource(cancellationToken);
+        using var activity = ActionCacheDiagnostics.StartOperation(nameof(RefreshAsync), _namespace);
 
         try
         {
@@ -234,6 +247,8 @@ public class ResilientActionCache : IActionCache
 
     private void Degrade(Exception exception, string operation)
     {
+        Activity.Current?.SetStatus(ActivityStatusCode.Error, exception.Message);
+
         if (_failClosed)
         {
             ActionCacheLog.OperationFailedClosed(_logger, exception, operation, (string)_namespace);

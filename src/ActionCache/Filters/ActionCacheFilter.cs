@@ -1,6 +1,7 @@
 using ActionCache.Common.Caching;
 using ActionCache.Common.Concurrency;
 using ActionCache.Common.Enums;
+using ActionCache.Common.Keys;
 using ActionCache.Common.Keys.VaryBy;
 using ActionCache.Common.Responses;
 using ActionCache.Common.Extensions;
@@ -28,6 +29,7 @@ public class ActionCacheFilter : ActionCacheFilterBase, IAsyncActionFilter
     /// <param name="varyByResolver">Resolves the request dimensions that form part of the cache key.</param>
     /// <param name="varyByOptions">Which request dimensions this endpoint varies its cache key by.</param>
     /// <param name="responseFactory">Converts between action results and stored responses.</param>
+    /// <param name="keyOptions">Controls how cache keys are formed.</param>
     public ActionCacheFilter(
         IActionCache cache,
         TemplateBinderFactory binderFactory,
@@ -36,8 +38,9 @@ public class ActionCacheFilter : ActionCacheFilterBase, IAsyncActionFilter
         bool singleFlightEnabled,
         ActionCacheVaryByResolver varyByResolver,
         VaryByOptions varyByOptions,
-        CachedResponseFactory responseFactory
-    ) : base(cache, binderFactory, logger, singleFlight, singleFlightEnabled, varyByResolver, varyByOptions, responseFactory)
+        CachedResponseFactory responseFactory,
+        ActionCacheKeyOptions keyOptions
+    ) : base(cache, binderFactory, logger, singleFlight, singleFlightEnabled, varyByResolver, varyByOptions, responseFactory, keyOptions)
     {
     }
 
@@ -63,7 +66,7 @@ public class ActionCacheFilter : ActionCacheFilterBase, IAsyncActionFilter
 
         var varyByValues = await VaryByResolver.ResolveAsync(context.HttpContext, VaryByOptions, cancellationToken);
 
-        if (!context.TryGetKey(out var key, varyByValues))
+        if (!context.TryGetKey(out var key, varyByValues, UsePlaintextKeys))
         {
             context.AddCacheStatus(CacheStatus.Miss);
             LogCacheKeyUnavailable();

@@ -68,7 +68,7 @@ public class ActionCacheFilterTests
         };
 
         _cache = _factory.Create(@namespace)!;
-        var filter = new ActionCacheFilter(_cache, _binderFactory, NullLogger.Instance, SingleFlightBuilder.Build(), true, VaryByBuilder.Resolver(), VaryByBuilder.Options(), ResponseFactoryBuilder.Build());
+        var filter = new ActionCacheFilter(_cache, _binderFactory, NullLogger.Instance, SingleFlightBuilder.Build(), true, VaryByBuilder.Resolver(), VaryByBuilder.Options(), ResponseFactoryBuilder.Build(), new ActionCacheKeyOptions());
 
         await filter.OnActionExecutionAsync(actionExecutingContext, next);
 

@@ -1,5 +1,6 @@
 using ActionCache.Common.Concurrency;
 using ActionCache.Common.Diagnostics;
+using ActionCache.Common.Keys;
 using ActionCache.Common.Keys.VaryBy;
 using ActionCache.Common.Responses;
 using ActionCache.Common.Extensions.Internal;
@@ -51,6 +52,11 @@ public abstract class ActionCacheFilterBase
     protected readonly CachedResponseFactory ResponseFactory;
 
     /// <summary>
+    /// Whether cache keys are readable and reversible rather than hashed.
+    /// </summary>
+    protected readonly bool UsePlaintextKeys;
+
+    /// <summary>
     /// The logger used to record filter-level conditions the cache layer cannot observe.
     /// </summary>
     private readonly ILogger _logger;
@@ -66,6 +72,7 @@ public abstract class ActionCacheFilterBase
     /// <param name="varyByResolver">Resolves the request dimensions that form part of the cache key.</param>
     /// <param name="varyByOptions">Which request dimensions this endpoint varies its cache key by.</param>
     /// <param name="responseFactory">Converts between endpoint results and stored responses.</param>
+    /// <param name="keyOptions">Controls how cache keys are formed.</param>
     internal ActionCacheFilterBase(
         IActionCache cache,
         TemplateBinderFactory binderFactory,
@@ -74,7 +81,8 @@ public abstract class ActionCacheFilterBase
         bool singleFlightEnabled,
         ActionCacheVaryByResolver varyByResolver,
         VaryByOptions varyByOptions,
-        CachedResponseFactory responseFactory)
+        CachedResponseFactory responseFactory,
+        ActionCacheKeyOptions keyOptions)
     {
         Cache = cache;
         BinderFactory = binderFactory;
@@ -84,6 +92,7 @@ public abstract class ActionCacheFilterBase
         VaryByResolver = varyByResolver;
         VaryByOptions = varyByOptions;
         ResponseFactory = responseFactory;
+        UsePlaintextKeys = keyOptions.UsePlaintextKeys;
     }
 
     /// <summary>
@@ -95,7 +104,8 @@ public abstract class ActionCacheFilterBase
     /// <param name="logger">The logger used to record filter-level conditions the cache layer cannot observe.</param>
     internal ActionCacheFilterBase(IActionCache cache, TemplateBinderFactory binderFactory, ILogger logger)
         : this(cache, binderFactory, logger, NullActionCacheSingleFlight.Instance, singleFlightEnabled: false,
-               ActionCacheVaryByResolver.None, new VaryByOptions(), CachedResponseFactory.None)
+               ActionCacheVaryByResolver.None, new VaryByOptions(), CachedResponseFactory.None,
+               new ActionCacheKeyOptions())
     {
     }
 

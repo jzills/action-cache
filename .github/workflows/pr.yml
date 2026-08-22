@@ -49,8 +49,17 @@ jobs:
       - name: Build
         run: dotnet build ActionCache.slnx --no-restore
 
-      - name: Test
-        run: dotnet test test/Integration/Integration.csproj -p:TestTfmsInParallel=false --no-build --verbosity normal
+      # One framework at a time, explicitly. The suite is multi-targeted and both
+      # frameworks run the same fixtures against the same Redis, SQL Server and Cosmos
+      # containers using the same namespaces, so overlapping runs let one fixture's
+      # TearDown eviction wipe the other's entries mid-test. That surfaced as intermittent
+      # expiration and key-count failures that always passed on a single-framework re-run.
+      # -p:TestTfmsInParallel=false did not reliably serialize them; separate invocations do.
+      - name: Test (net8.0)
+        run: dotnet test test/Integration/Integration.csproj -f net8.0 --no-build --verbosity normal
+
+      - name: Test (net10.0)
+        run: dotnet test test/Integration/Integration.csproj -f net10.0 --no-build --verbosity normal
 
   package-dependencies:
     name: Package Dependencies

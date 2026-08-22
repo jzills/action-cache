@@ -1,4 +1,7 @@
 <Solution>
+  <Folder Name="/benchmarks/">
+    <Project Path="benchmarks/ActionCache.Benchmarks/ActionCache.Benchmarks.csproj" />
+  </Folder>
   <Folder Name="/src/">
     <Project Path="src/ActionCache.Abstractions/ActionCache.Abstractions.csproj" />
     <Project Path="src/ActionCache.AzureCosmos/ActionCache.AzureCosmos.csproj" />

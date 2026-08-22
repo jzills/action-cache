@@ -27,8 +27,12 @@ jobs:
       - name: Run unit tests
         run: dotnet test test/Unit/Unit.csproj --verbosity normal
 
-      - name: Run integration tests
-        run: dotnet test test/Integration/Integration.csproj -p:TestTfmsInParallel=false --verbosity normal
+      # Sequential per framework — see the note in pr.yml.
+      - name: Run integration tests (net8.0)
+        run: dotnet test test/Integration/Integration.csproj -f net8.0 --verbosity normal
+
+      - name: Run integration tests (net10.0)
+        run: dotnet test test/Integration/Integration.csproj -f net10.0 --verbosity normal
 
   publish:
     name: Pack and Publish
