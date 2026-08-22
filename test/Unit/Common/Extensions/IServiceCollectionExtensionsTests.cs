@@ -138,6 +138,6 @@ public class IServiceCollectionExtensionsTests
             .UseDistributedSingleFlight());
 
         register.Should().Throw<InvalidOperationException>()
-            .WithMessage("*requires a Redis or SQL Server cache backend*");
+            .WithMessage("*requires a cache backend that provides a distributed lock*");
     }
 }

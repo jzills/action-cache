@@ -1,8 +1,5 @@
-using ActionCache.AzureCosmos;
-using Microsoft.Extensions.Caching.Memory;
-using Microsoft.Extensions.Caching.SqlServer;
-using Microsoft.Extensions.Caching.StackExchangeRedis;
 using ActionCache.Common.Concurrency;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace ActionCache.Common;
 
@@ -41,22 +38,18 @@ public class ActionCacheOptions
     public ActionCacheSingleFlightOptions SingleFlightOptions { get; } = new();
 
     /// <summary>
-    /// Gets or sets a delegate to configure options for <see cref="MemoryCacheOptions"/>.
+    /// Registrations contributed by backend packages.
     /// </summary>
-    public Action<MemoryCacheOptions>? ConfigureMemoryCacheOptions { get; set; }
+    /// <remarks>
+    /// The core package deliberately does not know which backends exist. Each backend
+    /// package contributes its own registration through its <c>Use…Cache</c> extension, so
+    /// referencing ActionCache alone pulls in no Redis, SQL Server or Cosmos dependency.
+    /// </remarks>
+    internal List<Action<IServiceCollection>> BackendRegistrations { get; } = [];
 
     /// <summary>
-    /// Gets or sets a delegate to configure options for <see cref="RedisCacheOptions"/>.
+    /// Builds the distributed locker used by <c>UseDistributedSingleFlight()</c>, set by a
+    /// backend package that supports one.
     /// </summary>
-    public Action<RedisCacheOptions>? ConfigureRedisCacheOptions { get; set; }
-
-    /// <summary>
-    /// Gets or sets a delegate to configure options for <see cref="SqlServerCacheOptions"/>.
-    /// </summary>
-    public Action<SqlServerCacheOptions>? ConfigureSqlServerCacheOptions { get; set; }
-
-    /// <summary>
-    /// Gets or sets a delegate to configure options for <see cref="AzureCosmosCacheOptions"/>.
-    /// </summary>
-    public Action<AzureCosmosCacheOptions>? ConfigureAzureCosmosCacheOptions { get; set; }
+    internal Func<IServiceProvider, ICacheLockerHandler>? DistributedLockerFactory { get; set; }
 }

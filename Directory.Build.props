@@ -1,0 +1,44 @@
+<Project>
+
+  <!-- Shared by every ActionCache package. Per-package identity lives in its own csproj. -->
+  <PropertyGroup>
+    <TargetFrameworks>net8.0;net10.0</TargetFrameworks>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <EnableNETAnalyzers>true</EnableNETAnalyzers>
+    <AnalysisLevel>latest</AnalysisLevel>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <Authors>Joshua Zillwood</Authors>
+    <Copyright>Copyright © Joshua Zillwood</Copyright>
+    <PackageIcon>Icon.jpg</PackageIcon>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/jzills/action-cache</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/jzills/action-cache.git</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+  </PropertyGroup>
+
+  <!-- Step-into debugging and symbols on nuget.org. -->
+  <PropertyGroup>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <ContinuousIntegrationBuild Condition="'$(CI)' == 'true'">true</ContinuousIntegrationBuild>
+  </PropertyGroup>
+
+  <!-- The version floors for framework-shipped packages, keyed off the target. -->
+  <PropertyGroup>
+    <_TargetVersion Condition="'$(TargetFramework)' == 'net8.0'">8.0.0</_TargetVersion>
+    <_TargetVersion Condition="'$(TargetFramework)' == 'net10.0'">10.0.0</_TargetVersion>
+  </PropertyGroup>
+
+  <ItemGroup Condition="'$(IsPackable)' != 'false'">
+    <None Include="$(MSBuildThisFileDirectory)resources/Icon.jpg" Pack="true" PackagePath="" Visible="false" />
+    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0" PrivateAssets="All" />
+  </ItemGroup>
+
+</Project>

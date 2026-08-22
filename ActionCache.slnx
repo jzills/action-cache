@@ -1,0 +1,13 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/ActionCache.Abstractions/ActionCache.Abstractions.csproj" />
+    <Project Path="src/ActionCache.AzureCosmos/ActionCache.AzureCosmos.csproj" />
+    <Project Path="src/ActionCache.Redis/ActionCache.Redis.csproj" />
+    <Project Path="src/ActionCache.SqlServer/ActionCache.SqlServer.csproj" />
+    <Project Path="src/ActionCache/ActionCache.csproj" />
+  </Folder>
+  <Folder Name="/test/">
+    <Project Path="test/Integration/Integration.csproj" />
+    <Project Path="test/Unit/Unit.csproj" />
+  </Folder>
+</Solution>

@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <PackageId>ActionCache.SqlServer</PackageId>
+    <Description>SQL Server backend for ActionCache, using the distributed cache table and sp_getapplock for distributed locking.</Description>
+    <PackageTags>cache;sqlserver;aspnetcore;distributed-cache</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Data.SqlClient" Version="5.2.2" />
+    <PackageReference Include="Microsoft.Extensions.Caching.SqlServer" Version="$(_TargetVersion)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../ActionCache/ActionCache.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Unit" />
+  </ItemGroup>
+
+</Project>

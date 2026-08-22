@@ -40,11 +40,25 @@ against an in-process or distributed backend, or several layered together.
 
 ## Installation
 
-`ActionCache` is available on [NuGet](https://www.nuget.org/packages/ActionCache/):
+ActionCache ships as one package per backend, so you only take the dependencies you use:
 
 ```bash
-dotnet add package ActionCache
+dotnet add package ActionCache                 # core + in-memory caching
+dotnet add package ActionCache.Redis           # add for Redis
+dotnet add package ActionCache.SqlServer       # add for SQL Server
+dotnet add package ActionCache.AzureCosmos     # add for Azure Cosmos DB
 ```
+
+| Package | Depends on |
+|---------|------------|
+| [`ActionCache`](https://www.nuget.org/packages/ActionCache/) | `ActionCache.Abstractions` only — no Redis, SqlClient, Cosmos SDK or Newtonsoft |
+| [`ActionCache.Redis`](https://www.nuget.org/packages/ActionCache.Redis/) | StackExchange.Redis |
+| [`ActionCache.SqlServer`](https://www.nuget.org/packages/ActionCache.SqlServer/) | Microsoft.Data.SqlClient |
+| [`ActionCache.AzureCosmos`](https://www.nuget.org/packages/ActionCache.AzureCosmos/) | Microsoft.Azure.Cosmos, Newtonsoft.Json |
+| [`ActionCache.Abstractions`](https://www.nuget.org/packages/ActionCache.Abstractions/) | nothing — reference it to write a custom backend |
+
+Configuration is unchanged: `options.UseRedisCache(...)` and friends still read the same,
+they just live in their own package now.
 
 Targets **.NET 8** and **.NET 10**.
 

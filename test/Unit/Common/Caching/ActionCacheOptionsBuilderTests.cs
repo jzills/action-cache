@@ -1,8 +1,6 @@
-using ActionCache.AzureCosmos;
 using ActionCache.Common;
-using Microsoft.Extensions.Caching.Memory;
-using Microsoft.Extensions.Caching.SqlServer;
-using Microsoft.Extensions.Caching.StackExchangeRedis;
+using ActionCache.Common.Extensions;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Unit.Common.Caching;
 
@@ -25,77 +23,77 @@ public class ActionCacheOptionsBuilderTests
     }
 
     [Test]
-    public void UseMemoryCache_Always_SetsConfigureMemoryCacheOptionsAndReturnsBuilder()
+    public void UseMemoryCache_RegistersABackendWithoutNamingItOnTheOptions()
     {
+        // The options object no longer carries per-backend configure delegates: that
+        // coupling is what made one package depend on Redis, SQL Server and Cosmos.
+        // A backend now contributes an opaque registration instead.
         var returned = _sut.UseMemoryCache(options => options.SizeLimit = 100);
 
-        var built = _sut.Build();
         returned.Should().BeSameAs(_sut);
-        built.ConfigureMemoryCacheOptions.Should().NotBeNull();
+        _sut.Build().BackendRegistrations.Should().ContainSingle();
     }
 
     [Test]
-    public void UseRedisCache_WithAction_SetsConfigureRedisCacheOptionsAndReturnsBuilder()
+    public void UseRedisCache_RegistersABackendAndSuppliesADistributedLocker()
     {
-        var returned = _sut.UseRedisCache(options => options.Configuration = "localhost");
+        var returned = _sut.UseRedisCache("localhost:6379");
 
-        var built = _sut.Build();
         returned.Should().BeSameAs(_sut);
-        built.ConfigureRedisCacheOptions.Should().NotBeNull();
+
+        var built = _sut.Build();
+        built.BackendRegistrations.Should().ContainSingle();
+        built.DistributedLockerFactory.Should().NotBeNull(
+            "Redis supports distributed single-flight, so it must supply the locker");
     }
 
     [Test]
-    public void UseRedisCache_WithConfigurationString_SetsConfigurationOnOptions()
+    public void UseAzureCosmosCache_RegistersABackendButSuppliesNoLocker()
     {
-        _sut.UseRedisCache("localhost:6379");
+        _sut.UseAzureCosmosCache(_ => { });
 
         var built = _sut.Build();
-        built.ConfigureRedisCacheOptions.Should().NotBeNull();
-
-        var options = new RedisCacheOptions();
-        built.ConfigureRedisCacheOptions!(options);
-        options.Configuration.Should().Be("localhost:6379");
+        built.BackendRegistrations.Should().ContainSingle();
+        built.DistributedLockerFactory.Should().BeNull("Cosmos offers no distributed lock");
     }
 
     [Test]
-    public void UseSqlServerCache_Always_SetsConfigureSqlServerCacheOptionsAndReturnsBuilder()
+    public void UseSeveralBackends_RegistersEachOfThem()
     {
-        var returned = _sut.UseSqlServerCache(options => options.SchemaName = "dbo");
+        _sut.UseMemoryCache(_ => { }).UseRedisCache("localhost:6379");
 
-        var built = _sut.Build();
+        _sut.Build().BackendRegistrations.Should().HaveCount(2);
+    }
+
+    [Test]
+    public void AddBackend_RunsTheRegistrationAgainstTheServiceCollection()
+    {
+        var services = new ServiceCollection();
+        _sut.AddBackend(collection => collection.AddSingleton("marker"));
+
+        foreach (var register in _sut.Build().BackendRegistrations)
+        {
+            register(services);
+        }
+
+        services.Should().ContainSingle(descriptor => descriptor.ServiceType == typeof(string));
+    }
+
+    [Test]
+    public void FailClosed_Always_SetsFailClosedAndReturnsBuilder()
+    {
+        var returned = _sut.FailClosed();
+
         returned.Should().BeSameAs(_sut);
-        built.ConfigureSqlServerCacheOptions.Should().NotBeNull();
+        _sut.Build().FailClosed.Should().BeTrue();
     }
 
     [Test]
-    public void UseAzureCosmosCache_Always_SetsConfigureAzureCosmosCacheOptionsAndReturnsBuilder()
+    public void UseOperationTimeout_Always_SetsTheTimeoutAndReturnsBuilder()
     {
-        var returned = _sut.UseAzureCosmosCache(options => options.ConnectionString = "conn");
+        var returned = _sut.UseOperationTimeout(TimeSpan.FromMilliseconds(250));
 
-        var built = _sut.Build();
         returned.Should().BeSameAs(_sut);
-        built.ConfigureAzureCosmosCacheOptions.Should().NotBeNull();
-    }
-
-    [Test]
-    public void Build_Always_ReturnsConfiguredOptions()
-    {
-        _sut.UseEntryOptions(options => options.SlidingExpiration = TimeSpan.FromSeconds(30));
-
-        var result = _sut.Build();
-
-        result.Should().NotBeNull();
-        result.EntryOptions.SlidingExpiration.Should().Be(TimeSpan.FromSeconds(30));
-    }
-
-    [Test]
-    public void UseMemoryCache_OptionsDelegateConfiguresCorrectly()
-    {
-        _sut.UseMemoryCache(options => options.SizeLimit = 50);
-
-        var built = _sut.Build();
-        var options = new MemoryCacheOptions();
-        built.ConfigureMemoryCacheOptions!(options);
-        options.SizeLimit.Should().Be(50);
+        _sut.Build().OperationTimeout.Should().Be(TimeSpan.FromMilliseconds(250));
     }
 }

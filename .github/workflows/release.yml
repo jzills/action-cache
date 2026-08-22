@@ -25,12 +25,10 @@ jobs:
             10.0.x
 
       - name: Run unit tests
-        working-directory: ./test/Unit
-        run: dotnet test --verbosity normal
+        run: dotnet test test/Unit/Unit.csproj --verbosity normal
 
       - name: Run integration tests
-        working-directory: ./test/Integration
-        run: dotnet test --verbosity normal
+        run: dotnet test test/Integration/Integration.csproj -p:TestTfmsInParallel=false --verbosity normal
 
   publish:
     name: Pack and Publish
@@ -57,15 +55,16 @@ jobs:
             10.0.x
 
       - name: Pack
-        working-directory: ./src
         run: >
-          dotnet pack
+          dotnet pack ActionCache.slnx
           --configuration Release
           -p:Version=${{ steps.version.outputs.value }}
           --output ./nupkg
 
+      - name: Assert the core package carries no backend dependencies
+        run: bash .github/scripts/verify-package-dependencies.sh ./nupkg
+
       - name: Push to NuGet
-        working-directory: ./src
         run: >
           dotnet nuget push ./nupkg/*.nupkg
           --api-key ${{ secrets.NUGET_API_KEY }}
