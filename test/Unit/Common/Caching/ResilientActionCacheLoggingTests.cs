@@ -14,9 +14,9 @@ namespace Unit.Common.Caching;
 [TestFixture]
 public class ResilientActionCacheLoggingTests
 {
-    private Mock<IActionCache> _inner;
+    private Mock<IActionCache> _inner = null!;
     private CapturingLogger _logger;
-    private ResilientActionCache _sut;
+    private ResilientActionCache _sut = null!;
 
     [SetUp]
     public void SetUp()

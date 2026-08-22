@@ -9,9 +9,9 @@ namespace Unit.Redis;
 [TestFixture]
 public class RedisExpiryServiceTests
 {
-    private Mock<IConnectionMultiplexer> _multiplexerMock;
+    private Mock<IConnectionMultiplexer> _multiplexerMock = null!;
     private Mock<IDatabase> _databaseMock;
-    private Mock<ISubscriber> _subscriberMock;
+    private Mock<ISubscriber> _subscriberMock = null!;
     private RedisExpiryService _sut;
 
     [SetUp]

@@ -7,7 +7,7 @@ namespace Unit.Common.Caching;
 [TestFixture]
 public class ActionCacheOptionsBuilderTests
 {
-    private ActionCacheOptionsBuilder _sut;
+    private ActionCacheOptionsBuilder _sut = null!;
 
     [SetUp]
     public void SetUp() => _sut = new ActionCacheOptionsBuilder();

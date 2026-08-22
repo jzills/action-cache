@@ -18,7 +18,7 @@ namespace Unit.Common.Filters;
 [TestFixture]
 public class ActionCacheFilterFactoriesTests
 {
-    private ServiceProvider _serviceProvider;
+    private ServiceProvider _serviceProvider = null!;
 
     [TearDown]
     public void TearDown() => _serviceProvider.Dispose();

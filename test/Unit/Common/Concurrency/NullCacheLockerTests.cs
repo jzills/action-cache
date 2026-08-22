@@ -5,7 +5,7 @@ namespace Unit.Common;
 [TestFixture]
 public class NullCacheLockerTests
 {
-    private NullCacheLocker _locker;
+    private NullCacheLocker _locker = null!;
 
     [SetUp]
     public void SetUp() => _locker = new NullCacheLocker();

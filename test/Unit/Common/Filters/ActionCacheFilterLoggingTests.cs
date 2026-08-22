@@ -25,9 +25,9 @@ namespace Unit.Common.Filters;
 [TestFixture]
 public class ActionCacheFilterLoggingTests
 {
-    private Mock<IActionCache> _cacheMock;
+    private Mock<IActionCache> _cacheMock = null!;
     private CapturingLogger _logger;
-    private ActionCacheFilter _sut;
+    private ActionCacheFilter _sut = null!;
 
     [SetUp]
     public void SetUp()

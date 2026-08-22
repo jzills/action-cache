@@ -14,7 +14,7 @@ namespace Unit.Redis;
 [TestFixture]
 public class RedisActionCacheTests
 {
-    private Mock<IDatabase> _databaseMock;
+    private Mock<IDatabase> _databaseMock = null!;
     private RedisActionCache _sut;
 
     [SetUp]

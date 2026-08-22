@@ -9,7 +9,7 @@ namespace Unit.Common.Caching;
 [TestFixture]
 public class ResilientActionCacheTests
 {
-    private Mock<IActionCache> _inner;
+    private Mock<IActionCache> _inner = null!;
     private Mock<ILogger> _logger;
 
     [SetUp]

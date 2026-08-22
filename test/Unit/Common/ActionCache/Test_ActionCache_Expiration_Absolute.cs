@@ -6,7 +6,7 @@ namespace Unit.Common;
 [TestFixture]
 public class ActionCacheAbsoluteExpirationTests
 {
-    private IActionCache _cache;
+    private IActionCache _cache = null!;
     private IActionCacheFactory _factory;
 
     [SetUp]

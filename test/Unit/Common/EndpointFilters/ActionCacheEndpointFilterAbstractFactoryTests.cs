@@ -17,9 +17,9 @@ namespace Unit.Common.EndpointFilters;
 [TestFixture]
 public class ActionCacheEndpointFilterAbstractFactoryTests
 {
-    private Mock<IActionCacheFactory> _cacheFactoryMock;
+    private Mock<IActionCacheFactory> _cacheFactoryMock = null!;
     private Mock<IActionCache> _cacheMock;
-    private TemplateBinderFactory _binderFactory;
+    private TemplateBinderFactory _binderFactory = null!;
     private ActionCacheEndpointFilterAbstractFactory _sut;
 
     [SetUp]

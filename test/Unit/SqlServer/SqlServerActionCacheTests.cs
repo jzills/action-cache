@@ -17,9 +17,9 @@ namespace Unit.SqlServer;
 [TestFixture]
 public class SqlServerActionCacheTests
 {
-    private Mock<IDistributedCache> _cacheMock;
+    private Mock<IDistributedCache> _cacheMock = null!;
     private Mock<ICacheLocker<SqlServerCacheLock>> _lockerMock;
-    private SqlServerActionCache _sut;
+    private SqlServerActionCache _sut = null!;
 
     [SetUp]
     public void SetUp()

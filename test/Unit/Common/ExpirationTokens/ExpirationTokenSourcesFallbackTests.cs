@@ -5,7 +5,7 @@ namespace Unit.Common;
 [TestFixture]
 public class ExpirationTokenSourcesFallbackTests
 {
-    private ExpirationTokenSourcesFallback _fallback;
+    private ExpirationTokenSourcesFallback _fallback = null!;
 
     [SetUp]
     public void SetUp() => _fallback = new ExpirationTokenSourcesFallback();

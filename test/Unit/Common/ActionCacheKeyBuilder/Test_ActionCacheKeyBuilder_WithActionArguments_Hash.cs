@@ -30,7 +30,7 @@ public class ActionCacheKeyBuilderTests
     public void Build_ByDefault_ProducesAnOpaqueKey(
         IEnumerable<ControllerParameterDescriptor> _,
         RouteValueDictionary routeValues,
-        Dictionary<string, object> actionArguments
+        Dictionary<string, object?> actionArguments
     )
     {
         // Keys are hashed by default: the components embed every route value and action
@@ -53,7 +53,7 @@ public class ActionCacheKeyBuilderTests
     public void Build_ByDefault_IsDeterministic(
         IEnumerable<ControllerParameterDescriptor> _,
         RouteValueDictionary routeValues,
-        Dictionary<string, object> actionArguments
+        Dictionary<string, object?> actionArguments
     )
     {
         string BuildKey() => new ActionCacheKeyBuilder()
@@ -80,7 +80,7 @@ public class ActionCacheKeyBuilderTests
     public void Build_WithPlaintextKeys_ProducesAReversibleKey(
         IEnumerable<ControllerParameterDescriptor> _,
         RouteValueDictionary routeValues,
-        Dictionary<string, object> actionArguments
+        Dictionary<string, object?> actionArguments
     )
     {
         // The debugging escape hatch: readable and reversible, at the cost of exposing

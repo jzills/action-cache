@@ -63,7 +63,7 @@ public class Test_ActionCache_VaryByUser
         App = builder.Build();
         App.UseRouting();
         App.UseAuthentication();
-        App.UseEndpoints(options => options.MapControllers());
+        App.MapControllers();
 
         await App.StartAsync();
         Client = App.GetTestServer().CreateClient();

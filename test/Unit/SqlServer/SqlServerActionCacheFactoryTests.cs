@@ -15,11 +15,11 @@ namespace Unit.SqlServer;
 [TestFixture]
 public class SqlServerActionCacheFactoryTests
 {
-    private Mock<IDistributedCache> _cacheMock;
+    private Mock<IDistributedCache> _cacheMock = null!;
     private Mock<IActionCacheRefreshProvider> _refreshProviderMock;
-    private IOptions<ActionCacheEntryOptions> _entryOptions;
+    private IOptions<ActionCacheEntryOptions> _entryOptions = null!;
     private IOptions<SqlServerCacheOptions> _sqlServerOptions;
-    private SqlServerActionCacheFactory _sut;
+    private SqlServerActionCacheFactory _sut = null!;
 
     [SetUp]
     public void SetUp()

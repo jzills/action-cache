@@ -1,0 +1,13 @@
+<Project>
+
+  <!--
+    Imported after each project body, unlike Directory.Build.props — which matters because
+    IsPackable is set inside the individual csproj files. Conditioning on it from the props
+    file silently sees an empty value and applies to everything.
+  -->
+  <PropertyGroup>
+    <!-- A warning that reaches a released package is a defect nobody sees. -->
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+  </PropertyGroup>
+
+</Project>

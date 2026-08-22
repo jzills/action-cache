@@ -10,9 +10,9 @@ namespace Unit.SqlServer;
 [TestFixture]
 public class IDistributedCacheExtensionsTests
 {
-    private Mock<IDistributedCache> _cacheMock;
+    private Mock<IDistributedCache> _cacheMock = null!;
     private Namespace _namespace;
-    private DistributedCacheEntryOptions _entryOptions;
+    private DistributedCacheEntryOptions _entryOptions = null!;
 
     [SetUp]
     public void SetUp()

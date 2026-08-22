@@ -19,9 +19,9 @@ namespace Unit.Common.Filters;
 [TestFixture]
 public class ActionCacheFilterHitTests
 {
-    private Mock<IActionCache> _cacheMock;
+    private Mock<IActionCache> _cacheMock = null!;
     private TemplateBinderFactory _binderFactory;
-    private ActionCacheFilter _sut;
+    private ActionCacheFilter _sut = null!;
 
     [SetUp]
     public void SetUp()

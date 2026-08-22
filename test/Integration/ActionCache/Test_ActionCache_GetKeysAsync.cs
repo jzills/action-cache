@@ -14,10 +14,10 @@ public class Test_ActionCache_GetKeysAsync
         var cacheFactory = serviceProvider.GetRequiredService<IActionCacheFactory>();
         Cache = cacheFactory.Create(nameof(Test_ActionCache_GetKeysAsync))!;
 
-        await Cache.SetAsync("Foo", "Bar");
-        await Cache.SetAsync("Biz", "Baz");
+        await Cache!.SetAsync("Foo", "Bar");
+        await Cache!.SetAsync("Biz", "Baz");
 
-        var result = await Cache.GetKeysAsync();
+        var result = await Cache!.GetKeysAsync();
         Assert.That(result.Count(), Is.EqualTo(2));
     }
 

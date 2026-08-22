@@ -16,9 +16,9 @@ namespace Unit.Common.Filters;
 [TestFixture]
 public class ActionCacheRefreshFilterTests
 {
-    private Mock<IActionCache> _cacheMock;
+    private Mock<IActionCache> _cacheMock = null!;
     private TemplateBinderFactory _binderFactory;
-    private ActionCacheRefreshFilter _sut;
+    private ActionCacheRefreshFilter _sut = null!;
 
     [SetUp]
     public void SetUp()

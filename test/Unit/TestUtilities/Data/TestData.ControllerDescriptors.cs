@@ -56,7 +56,7 @@ public static partial class TestData
     private class SampleModel
     {
         public Guid Id { get; set; }
-        public string Title { get; set; }
+        public string? Title { get; set; }
     }
 
     private class SampleNestedModel
