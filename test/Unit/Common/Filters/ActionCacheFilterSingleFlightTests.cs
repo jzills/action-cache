@@ -74,7 +74,7 @@ public class ActionCacheFilterSingleFlightTests
         new(cache, _binderFactory, NullLogger.Instance, singleFlight, enabled);
 
     private static InProcessSingleFlight CreateSingleFlight() =>
-        new(new ActionCache.Common.ActionCacheEntryOptions(), NullLogger<InProcessSingleFlight>.Instance);
+        new(new ActionCacheSingleFlightOptions(), NullLogger<InProcessSingleFlight>.Instance);
 
     [Test]
     public async Task OnActionExecutionAsync_UnderConcurrentMisses_ExecutesTheActionOnce()

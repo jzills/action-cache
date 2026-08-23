@@ -9,11 +9,9 @@ public class SemaphoreSlimLock : CacheLock
     /// Initializes a new instance of the <see cref="SemaphoreSlimLock"/> class.
     /// </summary>
     /// <param name="resource">The resource this lock guards.</param>
-    /// <param name="lockDuration">The duration the lock is nominally held for.</param>
     /// <param name="lockTimeout">The maximum time spent waiting to acquire the lock.</param>
-    public SemaphoreSlimLock(string resource, TimeSpan lockDuration, TimeSpan lockTimeout) : base(resource)
+    public SemaphoreSlimLock(string resource, TimeSpan lockTimeout) : base(resource)
     {
-        Duration = lockDuration;
         Timeout = lockTimeout;
     }
 

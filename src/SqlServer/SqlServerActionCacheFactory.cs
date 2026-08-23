@@ -54,7 +54,6 @@ public class SqlServerActionCacheFactory : ActionCacheFactoryBase
             RefreshProvider = RefreshProvider,
             CacheLocker = new SqlServerCacheLocker(
                 ConnectionString,
-                EntryOptions.LockDuration,
                 EntryOptions.LockTimeout)
         };
 
@@ -71,13 +70,11 @@ public class SqlServerActionCacheFactory : ActionCacheFactoryBase
             {
                 AbsoluteExpiration = absoluteExpiration,
                 SlidingExpiration = slidingExpiration,
-                LockDuration = EntryOptions.LockDuration,
                 LockTimeout = EntryOptions.LockTimeout
             },
             RefreshProvider = RefreshProvider,
             CacheLocker = new SqlServerCacheLocker(
                 ConnectionString,
-                EntryOptions.LockDuration,
                 EntryOptions.LockTimeout)
         };
 

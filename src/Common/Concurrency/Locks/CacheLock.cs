@@ -25,11 +25,6 @@ public abstract class CacheLock
     public bool IsAcquired { get; set; } = false;
 
     /// <summary>
-    /// Gets or sets the duration for which the lock is held.
-    /// </summary>
-    public TimeSpan Duration { get; set; } = TimeSpan.FromMilliseconds(150);
-
-    /// <summary>
     /// Gets or sets the maximum time allowed for attempting to acquire the lock.
     /// </summary>
     public TimeSpan Timeout { get; set; } = TimeSpan.FromMilliseconds(150);

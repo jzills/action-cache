@@ -10,7 +10,7 @@ public class NullCacheLocker : CacheLockerBase<NullCacheLock>
     /// <summary>
     /// Initializes a new instance of the <see cref="NullCacheLocker"/> class.
     /// </summary>
-    public NullCacheLocker() : base(TimeSpan.Zero, TimeSpan.Zero)
+    public NullCacheLocker() : base(TimeSpan.Zero)
     {
     }
 

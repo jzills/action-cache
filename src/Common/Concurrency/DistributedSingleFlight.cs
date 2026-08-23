@@ -42,27 +42,28 @@ public class DistributedSingleFlight : IActionCacheSingleFlight
     {
         var resource = $"{(string)@namespace}:{key}";
 
-        try
+        // TryWaitForLockThenAsync reports a busy lock in its result rather than by throwing.
+        // The previous version inferred the timeout from an InvalidOperationException, which
+        // the origin action can raise just as easily as the locker: that logged a misleading
+        // lock timeout and then ran the action a second time.
+        var attempt = await _locker.TryWaitForLockThenAsync(resource, async () =>
         {
-            return await _locker.WaitForLockThenAsync(resource, async () =>
+            var cached = await cacheReader();
+            if (cached is not null)
             {
-                var cached = await cacheReader();
-                if (cached is not null)
-                {
-                    ActionCacheLog.SingleFlightCoalesced(_logger, key, @namespace);
-                    return new SingleFlightResult<TValue>(cached, WasCoalesced: true);
-                }
+                ActionCacheLog.SingleFlightCoalesced(_logger, key, @namespace);
+                return new SingleFlightResult<TValue>(cached, WasCoalesced: true);
+            }
 
-                return new SingleFlightResult<TValue>(await valueFactory(), WasCoalesced: false);
-            });
-        }
-        catch (InvalidOperationException)
-        {
-            // CacheLockerBase signals acquisition timeout by throwing. Absorbing it here
-            // preserves the never-throw contract: the request executes uncoalesced rather
-            // than failing because a lock was busy.
-            ActionCacheLog.SingleFlightLockTimeout(_logger, key, @namespace);
             return new SingleFlightResult<TValue>(await valueFactory(), WasCoalesced: false);
+        });
+
+        if (attempt.LockAcquired)
+        {
+            return attempt.Result;
         }
+
+        ActionCacheLog.SingleFlightLockTimeout(_logger, key, @namespace);
+        return new SingleFlightResult<TValue>(await valueFactory(), WasCoalesced: false);
     }
 }

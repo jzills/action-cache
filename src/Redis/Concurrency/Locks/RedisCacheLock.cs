@@ -13,11 +13,9 @@ public class RedisCacheLock : CacheLock
     /// Initializes a new instance of the <see cref="RedisCacheLock"/> class.
     /// </summary>
     /// <param name="resource">The logical resource being locked (used to build <see cref="Key"/>).</param>
-    /// <param name="lockDuration">How long the lock is held in Redis (TTL on the key).</param>
     /// <param name="lockTimeout">Maximum time the locker will poll before giving up.</param>
-    public RedisCacheLock(string resource, TimeSpan lockDuration, TimeSpan lockTimeout) : base(resource)
+    public RedisCacheLock(string resource, TimeSpan lockTimeout) : base(resource)
     {
-        Duration = lockDuration;
         Timeout = lockTimeout;
         Key = $"Lock:{resource}";
         Token = Guid.NewGuid().ToString("N");

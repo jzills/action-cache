@@ -9,9 +9,16 @@ namespace ActionCache.Redis.Concurrency;
 /// Acquisition and release are each a single atomic Lua script, so no race conditions
 /// can occur between check-and-set steps.
 /// </summary>
+/// <remarks>
+/// The only locker that enforces the lease: it becomes the lock key's TTL, so an operation
+/// running longer than the lease loses its lock while still in flight and another caller may
+/// acquire it. Release is token-fenced, so the original holder cannot then delete a lock it
+/// no longer owns. Size the lease above the slowest operation it guards.
+/// </remarks>
 public class RedisCacheLocker : CacheLockerBase<RedisCacheLock>
 {
     private readonly IDatabase _database;
+    private readonly TimeSpan _leaseDuration;
 
     // SET key token NX PX ttlMs — returns "OK" on success, null on failure.
     private const string AcquireScript =
@@ -29,23 +36,27 @@ public class RedisCacheLocker : CacheLockerBase<RedisCacheLock>
     /// Initializes a new instance of the <see cref="RedisCacheLocker"/> class.
     /// </summary>
     /// <param name="database">The Redis database used for lock operations.</param>
-    /// <param name="lockDuration">TTL applied to the lock key in Redis.</param>
+    /// <param name="leaseDuration">
+    /// TTL applied to the lock key. Redis is the only backend that can impose a lease, so it
+    /// is a parameter here rather than shared state on the base locker.
+    /// </param>
     /// <param name="lockTimeout">Maximum time <see cref="WaitForLockAsync"/> will poll.</param>
-    public RedisCacheLocker(IDatabase database, TimeSpan lockDuration, TimeSpan lockTimeout)
-        : base(lockDuration, lockTimeout)
+    public RedisCacheLocker(IDatabase database, TimeSpan leaseDuration, TimeSpan lockTimeout)
+        : base(lockTimeout)
     {
         _database = database;
+        _leaseDuration = leaseDuration;
     }
 
     /// <inheritdoc/>
     public override async Task<RedisCacheLock> TryAcquireLockAsync(string resource)
     {
-        var cacheLock = new RedisCacheLock(resource, LockDuration, LockTimeout);
+        var cacheLock = new RedisCacheLock(resource, LockTimeout);
 
         var result = await _database.ScriptEvaluateAsync(
             AcquireScript,
             [(RedisKey)cacheLock.Key],
-            [cacheLock.Token, (long)LockDuration.TotalMilliseconds]);
+            [cacheLock.Token, (long)_leaseDuration.TotalMilliseconds]);
 
         cacheLock.IsAcquired = result.ToString() == "OK";
         return cacheLock;
@@ -76,6 +87,6 @@ public class RedisCacheLocker : CacheLockerBase<RedisCacheLock>
             await Task.Delay(100);
         }
 
-        return new RedisCacheLock(resource, LockDuration, LockTimeout);
+        return new RedisCacheLock(resource, LockTimeout);
     }
 }

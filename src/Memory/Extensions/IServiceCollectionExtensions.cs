@@ -53,7 +53,7 @@ internal static class IServiceCollectionExtensions
                 var entryOptions = serviceProvider
                     .GetRequiredService<IOptions<ActionCacheEntryOptions>>().Value;
 
-                return new SemaphoreSlimCacheLocker(entryOptions.LockDuration, entryOptions.LockTimeout);
+                return new SemaphoreSlimCacheLocker(entryOptions.LockTimeout);
             })
             .AddScoped<IActionCacheFactory, MemoryActionCacheFactory>();
 

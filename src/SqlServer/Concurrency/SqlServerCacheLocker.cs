@@ -9,6 +9,11 @@ namespace ActionCache.SqlServer.Concurrency;
 /// A cache locker that uses SQL Server session-level application locks (sp_getapplock /
 /// sp_releaseapplock) for true atomic, cross-process mutual exclusion.
 /// </summary>
+/// <remarks>
+/// The lock is session-scoped and held for as long as its dedicated connection stays open,
+/// so this locker takes no lease and a held lock cannot expire mid-operation; a process that
+/// dies drops its connection and releases the lock. The cost is one held connection per lock.
+/// </remarks>
 public class SqlServerCacheLocker : CacheLockerBase<SqlServerCacheLock>
 {
     private readonly string _connectionString;
@@ -17,10 +22,9 @@ public class SqlServerCacheLocker : CacheLockerBase<SqlServerCacheLock>
     /// Initializes a new instance of the <see cref="SqlServerCacheLocker"/> class.
     /// </summary>
     /// <param name="connectionString">Connection string used to open a dedicated lock connection.</param>
-    /// <param name="lockDuration">Duration hint stored on acquired locks.</param>
     /// <param name="lockTimeout">Maximum time sp_getapplock will wait before returning -1.</param>
-    public SqlServerCacheLocker(string connectionString, TimeSpan lockDuration, TimeSpan lockTimeout)
-        : base(lockDuration, lockTimeout)
+    public SqlServerCacheLocker(string connectionString, TimeSpan lockTimeout)
+        : base(lockTimeout)
     {
         _connectionString = connectionString;
     }
@@ -58,7 +62,7 @@ public class SqlServerCacheLocker : CacheLockerBase<SqlServerCacheLock>
 
     private async Task<SqlServerCacheLock> AcquireLockAsync(string resource, int timeoutMs)
     {
-        var cacheLock = new SqlServerCacheLock(resource, LockDuration, LockTimeout);
+        var cacheLock = new SqlServerCacheLock(resource, LockTimeout);
         var connection = new SqlConnection(_connectionString);
 
         try

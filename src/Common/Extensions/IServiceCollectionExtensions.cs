@@ -48,6 +48,11 @@ public static class IServiceCollectionExtensions
         services.Configure<ActionCacheResilienceOptions>(resilienceOptions =>
             resilienceOptions.FailClosed = options.FailClosed);
 
+        // Validated here so a lease that cannot coalesce anything fails at startup rather
+        // than degrading silently under load.
+        options.SingleFlightOptions.Validate();
+        services.TryAddSingleton(options.SingleFlightOptions);
+
         if (options.ConfigureMemoryCacheOptions is not null)
         {
             services.AddActionCacheMemory(options.ConfigureMemoryCacheOptions);
@@ -89,7 +94,7 @@ public static class IServiceCollectionExtensions
         // with Try* semantics: one shared instance, however many backends are configured.
         services.TryAddSingleton<IActionCacheSingleFlight>(serviceProvider =>
             new InProcessSingleFlight(
-                serviceProvider.GetRequiredService<IOptions<ActionCacheEntryOptions>>().Value,
+                serviceProvider.GetRequiredService<ActionCacheSingleFlightOptions>(),
                 serviceProvider.GetRequiredService<ILogger<InProcessSingleFlight>>()));
 
         return services
@@ -133,18 +138,21 @@ public static class IServiceCollectionExtensions
 
         services.Replace(ServiceDescriptor.Singleton<IActionCacheSingleFlight>(serviceProvider =>
         {
-            var entryOptions = serviceProvider
-                .GetRequiredService<IOptions<ActionCacheEntryOptions>>().Value;
+            // The lease is Redis's alone — it is the lock key's TTL — and it comes from the
+            // single-flight options. It used to come from the key-index lock's LockDuration,
+            // whose five-second default meant every action slower than that lost its lock
+            // mid-flight and stampeded.
+            var singleFlightOptions = serviceProvider
+                .GetRequiredService<ActionCacheSingleFlightOptions>();
 
             ICacheLockerHandler locker = useRedis
                 ? new RedisCacheLocker(
                     serviceProvider.GetRequiredService<IConnectionMultiplexer>().GetDatabase(),
-                    entryOptions.LockDuration,
-                    entryOptions.LockTimeout)
+                    singleFlightOptions.LeaseDuration,
+                    singleFlightOptions.WaitTimeout)
                 : new SqlServerCacheLocker(
                     ResolveSqlServerConnectionString(serviceProvider),
-                    entryOptions.LockDuration,
-                    entryOptions.LockTimeout);
+                    singleFlightOptions.WaitTimeout);
 
             return new DistributedSingleFlight(
                 locker,

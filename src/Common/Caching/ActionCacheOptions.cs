@@ -2,6 +2,7 @@ using ActionCache.AzureCosmos;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Caching.SqlServer;
 using Microsoft.Extensions.Caching.StackExchangeRedis;
+using ActionCache.Common.Concurrency;
 
 namespace ActionCache.Common;
 
@@ -27,6 +28,11 @@ public class ActionCacheOptions
     /// rather than only within one process. Defaults to <see langword="false"/>.
     /// </summary>
     public bool UseDistributedSingleFlight { get; set; }
+
+    /// <summary>
+    /// Gets the options controlling how concurrent misses for one key are coalesced.
+    /// </summary>
+    public ActionCacheSingleFlightOptions SingleFlightOptions { get; } = new();
 
     /// <summary>
     /// Gets or sets a delegate to configure options for <see cref="MemoryCacheOptions"/>.

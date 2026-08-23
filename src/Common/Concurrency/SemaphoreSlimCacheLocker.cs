@@ -10,6 +10,11 @@ namespace ActionCache.Common.Concurrency;
 /// do not accumulate for the lifetime of the process.
 /// </summary>
 /// <remarks>
+/// A semaphore has no time-to-live, so this locker takes no lease: a lock is held until
+/// released, and the <c>finally</c> in every caller is what guarantees that. A process that
+/// dies releases its locks by exiting.
+/// </remarks>
+/// <remarks>
 /// Instances must be shared to be meaningful: caches are constructed per request, so a
 /// locker created inside a cache factory's <c>Create</c> would guard nothing. Register as
 /// a singleton.
@@ -22,10 +27,9 @@ public class SemaphoreSlimCacheLocker : CacheLockerBase<SemaphoreSlimLock>
     /// <summary>
     /// Initializes a new instance of the <see cref="SemaphoreSlimCacheLocker"/> class.
     /// </summary>
-    /// <param name="lockDuration">The duration a lock is nominally held for.</param>
     /// <param name="lockTimeout">The maximum time <see cref="WaitForLockAsync"/> waits before giving up.</param>
-    public SemaphoreSlimCacheLocker(TimeSpan lockDuration, TimeSpan lockTimeout)
-        : base(lockDuration, lockTimeout)
+    public SemaphoreSlimCacheLocker(TimeSpan lockTimeout)
+        : base(lockTimeout)
     {
     }
 
@@ -63,7 +67,7 @@ public class SemaphoreSlimCacheLocker : CacheLockerBase<SemaphoreSlimLock>
 
     private async Task<SemaphoreSlimLock> AcquireAsync(string resource, TimeSpan timeout)
     {
-        var cacheLock = new SemaphoreSlimLock(resource, LockDuration, LockTimeout);
+        var cacheLock = new SemaphoreSlimLock(resource, LockTimeout);
         var entry = Rent(resource);
 
         // The semaphore is never disposed, so waiting on it can never race a disposal.

@@ -7,8 +7,8 @@ namespace Unit.Common.Concurrency;
 [TestFixture]
 public class InProcessSingleFlightTests
 {
-    private static InProcessSingleFlight Create(ActionCacheEntryOptions? entryOptions = null) =>
-        new(entryOptions ?? new ActionCacheEntryOptions(), NullLogger<InProcessSingleFlight>.Instance);
+    private static InProcessSingleFlight Create(ActionCacheSingleFlightOptions? options = null) =>
+        new(options ?? new ActionCacheSingleFlightOptions(), NullLogger<InProcessSingleFlight>.Instance);
 
     [Test]
     public async Task GetOrCreateAsync_WhenNothingIsCached_RunsTheValueFactory()
@@ -114,8 +114,8 @@ public class InProcessSingleFlightTests
     {
         // A 1ms timeout against a factory that holds the lock far longer forces the
         // acquisition failure path.
-        var entryOptions = new ActionCacheEntryOptions { LockTimeout = TimeSpan.FromMilliseconds(1) };
-        var singleFlight = Create(entryOptions);
+        var options = new ActionCacheSingleFlightOptions { WaitTimeout = TimeSpan.FromMilliseconds(1) };
+        var singleFlight = Create(options);
         var factoryRuns = 0;
 
         async Task<string?> Produce()

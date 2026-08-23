@@ -23,15 +23,14 @@ public class ActionCacheEntryOptions
     public TimeSpan? SlidingExpiration { get; set; }
 
     /// <summary>
-    /// Gets or sets the duration for which the lock will remain valid once acquired.
-    /// </summary>
-    /// <value>The default is 5 seconds.</value>
-    public TimeSpan LockDuration { get; set; } = TimeSpan.FromSeconds(5);
-
-    /// <summary>
-    /// Gets or sets the maximum amount of time to wait for acquiring the lock before timing out.
+    /// Gets or sets the maximum amount of time to wait for a key-index lock before timing out.
     /// </summary>
     /// <value>The default is 10 seconds.</value>
+    /// <remarks>
+    /// Guards the short read-modify-write operations on a namespace's key index. Single
+    /// flight waits for <see cref="Concurrency.ActionCacheSingleFlightOptions.WaitTimeout"/>
+    /// instead, and holds its lock across the origin action rather than a dictionary update.
+    /// </remarks>
     public TimeSpan LockTimeout { get; set; } = TimeSpan.FromSeconds(10);
 
     /// <summary>

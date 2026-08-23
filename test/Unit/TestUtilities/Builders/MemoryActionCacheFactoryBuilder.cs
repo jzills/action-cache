@@ -20,6 +20,6 @@ internal static class MemoryActionCacheFactoryBuilder
             Options.Create(new ActionCacheEntryOptions()),
             new ActionCacheRefreshProvider(new ActionCacheDescriptorProviderNull(), NullLogger<ActionCacheRefreshProvider>.Instance),
             NullLoggerFactory.Instance,
-            new SemaphoreSlimCacheLocker(TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(10)));
+            new SemaphoreSlimCacheLocker(TimeSpan.FromSeconds(10)));
     }
 }

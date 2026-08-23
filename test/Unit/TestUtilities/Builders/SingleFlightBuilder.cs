@@ -7,5 +7,8 @@ namespace Unit.TestUtilities.Builders;
 internal static class SingleFlightBuilder
 {
     internal static IActionCacheSingleFlight Build() =>
-        new InProcessSingleFlight(new ActionCacheEntryOptions(), NullLogger<InProcessSingleFlight>.Instance);
+        Build(new ActionCacheSingleFlightOptions());
+
+    internal static IActionCacheSingleFlight Build(ActionCacheSingleFlightOptions options) =>
+        new InProcessSingleFlight(options, NullLogger<InProcessSingleFlight>.Instance);
 }

@@ -22,14 +22,18 @@ public class InProcessSingleFlight : IActionCacheSingleFlight
     /// <summary>
     /// Initializes a new instance of the <see cref="InProcessSingleFlight"/> class.
     /// </summary>
-    /// <param name="entryOptions">Supplies the lock duration and acquisition timeout.</param>
+    /// <param name="options">Supplies the lease duration and how long a caller waits for it.</param>
     /// <param name="logger">Records coalescing and lock-timeout outcomes.</param>
     public InProcessSingleFlight(
-        ActionCacheEntryOptions entryOptions,
+        ActionCacheSingleFlightOptions options,
         ILogger<InProcessSingleFlight> logger
     )
     {
-        _locker = new SemaphoreSlimCacheLocker(entryOptions.LockDuration, entryOptions.LockTimeout);
+        // Waits for the single-flight timeout, not the key-index lock's: this lock is held
+        // across the origin action, the index lock across a dictionary update. A semaphore
+        // cannot expire, so LeaseDuration has nothing to enforce here — it exists for the
+        // distributed lockers that can.
+        _locker = new SemaphoreSlimCacheLocker(options.WaitTimeout);
         _logger = logger;
     }
 

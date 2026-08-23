@@ -7,23 +7,23 @@ namespace ActionCache.Common.Concurrency;
 public abstract class CacheLockerBase<TLock> : ICacheLocker<TLock> where TLock : CacheLock
 {
     /// <summary>
-    /// The duration for which the lock will be held.
+    /// How long acquisition waits before giving up.
     /// </summary>
-    protected readonly TimeSpan LockDuration;
-
-    /// <summary>
-    /// The timeout period for trying to acquire the lock.
-    /// </summary>
+    /// <remarks>
+    /// The only timing every locker can honour. A <em>lease</em> — a deadline after which a
+    /// held lock is considered abandoned — is not here, because only a backend whose locks
+    /// carry a time-to-live can impose one. <c>RedisCacheLocker</c> takes its lease as its
+    /// own constructor parameter; the others hold until released, and a process that dies
+    /// releases its locks by exiting.
+    /// </remarks>
     protected readonly TimeSpan LockTimeout;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="CacheLockerBase{T}"/> class with the specified lock duration and timeout.
+    /// Initializes a new instance of the <see cref="CacheLockerBase{T}"/> class.
     /// </summary>
-    /// <param name="lockDuration">The duration for which the lock will be held.</param>
-    /// <param name="lockTimeout">The timeout period for trying to acquire the lock.</param>
-    public CacheLockerBase(TimeSpan lockDuration, TimeSpan lockTimeout)
+    /// <param name="lockTimeout">How long acquisition waits before giving up.</param>
+    public CacheLockerBase(TimeSpan lockTimeout)
     {
-        LockDuration = lockDuration;
         LockTimeout = lockTimeout;
     }
 
@@ -94,6 +94,27 @@ public abstract class CacheLockerBase<TLock> : ICacheLocker<TLock> where TLock :
         else
         {
             throw new InvalidOperationException($"Failed to acquire lock for resource '{resource}' within the configured timeout.");
+        }
+    }
+
+    /// <inheritdoc/>
+    public virtual async Task<CacheLockAttempt<TResult>> TryWaitForLockThenAsync<TResult>(
+        string resource,
+        Func<Task<TResult>> resultAccessor)
+    {
+        var cacheLock = await WaitForLockAsync(resource);
+        if (!cacheLock.IsAcquired)
+        {
+            return new CacheLockAttempt<TResult>(LockAcquired: false, Result: default);
+        }
+
+        try
+        {
+            return new CacheLockAttempt<TResult>(LockAcquired: true, Result: await resultAccessor());
+        }
+        finally
+        {
+            await ReleaseLockAsync(cacheLock);
         }
     }
 

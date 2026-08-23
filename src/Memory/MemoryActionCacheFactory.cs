@@ -86,7 +86,6 @@ public class MemoryActionCacheFactory : ActionCacheFactoryBase
                 {
                     AbsoluteExpiration = absoluteExpiration,
                     SlidingExpiration = slidingExpiration,
-                    LockDuration = EntryOptions.LockDuration,
                     LockTimeout = EntryOptions.LockTimeout
                 },
                 RefreshProvider = RefreshProvider,

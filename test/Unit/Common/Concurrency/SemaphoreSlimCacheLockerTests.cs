@@ -6,7 +6,7 @@ namespace Unit.Common.Concurrency;
 public class SemaphoreSlimCacheLockerTests
 {
     private static SemaphoreSlimCacheLocker CreateLocker(TimeSpan? lockTimeout = null) =>
-        new(TimeSpan.FromSeconds(5), lockTimeout ?? TimeSpan.FromSeconds(10));
+        new(lockTimeout ?? TimeSpan.FromSeconds(10));
 
     [Test]
     public async Task WaitForLockAsync_WhenResourceIsFree_AcquiresLock()

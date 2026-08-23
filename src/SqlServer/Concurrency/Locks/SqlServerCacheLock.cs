@@ -14,11 +14,9 @@ public class SqlServerCacheLock : CacheLock
     /// Initializes a new instance of the <see cref="SqlServerCacheLock"/> class.
     /// </summary>
     /// <param name="resource">The resource identifier passed to sp_getapplock.</param>
-    /// <param name="lockDuration">Duration hint stored on the lock.</param>
     /// <param name="lockTimeout">Maximum time to wait for acquisition.</param>
-    public SqlServerCacheLock(string resource, TimeSpan lockDuration, TimeSpan lockTimeout) : base(resource)
+    public SqlServerCacheLock(string resource, TimeSpan lockTimeout) : base(resource)
     {
-        Duration = lockDuration;
         Timeout = lockTimeout;
     }
 
