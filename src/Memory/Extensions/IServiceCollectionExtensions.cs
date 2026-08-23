@@ -1,7 +1,9 @@
 using ActionCache.Common;
+using ActionCache.Common.Concurrency;
 using ActionCache.Common.Extensions;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 
 namespace ActionCache.Memory.Extensions;
 
@@ -44,6 +46,15 @@ internal static class IServiceCollectionExtensions
     ) => services
             .AddActionCacheCommon()
             .AddExpirationTokenSources()
+            .AddSingleton(serviceProvider =>
+            {
+                // Singleton by necessity: caches are created per request, so a locker
+                // constructed inside MemoryActionCacheFactory.Create would guard nothing.
+                var entryOptions = serviceProvider
+                    .GetRequiredService<IOptions<ActionCacheEntryOptions>>().Value;
+
+                return new SemaphoreSlimCacheLocker(entryOptions.LockTimeout);
+            })
             .AddScoped<IActionCacheFactory, MemoryActionCacheFactory>();
 
     /// <summary>

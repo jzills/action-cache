@@ -41,4 +41,13 @@ public class ExpirationTokenSourcesFallback : IExpirationTokenSources
             return false;
         }
     }
+
+    /// <inheritdoc/>
+    public void Reset(string key)
+    {
+        if (Tokens.TryRemove(key, out var cancellationTokenSource))
+        {
+            cancellationTokenSource.Cancel();
+        }
+    }
 }

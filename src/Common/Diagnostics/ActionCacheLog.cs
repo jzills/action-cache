@@ -9,7 +9,7 @@ namespace ActionCache.Common.Diagnostics;
 /// <remarks>
 /// EventId ranges: 1xxx cache operations (<c>ResilientActionCache</c>), 2xxx filter-level
 /// conditions the cache layer cannot observe, 3xxx refresh provider, 4xxx factory
-/// cache-creation failures, 5xxx Redis expiry subscription retries.
+/// cache-creation failures, 5xxx Redis expiry subscription retries, 6xxx single-flight.
 /// Hit/miss/set/evict/refresh outcomes are logged only by the 1xxx events; filters do not
 /// duplicate them.
 /// </remarks>
@@ -59,4 +59,10 @@ internal static partial class ActionCacheLog
 
     [LoggerMessage(EventId = 5000, Level = LogLevel.Warning, Message = "ActionCache could not subscribe to Redis keyspace expiry notifications on database {Database}; retrying in {RetryDelay}. Until then, sliding-expiration index cleanup relies on lazy self-healing.")]
     public static partial void RedisExpirySubscriptionFailed(ILogger logger, Exception exception, int database, TimeSpan retryDelay);
+
+    [LoggerMessage(EventId = 6000, Level = LogLevel.Debug, Message = "ActionCache single-flight coalesced a waiter for key '{Key}' in namespace '{Namespace}'.")]
+    public static partial void SingleFlightCoalesced(ILogger logger, string key, string @namespace);
+
+    [LoggerMessage(EventId = 6001, Level = LogLevel.Debug, Message = "ActionCache single-flight could not acquire the lock for key '{Key}' in namespace '{Namespace}' within the timeout; executing uncoalesced.")]
+    public static partial void SingleFlightLockTimeout(ILogger logger, string key, string @namespace);
 }

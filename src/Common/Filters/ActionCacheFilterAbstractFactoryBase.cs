@@ -1,4 +1,5 @@
 using ActionCache.Common.Caching;
+using ActionCache.Common.Concurrency;
 using ActionCache.Common.Enums;
 using ActionCache.Common.Extensions.Internal;
 using ActionCache.Exceptions;
@@ -38,40 +39,54 @@ public abstract class ActionCacheFilterAbstractFactoryBase<TFilter> : IActionCac
     protected readonly ILoggerFactory LoggerFactory;
 
     /// <summary>
+    /// Coalesces concurrent misses for the same key across the filters this factory produces.
+    /// </summary>
+    protected readonly IActionCacheSingleFlight SingleFlight;
+
+    /// <summary>
     /// Initializes a new instance of the <see cref="ActionCacheFilterAbstractFactoryBase{TFilter}"/> class.
     /// </summary>
     /// <param name="cacheFactories">The cache factories used to create caches.</param>
     /// <param name="binderFactory">The template binder for parsing route parameters for templated namespaces.</param>
     /// <param name="resilientDecorator">Wraps created caches for graceful degradation.</param>
     /// <param name="loggerFactory">The factory used to create loggers for the filters this factory produces.</param>
+    /// <param name="singleFlight">Coalesces concurrent misses for the same key.</param>
     protected ActionCacheFilterAbstractFactoryBase(
         IEnumerable<IActionCacheFactory> cacheFactories,
         TemplateBinderFactory binderFactory,
         ResilientCacheDecorator resilientDecorator,
-        ILoggerFactory loggerFactory
+        ILoggerFactory loggerFactory,
+        IActionCacheSingleFlight singleFlight
     )
     {
         CacheFactories = cacheFactories;
         BinderFactory = binderFactory;
         ResilientDecorator = resilientDecorator;
         LoggerFactory = loggerFactory;
+        SingleFlight = singleFlight;
     }
 
     /// <inheritdoc/>
     /// <exception cref="InvalidCacheInstanceException">Thrown if no cache instances could be created for the namespace.</exception>
     /// <exception cref="FilterTypeNotSupportedException">Thrown if the specified filter type is not supported.</exception>
     public TFilter CreateInstance(Namespace @namespace, FilterType type) =>
-        CreateInstance(@namespace, absoluteExpiration: null, slidingExpiration: null, type);
+        CreateInstance(@namespace, absoluteExpiration: null, slidingExpiration: null, type, singleFlight: true);
 
     /// <inheritdoc/>
     /// <exception cref="InvalidCacheInstanceException">Thrown if no cache instances could be created for the namespace.</exception>
     /// <exception cref="FilterTypeNotSupportedException">Thrown if the specified filter type is not supported.</exception>
-    public TFilter CreateInstance(Namespace @namespace, TimeSpan? absoluteExpiration, TimeSpan? slidingExpiration, FilterType type)
+    public TFilter CreateInstance(Namespace @namespace, TimeSpan? absoluteExpiration, TimeSpan? slidingExpiration, FilterType type) =>
+        CreateInstance(@namespace, absoluteExpiration, slidingExpiration, type, singleFlight: true);
+
+    /// <inheritdoc/>
+    /// <exception cref="InvalidCacheInstanceException">Thrown if no cache instances could be created for the namespace.</exception>
+    /// <exception cref="FilterTypeNotSupportedException">Thrown if the specified filter type is not supported.</exception>
+    public TFilter CreateInstance(Namespace @namespace, TimeSpan? absoluteExpiration, TimeSpan? slidingExpiration, FilterType type, bool singleFlight)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(@namespace, nameof(@namespace));
 
         var caches = GetCacheInstances(@namespace, absoluteExpiration, slidingExpiration);
-        return CreateHandler(caches, type);
+        return CreateHandler(caches, type, singleFlight);
     }
 
     /// <summary>
@@ -80,18 +95,20 @@ public abstract class ActionCacheFilterAbstractFactoryBase<TFilter> : IActionCac
     /// </summary>
     /// <param name="cache">The cache handler to use for the filter.</param>
     /// <param name="type">The type of filter to create.</param>
+    /// <param name="singleFlight">Whether concurrent misses for one key are coalesced.</param>
     /// <returns>A filter implementation corresponding to the filter type.</returns>
     /// <exception cref="FilterTypeNotSupportedException">Thrown if the filter type is unsupported.</exception>
-    internal abstract TFilter CreateFilter(ActionCacheHandler cache, FilterType type);
+    internal abstract TFilter CreateFilter(ActionCacheHandler cache, FilterType type, bool singleFlight);
 
     /// <summary>
     /// Chains the specified caches into a handler and creates the corresponding filter.
     /// </summary>
     /// <param name="caches">A read-only list of action cache instances to handle.</param>
     /// <param name="type">The type of filter to create.</param>
+    /// <param name="singleFlight">Whether concurrent misses for one key are coalesced.</param>
     /// <returns>A filter implementation based on the specified filter type.</returns>
     /// <exception cref="InvalidCacheInstanceException">Thrown if no cache instances are provided.</exception>
-    internal TFilter CreateHandler(IReadOnlyList<IActionCache> caches, FilterType type)
+    internal TFilter CreateHandler(IReadOnlyList<IActionCache> caches, FilterType type, bool singleFlight = true)
     {
         if (caches.Count == 0)
         {
@@ -105,7 +122,7 @@ public abstract class ActionCacheFilterAbstractFactoryBase<TFilter> : IActionCac
                 cacheHandler.SetNext(cache);
             }
 
-            return CreateFilter(cacheHandler, type);
+            return CreateFilter(cacheHandler, type, singleFlight);
         }
     }
 

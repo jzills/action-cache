@@ -32,6 +32,24 @@ public interface ICacheLockerHandler
     Task WaitForLockThenAsync(string resource, Func<Task> thenFunc);
 
     /// <summary>
+    /// Waits for the lock on the specified resource, runs the provided function under it, and
+    /// reports whether the lock was acquired — without throwing when it was not.
+    /// </summary>
+    /// <typeparam name="TResult">The type of the result produced by the function.</typeparam>
+    /// <param name="resource">The resource to acquire the lock for.</param>
+    /// <param name="resultAccessor">The function executed once the lock is held.</param>
+    /// <returns>
+    /// The function's result together with whether the lock was acquired. When it was not,
+    /// the function did not run.
+    /// </returns>
+    /// <remarks>
+    /// Prefer this over the throwing overloads wherever a busy lock is an expected outcome
+    /// rather than an error. Exceptions raised by <paramref name="resultAccessor"/> propagate
+    /// unchanged, so a caller cannot mistake a failure of the work for a failure to lock.
+    /// </remarks>
+    Task<CacheLockAttempt<TResult>> TryWaitForLockThenAsync<TResult>(string resource, Func<Task<TResult>> resultAccessor);
+
+    /// <summary>
     /// Waits for the lock to be acquired on the specified resource, then executes the provided function and returns the result.
     /// </summary>
     /// <typeparam name="TResult">The type of the result produced by the function.</typeparam>

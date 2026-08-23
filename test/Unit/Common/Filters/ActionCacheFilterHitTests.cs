@@ -1,3 +1,4 @@
+using Unit.TestUtilities.Builders;
 using ActionCache;
 using ActionCache.Filters;
 using ActionCache.Utilities;
@@ -32,7 +33,7 @@ public class ActionCacheFilterHitTests
             .BuildServiceProvider()
             .GetRequiredService<TemplateBinderFactory>();
 
-        _sut = new ActionCacheFilter(_cacheMock.Object, _binderFactory, NullLogger.Instance);
+        _sut = new ActionCacheFilter(_cacheMock.Object, _binderFactory, NullLogger.Instance, SingleFlightBuilder.Build(), true);
     }
 
     [Test]

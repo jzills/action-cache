@@ -55,7 +55,24 @@ Each backend lives in its own directory and follows the same pattern:
 
 ### `ActionCacheBase<TLock>`
 
-All backends extend this abstract base, which holds the generic locking strategy. `TLock` is `SemaphoreSlimLock` for Memory and `NullCacheLock` for Redis (Redis operations are atomic via Lua scripts).
+All backends extend this abstract base, which holds the generic locking strategy:
+
+| Backend | `TLock` | Why |
+|---------|---------|-----|
+| Memory | `SemaphoreSlimLock` | The namespace key index is a read-modify-write that `IMemoryCache` does not make atomic. The locker is a **singleton** — caches are created per request, so a per-instance locker would guard nothing. |
+| Redis | `NullCacheLock` | Operations are atomic via Lua scripts. |
+| SQL Server | `SqlServerCacheLock` | `sp_getapplock` / `sp_releaseapplock`. |
+| Azure Cosmos | `NullCacheLock` | Operations are atomic. |
+
+### Stampede Protection
+
+`IActionCacheSingleFlight` coalesces concurrent misses for one key so the origin action
+runs once. It is applied in `ActionCacheFilter` / `ActionCacheEndpointFilter` using
+lock-then-recheck, on by default, opt out with `[ActionCache(SingleFlight = false)]`.
+`InProcessSingleFlight` is the default; `options.UseDistributedSingleFlight()` swaps in
+`DistributedSingleFlight` over the Redis or SQL Server lock. `InProcessSingleFlight` owns
+a **private** locker instance rather than sharing the Memory backend's — the two nest, and
+separate lockers make a key collision impossible.
 
 ### Namespace-Based Eviction
 

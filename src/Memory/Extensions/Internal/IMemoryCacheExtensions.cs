@@ -7,79 +7,106 @@ namespace ActionCache.Memory.Extensions.Internal;
 /// <summary>
 /// Provides extension methods for working with <see cref="IMemoryCache"/>.
 /// </summary>
+/// <remarks>
+/// These methods are not internally synchronized. Callers must hold the namespace's lock —
+/// see <see cref="ActionCache.Memory.MemoryActionCache"/>, which wraps every call in its
+/// cache locker. <c>GetOrCreate</c> is not atomic, so without
+/// that lock two concurrent writers can each build an index and lose one another's keys.
+/// </remarks>
 internal static class IMemoryCacheExtensions
 {
     /// <summary>
-    /// Retrieves a dictionary of cached keys associated with the specified namespace.
-    /// If no keys exist, a new dictionary is created and stored in the cache.
-    /// Expired keys are removed before returning the result.
+    /// Retrieves the index of cached keys for a namespace, creating it when absent and
+    /// sweeping out entries whose absolute expiration has passed.
     /// </summary>
     /// <param name="cache">The memory cache instance.</param>
-    /// <param name="namespace">The namespace used to store and retrieve keys.</param>
-    /// <param name="entryOptions">The cache entry options used when storing updated keys.</param>
-    /// <returns>A <see cref="ConcurrentDictionary{TKey, TValue}"/> containing cached keys and their expiration times.</returns>
-    internal static ConcurrentDictionary<string, DateTimeOffset?> GetKeys(this IMemoryCache cache, Namespace @namespace, MemoryCacheEntryOptions entryOptions)
+    /// <param name="namespace">The namespace whose key index is read.</param>
+    /// <param name="indexOptions">The entry options used when the index is written back. These describe the index entry itself, never a cached response.</param>
+    /// <returns>A dictionary of cache keys mapped to their absolute expiration, if any.</returns>
+    internal static ConcurrentDictionary<string, DateTimeOffset?> GetKeys(
+        this IMemoryCache cache,
+        Namespace @namespace,
+        MemoryCacheEntryOptions indexOptions
+    )
     {
-        var keys = cache.GetOrCreate(@namespace, options =>
-        {
-            options.Size = 1;
-            return new ConcurrentDictionary<string, DateTimeOffset?>();
-        });
+        var indexKey = CreateIndexKey(@namespace);
 
-        if (keys is null)
+        if (!cache.TryGetValue<ConcurrentDictionary<string, DateTimeOffset?>>(indexKey, out var keys) || keys is null)
         {
-            cache.Remove(@namespace);
+            keys = new ConcurrentDictionary<string, DateTimeOffset?>();
+            cache.Set(indexKey, keys, indexOptions);
+            return keys;
         }
-        else
+
+        var expired = keys.Where(key => key.Value.HasValue && DateTimeOffset.UtcNow >= key.Value.Value).ToList();
+        if (expired.Count > 0)
         {
-            var entries = keys.Where(key => DateTimeOffset.UtcNow >= key.Value);
-            if (entries.Any())
+            foreach (var entry in expired)
             {
-                foreach (var entry in entries)
-                {
-                    keys.TryRemove(entry.Key, out _);
-                }
-
-                cache.Set(@namespace, keys, entryOptions);
+                keys.TryRemove(entry.Key, out _);
             }
+
+            cache.Set(indexKey, keys, indexOptions);
         }
 
-        return keys ?? [];
+        return keys;
     }
 
     /// <summary>
-    /// Adds a key to the cache under the specified namespace with the provided expiration options.
+    /// Adds a key to a namespace's index.
     /// </summary>
     /// <param name="cache">The memory cache instance.</param>
-    /// <param name="namespace">The namespace under which the key is stored.</param>
-    /// <param name="key">The key to add to the cache.</param>
-    /// <param name="entryOptions">The cache entry options specifying expiration and other settings.</param>
-    internal static void SetKey(this IMemoryCache cache, Namespace @namespace, string key, MemoryCacheEntryOptions entryOptions)
+    /// <param name="namespace">The namespace the key belongs to.</param>
+    /// <param name="key">The cache key to record.</param>
+    /// <param name="absoluteExpiration">The cached response's absolute expiration, used to sweep the index later. <see langword="null"/> for entries that do not expire.</param>
+    /// <param name="indexOptions">The entry options used when the index is written back.</param>
+    internal static void SetKey(
+        this IMemoryCache cache,
+        Namespace @namespace,
+        string key,
+        DateTimeOffset? absoluteExpiration,
+        MemoryCacheEntryOptions indexOptions
+    )
     {
-        var keys = cache.GetKeys(@namespace, entryOptions);
-        if (keys.TryAdd(key, entryOptions.AbsoluteExpiration))
+        var keys = cache.GetKeys(@namespace, indexOptions);
+        keys[key] = absoluteExpiration;
+        cache.Set(CreateIndexKey(@namespace), keys, indexOptions);
+
+    }
+
+    /// <summary>
+    /// Removes a key from a namespace's index.
+    /// </summary>
+    /// <param name="cache">The memory cache instance.</param>
+    /// <param name="namespace">The namespace the key belongs to.</param>
+    /// <param name="key">The cache key to remove.</param>
+    /// <param name="indexOptions">The entry options used when the index is written back.</param>
+    internal static void RemoveKey(
+        this IMemoryCache cache,
+        Namespace @namespace,
+        string key,
+        MemoryCacheEntryOptions indexOptions
+    )
+    {
+        var keys = cache.GetKeys(@namespace, indexOptions);
+        if (keys.TryRemove(key, out _))
         {
-            cache.Set(@namespace, keys, entryOptions);
+            cache.Set(CreateIndexKey(@namespace), keys, indexOptions);
         }
     }
 
     /// <summary>
-    /// Removes a specified key from the cache under the given namespace.
-    /// If the key exists, it is removed, and the updated dictionary is stored back in the cache.
+    /// Builds the cache key under which a namespace's key index is stored.
     /// </summary>
-    /// <param name="cache">The memory cache instance.</param>
-    /// <param name="namespace">The namespace containing the key to remove.</param>
-    /// <param name="key">The key to remove from the cache.</param>
-    /// <param name="entryOptions">The cache entry options used to update the stored dictionary.</param>
-    internal static void RemoveKey(this IMemoryCache cache, Namespace @namespace, string key, MemoryCacheEntryOptions entryOptions)
-    {
-        var keys = cache.GetKeys(@namespace, entryOptions);
-        if (keys.Any())
-        {
-            if (keys.TryRemove(key, out _))
-            {
-                cache.Set(@namespace, keys, entryOptions);
-            }
-        }
-    }
+    /// <param name="namespace">The namespace whose index key is built.</param>
+    /// <returns>The index's cache key.</returns>
+    /// <remarks>
+    /// Derived from the <em>resolved</em> namespace string, so a route-templated namespace
+    /// such as <c>Account:{id}</c> gets one index per id rather than one shared across all
+    /// of them. The suffix keeps it clear of two neighbours that share that string: the
+    /// <see cref="ActionCache.Memory.ExpirationTokenSources"/> entry, which stores the
+    /// namespace's <see cref="CancellationTokenSource"/> under the bare namespace, and
+    /// cached responses, which are stored under a hex-encoded key.
+    /// </remarks>
+    private static string CreateIndexKey(Namespace @namespace) => $"{(string)@namespace}:__keys";
 }

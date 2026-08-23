@@ -96,6 +96,38 @@ To make backend failures propagate to the caller instead, opt in to **fail-close
         options.FailClosed();
     });
 
+## Cache Stampede Protection
+
+When a hot entry expires, every concurrent request misses at once and they all execute the
+action. ActionCache coalesces them: the first request executes while the rest wait, then
+re-read the cache and reuse what it stored. A test issuing 20 concurrent requests to one
+uncached endpoint invokes the action **once**.
+
+This is **on by default**. Opt out per endpoint when the action has per-request side
+effects that must not be skipped:
+
+    [HttpGet("forecasts")]
+    [ActionCache(Namespace = "Forecasts", SingleFlight = false)]
+    public IActionResult Get() => Ok(_forecasts);
+
+A waiter blocks for at most `ActionCacheEntryOptions.LockTimeout` (default 10 seconds); if
+the lock cannot be acquired in that time the request executes uncoalesced rather than
+failing, consistent with the fail-open stance above.
+
+By default coalescing is **per process**, matching .NET's `HybridCache`. With several
+instances running, each one executes the action once. To coalesce across every instance,
+opt in to the distributed lock:
+
+    builder.Services.AddActionCache(options =>
+    {
+        options.UseRedisCache(...);
+        options.UseDistributedSingleFlight();
+    });
+
+This requires Redis or SQL Server (Redis is preferred when both are configured) and throws
+at startup if neither is present. Note that every cache miss then costs a lock round-trip
+to the backend, which is why it is not the default.
+
 ## Basic Usage
 
 Add an `ActionCacheAttribute` to any controller actions that should be cached. There is a mandatory parameter for the cache namespace which will prefix all entries with whatever is specified.

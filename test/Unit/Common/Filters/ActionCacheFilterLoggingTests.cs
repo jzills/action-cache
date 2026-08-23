@@ -1,3 +1,4 @@
+using Unit.TestUtilities.Builders;
 using ActionCache;
 using ActionCache.Filters;
 using ActionCache.Utilities;
@@ -39,7 +40,7 @@ public class ActionCacheFilterLoggingTests
             .GetRequiredService<TemplateBinderFactory>();
 
         _logger = new CapturingLogger();
-        _sut = new ActionCacheFilter(_cacheMock.Object, binderFactory, _logger);
+        _sut = new ActionCacheFilter(_cacheMock.Object, binderFactory, _logger, SingleFlightBuilder.Build(), true);
     }
 
     [Test]

@@ -34,4 +34,13 @@ public class ExpirationTokenSourcesValidated : IExpirationTokenSources
             return false;
         }
     }
+
+    /// <inheritdoc/>
+    public void Reset(string key)
+    {
+        if (!string.IsNullOrWhiteSpace(key))
+        {
+            Next.Reset(key);
+        }
+    }
 }

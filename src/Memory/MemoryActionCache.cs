@@ -11,7 +11,7 @@ namespace ActionCache.Memory;
 /// <summary>
 /// Represents a memory action cache implementation.
 /// </summary>
-public class MemoryActionCache : ActionCacheBase<NullCacheLock>
+public class MemoryActionCache : ActionCacheBase<SemaphoreSlimLock>
 {
     /// <summary>
     /// A memory cache implementation.
@@ -19,24 +19,35 @@ public class MemoryActionCache : ActionCacheBase<NullCacheLock>
     protected readonly IMemoryCache Cache;
 
     /// <summary>
-    /// A source of tokens used to combine cache entries for actions like namespace eviction.
+    /// The source of the namespace's expiration token. Resolved per operation so this cache
+    /// can never write entries against a token that a prior eviction already cancelled.
     /// </summary>
-    protected CancellationTokenSource CancellationTokenSource;
+    protected readonly IExpirationTokenSources ExpirationTokens;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="MemoryActionCache"/> class.
     /// </summary>
     /// <param name="cache">The memory cache instance.</param>
-    /// <param name="cancellationTokenSource">The source for cancellation tokens used to expire cache entries.</param>
+    /// <param name="expirationTokens">The source of the namespace's expiration token.</param>
     /// <param name="context">The cache context.</param>  
     public MemoryActionCache(
         IMemoryCache cache,
-        CancellationTokenSource cancellationTokenSource,
-        ActionCacheContext<NullCacheLock> context
+        IExpirationTokenSources expirationTokens,
+        ActionCacheContext<SemaphoreSlimLock> context
     ) : base(context)
     {
         Cache = cache;
-        CancellationTokenSource = cancellationTokenSource;
+        ExpirationTokens = expirationTokens;
+    }
+
+    /// <summary>
+    /// Resolves the namespace's current expiration token.
+    /// </summary>
+    /// <returns>A change token tied to the namespace's live <see cref="CancellationTokenSource"/>.</returns>
+    private CancellationChangeToken CreateExpirationToken()
+    {
+        ExpirationTokens.TryGetOrAdd(Namespace, out var cancellationTokenSource);
+        return new CancellationChangeToken(cancellationTokenSource.Token);
     }
 
     /// <summary>
@@ -49,7 +60,17 @@ public class MemoryActionCache : ActionCacheBase<NullCacheLock>
             Size = 1,
             SlidingExpiration = EntryOptions.SlidingExpiration,
             AbsoluteExpiration = EntryOptions.GetAbsoluteExpirationFromUtcNow()
-        }.AddExpirationToken(new CancellationChangeToken(CancellationTokenSource.Token));
+        }.AddExpirationToken(CreateExpirationToken());
+
+    /// <summary>
+    /// Creates the entry options used for the namespace's key index. The index is owned by
+    /// the namespace lifecycle, so it carries the namespace expiration token but never a
+    /// caller's absolute or sliding expiration.
+    /// </summary>
+    /// <returns>The cache entry options applied to the namespace key index.</returns>
+    private MemoryCacheEntryOptions CreateIndexOptions() =>
+        new MemoryCacheEntryOptions { Size = 1 }
+            .AddExpirationToken(CreateExpirationToken());
 
     /// <summary>
     /// Asynchronously gets a value from the cache.
@@ -72,7 +93,7 @@ public class MemoryActionCache : ActionCacheBase<NullCacheLock>
         Cache.Set(Namespace.Create(key), value, entryOptions);
 
         return CacheLocker.WaitForLockThenAsync(Namespace,
-            () => Cache.SetKey(Namespace, key, entryOptions));
+            () => Cache.SetKey(Namespace, key, EntryOptions.GetAbsoluteExpirationFromUtcNow(), CreateIndexOptions()));
     }
 
     /// <summary>
@@ -84,17 +105,18 @@ public class MemoryActionCache : ActionCacheBase<NullCacheLock>
         Cache.Remove(Namespace.Create(key));
 
         return CacheLocker.WaitForLockThenAsync(Namespace, 
-            () => Cache.RemoveKey(Namespace, key, CreateEntryOptions()));
+            () => Cache.RemoveKey(Namespace, key, CreateIndexOptions()));
     }
 
     /// <summary>
     /// Asynchronously removes all values from the cache.
     /// </summary>
-    public override async Task RemoveAsync()
+    public override Task RemoveAsync()
     {
-        await CancellationTokenSource.CancelAsync();
-        CancellationTokenSource.Dispose();
-        CancellationTokenSource = new CancellationTokenSource();
+        // Cancelling the namespace's token source evicts every entry carrying it, the key
+        // index included. Lifecycle lives in the token source, which owns the store.
+        ExpirationTokens.Reset(Namespace);
+        return Task.CompletedTask;
     }
 
     /// <summary>
@@ -104,7 +126,7 @@ public class MemoryActionCache : ActionCacheBase<NullCacheLock>
     public override async Task<IEnumerable<string>> GetKeysAsync()
     {
         var keysWithAbsoluteExpiration = await CacheLocker.WaitForLockThenAsync(Namespace,
-            () => Cache.GetKeys(Namespace, CreateEntryOptions()));
+            () => Cache.GetKeys(Namespace, CreateIndexOptions()));
 
         return keysWithAbsoluteExpiration?.Keys.AsEnumerable() ?? [];
     }

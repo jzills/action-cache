@@ -76,35 +76,13 @@ public class RedisActionCacheFactoryTests
     }
 
     // Bug M7: Create(namespace, absoluteExpiration, slidingExpiration) constructs a fresh
-    // ActionCacheEntryOptions with only the expiration fields set. LockDuration and LockTimeout
-    // from the configured options are not copied, so they silently reset to their defaults
-    // (5 s and 10 s respectively). Consumers who configure custom lock durations via IOptions
-    // will find them ignored whenever a per-namespace expiration is also specified.
+    // ActionCacheEntryOptions with only the expiration fields set. LockTimeout from the
+    // configured options is not copied, so it silently resets to its 10 s default. Consumers
+    // who configure a custom lock timeout via IOptions find it ignored whenever a
+    // per-namespace expiration is also specified.
     //
-    // Fix: copy LockDuration and LockTimeout from the existing EntryOptions when constructing
-    // the replacement, or accept the full ActionCacheEntryOptions and override only expiration.
-
-    [Test]
-    public void Create_WithExpirations_DropsConfiguredLockDuration_BugM7()
-    {
-        var customLockDuration = TimeSpan.FromSeconds(30);
-        var configuredOptions = Options.Create(new ActionCacheEntryOptions
-        {
-            LockDuration = customLockDuration
-        });
-        var factory = new RedisActionCacheFactory(
-            _multiplexerMock.Object,
-            configuredOptions,
-            _refreshProviderMock.Object,
-            NullLoggerFactory.Instance);
-
-        var cache = factory.Create((Namespace)"TestNs", TimeSpan.FromMinutes(5), null);
-
-        var entryOptions = GetEntryOptions(cache!);
-
-        // BUG: LockDuration is reset to the default 5 s instead of the configured 30 s.
-        entryOptions.LockDuration.Should().Be(customLockDuration);
-    }
+    // Fix: copy LockTimeout from the existing EntryOptions when constructing the
+    // replacement, or accept the full ActionCacheEntryOptions and override only expiration.
 
     [Test]
     public void Create_WithExpirations_DropsConfiguredLockTimeout_BugM7()

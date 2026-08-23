@@ -127,4 +127,17 @@ public class IServiceCollectionExtensionsTests
 
         act.Should().Throw<MissingDatabaseIdException>();
     }
+
+    [Test]
+    public void AddActionCache_WhenDistributedSingleFlightHasNoBackend_ThrowsAtRegistration()
+    {
+        var services = new ServiceCollection();
+
+        var register = () => services.AddActionCache(options => options
+            .UseMemoryCache(_ => { })
+            .UseDistributedSingleFlight());
+
+        register.Should().Throw<InvalidOperationException>()
+            .WithMessage("*requires a Redis or SQL Server cache backend*");
+    }
 }

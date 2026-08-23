@@ -8,7 +8,7 @@ public class CacheLockerBaseTests
 {
     private sealed class AlwaysFailingLocker : CacheLockerBase<NullCacheLock>
     {
-        public AlwaysFailingLocker() : base(TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(10)) { }
+        public AlwaysFailingLocker() : base(TimeSpan.FromSeconds(10)) { }
 
         public override Task ReleaseLockAsync(NullCacheLock cacheLock) => Task.CompletedTask;
 
@@ -23,10 +23,52 @@ public class CacheLockerBaseTests
             TryAcquireLockAsync(resource);
     }
 
+    private sealed class AcquiringLocker : CacheLockerBase<NullCacheLock>
+    {
+        public AcquiringLocker() : base(TimeSpan.FromSeconds(10)) { }
+
+        public override Task ReleaseLockAsync(NullCacheLock cacheLock) => Task.CompletedTask;
+
+        public override Task<NullCacheLock> TryAcquireLockAsync(string resource) =>
+            Task.FromResult(new NullCacheLock(resource));
+
+        public override Task<NullCacheLock> WaitForLockAsync(string resource) =>
+            TryAcquireLockAsync(resource);
+    }
+
     private AlwaysFailingLocker _locker = null!;
 
     [SetUp]
     public void SetUp() => _locker = new AlwaysFailingLocker();
+
+    [Test]
+    public async Task TryWaitForLockThenAsync_WhenLockNotAcquired_ReportsItWithoutThrowingOrRunningTheWork()
+    {
+        var ran = false;
+
+        var attempt = await _locker.TryWaitForLockThenAsync<string>("resource", () =>
+        {
+            ran = true;
+            return Task.FromResult("produced");
+        });
+
+        attempt.LockAcquired.Should().BeFalse();
+        attempt.Result.Should().BeNull();
+        ran.Should().BeFalse("the work must not run without the lock");
+    }
+
+    [Test]
+    public async Task TryWaitForLockThenAsync_WhenTheWorkThrows_PropagatesInsteadOfReportingALockFailure()
+    {
+        // The distinction the type exists for: a caller must be able to tell "the lock was
+        // busy" from "the work failed", because it retries the first and must not the second.
+        var locker = new AcquiringLocker();
+
+        var act = async () => await locker.TryWaitForLockThenAsync<string>(
+            "resource", () => throw new InvalidOperationException("the work failed"));
+
+        await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("the work failed");
+    }
 
     [Test]
     public async Task WaitForLockThenAsync_Action_WhenLockNotAcquired_ThrowsInvalidOperationException()

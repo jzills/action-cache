@@ -23,6 +23,16 @@ public class ActionCacheEndpointFilterFactory : ActionCacheEndpointFilterFactory
     public long SlidingExpiration { get; set; } = ActionCacheEntryOptions.NoExpiration;
 
     /// <summary>
+    /// Whether concurrent misses for one cache key are coalesced so the endpoint executes once.
+    /// </summary>
+    /// <value>
+    /// Defaults to <see langword="true"/>. Set to <see langword="false"/> to let every
+    /// concurrent miss execute the endpoint, which is only appropriate when the endpoint has
+    /// per-request side effects that must not be skipped.
+    /// </value>
+    public bool SingleFlight { get; set; } = true;
+
+    /// <summary>
     /// Creates an instance of the action cache filter using the specified service provider.
     /// </summary>
     /// <param name="serviceProvider">The service provider to resolve dependencies.</param>
@@ -31,6 +41,7 @@ public class ActionCacheEndpointFilterFactory : ActionCacheEndpointFilterFactory
         CreateInstance(serviceProvider,
             FilterType.Add,
             TimeSpan.FromMilliseconds(AbsoluteExpiration),
-            TimeSpan.FromMilliseconds(SlidingExpiration)
+            TimeSpan.FromMilliseconds(SlidingExpiration),
+            SingleFlight
         );
 }

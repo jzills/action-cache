@@ -1,4 +1,5 @@
 using ActionCache.AzureCosmos;
+using ActionCache.Common.Concurrency;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Caching.SqlServer;
 using Microsoft.Extensions.Caching.StackExchangeRedis;
@@ -85,6 +86,41 @@ public class ActionCacheOptionsBuilder
     public ActionCacheOptionsBuilder FailClosed(bool failClosed = true)
     {
         Options.FailClosed = failClosed;
+        return this;
+    }
+
+    /// <summary>
+    /// Coordinates single-flight across every instance of the application using the
+    /// configured Redis or SQL Server backend's distributed lock, instead of coalescing
+    /// only within one process.
+    /// </summary>
+    /// <returns>Returns this instance of <see cref="ActionCacheOptionsBuilder"/>.</returns>
+    /// <remarks>
+    /// Every cache miss then costs a lock round-trip to the backend. Requires Redis or SQL
+    /// Server to be configured; Redis is preferred when both are.
+    /// </remarks>
+    public ActionCacheOptionsBuilder UseDistributedSingleFlight(
+        Action<ActionCacheSingleFlightOptions>? configureOptions = null)
+    {
+        Options.UseDistributedSingleFlight = true;
+        configureOptions?.Invoke(Options.SingleFlightOptions);
+        return this;
+    }
+
+    /// <summary>
+    /// Configures how concurrent misses for one cache key are coalesced.
+    /// </summary>
+    /// <param name="configureOptions">The delegate to configure the single-flight options.</param>
+    /// <returns>Returns this instance of <see cref="ActionCacheOptionsBuilder"/>.</returns>
+    /// <remarks>
+    /// Applies to both the in-process default and <see cref="UseDistributedSingleFlight"/>.
+    /// Raise <see cref="ActionCacheSingleFlightOptions.LeaseDuration"/> above the slowest
+    /// action the cache fronts.
+    /// </remarks>
+    public ActionCacheOptionsBuilder UseSingleFlightOptions(
+        Action<ActionCacheSingleFlightOptions> configureOptions)
+    {
+        configureOptions.Invoke(Options.SingleFlightOptions);
         return this;
     }
 

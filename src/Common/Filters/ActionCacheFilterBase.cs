@@ -1,3 +1,4 @@
+using ActionCache.Common.Concurrency;
 using ActionCache.Common.Diagnostics;
 using ActionCache.Common.Extensions.Internal;
 using Microsoft.AspNetCore.Routing;
@@ -22,6 +23,17 @@ public abstract class ActionCacheFilterBase
     protected readonly TemplateBinderFactory BinderFactory;
 
     /// <summary>
+    /// Coalesces concurrent misses for the same key.
+    /// </summary>
+    protected readonly IActionCacheSingleFlight SingleFlight;
+
+    /// <summary>
+    /// Whether this endpoint opted into single-flight. When <see langword="false"/> the
+    /// filter takes the direct path and never touches <see cref="SingleFlight"/>.
+    /// </summary>
+    protected readonly bool SingleFlightEnabled;
+
+    /// <summary>
     /// The logger used to record filter-level conditions the cache layer cannot observe.
     /// </summary>
     private readonly ILogger _logger;
@@ -32,11 +44,32 @@ public abstract class ActionCacheFilterBase
     /// <param name="cache">The <see cref="IActionCache"/> instance used for caching actions.</param>
     /// <param name="binderFactory">The <see cref="TemplateBinderFactory"/> instance used for binding route templates.</param>
     /// <param name="logger">The logger used to record filter-level conditions the cache layer cannot observe.</param>
-    internal ActionCacheFilterBase(IActionCache cache, TemplateBinderFactory binderFactory, ILogger logger)
+    /// <param name="singleFlight">Coalesces concurrent misses for the same key.</param>
+    /// <param name="singleFlightEnabled">Whether this endpoint opted into single-flight.</param>
+    internal ActionCacheFilterBase(
+        IActionCache cache,
+        TemplateBinderFactory binderFactory,
+        ILogger logger,
+        IActionCacheSingleFlight singleFlight,
+        bool singleFlightEnabled)
     {
         Cache = cache;
         BinderFactory = binderFactory;
         _logger = logger;
+        SingleFlight = singleFlight;
+        SingleFlightEnabled = singleFlightEnabled;
+    }
+
+    /// <summary>
+    /// Initializes a new instance for a filter that never produces cache entries — eviction
+    /// and refresh — and so has nothing to coalesce.
+    /// </summary>
+    /// <param name="cache">The <see cref="IActionCache"/> instance used for caching actions.</param>
+    /// <param name="binderFactory">The <see cref="TemplateBinderFactory"/> instance used for binding route templates.</param>
+    /// <param name="logger">The logger used to record filter-level conditions the cache layer cannot observe.</param>
+    internal ActionCacheFilterBase(IActionCache cache, TemplateBinderFactory binderFactory, ILogger logger)
+        : this(cache, binderFactory, logger, NullActionCacheSingleFlight.Instance, singleFlightEnabled: false)
+    {
     }
 
     /// <summary>

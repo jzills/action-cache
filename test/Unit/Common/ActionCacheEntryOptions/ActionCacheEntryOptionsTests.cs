@@ -154,12 +154,6 @@ public class ActionCacheEntryOptionsTests
     }
 
     [Test]
-    public void DefaultLockDuration_Is5Seconds()
-    {
-        new ActionCacheEntryOptions().LockDuration.Should().Be(TimeSpan.FromSeconds(5));
-    }
-
-    [Test]
     public void DefaultLockTimeout_Is10Seconds()
     {
         new ActionCacheEntryOptions().LockTimeout.Should().Be(TimeSpan.FromSeconds(10));
