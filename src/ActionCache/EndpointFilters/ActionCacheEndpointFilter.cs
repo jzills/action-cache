@@ -1,5 +1,6 @@
 using ActionCache.Common.Caching;
 using ActionCache.Common.Concurrency;
+using ActionCache.Common.Diagnostics;
 using ActionCache.Common.Enums;
 using ActionCache.Common.Keys;
 using ActionCache.Common.Keys.VaryBy;
@@ -7,6 +8,7 @@ using ActionCache.Common.Responses;
 using ActionCache.Common.Extensions;
 using ActionCache.Common.Extensions.Internal;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.Metadata;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.AspNetCore.Routing.Template;
 using ActionCache.MinimalApi.Extensions.Internal;
@@ -67,9 +69,12 @@ public class ActionCacheEndpointFilter : ActionCacheFilterBase, IEndpointFilter
 
         var varyByValues = await VaryByResolver.ResolveAsync(context.HttpContext, VaryByOptions, cancellationToken);
 
-        if (!context.TryGetKey(out var key, varyByValues, UsePlaintextKeys))
+        if (!context.TryGetKey(out var key, varyByValues, KeyOptions))
         {
             context.AddCacheStatus(CacheStatus.Miss);
+            // Counted, so the instrument totals requests rather than only the ones that got
+            // as far as a key. A request the cache could not serve is a miss.
+            RecordLookup(CacheStatus.Miss);
             LogCacheKeyUnavailable();
             return await next(context);
         }
@@ -78,11 +83,13 @@ public class ActionCacheEndpointFilter : ActionCacheFilterBase, IEndpointFilter
         if (cacheValue is not null)
         {
             context.AddCacheStatus(CacheStatus.Hit);
+            RecordLookup(CacheStatus.Hit);
             return CachedResponseFactory.ToEndpointResult(cacheValue);
         }
 
         if (!SingleFlightEnabled)
         {
+            RecordLookup(CacheStatus.Miss);
             return await ExecuteAndCacheAsync(context, next, key, varyByValues.Count > 0, cancellationToken);
         }
 
@@ -101,6 +108,9 @@ public class ActionCacheEndpointFilter : ActionCacheFilterBase, IEndpointFilter
             context.AddCacheStatus(CacheStatus.Hit);
         }
 
+        // A coalesced waiter was served without the endpoint running, which is a hit by the
+        // only definition that matters to the ratio.
+        RecordLookup(outcome.WasCoalesced ? CacheStatus.Hit : CacheStatus.Miss);
         return outcome.Value;
     }
 
@@ -124,7 +134,7 @@ public class ActionCacheEndpointFilter : ActionCacheFilterBase, IEndpointFilter
         if (result.IsSuccessfulEndpointResult() &&
             ResponseFactory.TryCreateFromEndpointResult(
                 result,
-                ResponseFactory.CreateRequest(context.HttpContext),
+                ResponseFactory.CreateRequest(context.HttpContext, GetBoundBody(context, variesByRequest)),
                 variesByRequest,
                 out var cachedResponse))
         {
@@ -139,4 +149,55 @@ public class ActionCacheEndpointFilter : ActionCacheFilterBase, IEndpointFilter
 
         return result;
     }
+
+    /// <summary>
+    /// Finds the argument bound from the request body, if the endpoint takes one.
+    /// </summary>
+    /// <param name="context">The endpoint filter invocation context.</param>
+    /// <param name="variesByRequest">Whether the cache key varies by request context.</param>
+    /// <returns>The bound body model, or <see langword="null"/> when there is none to record.</returns>
+    /// <remarks>
+    /// The MVC filter reads the body parameter off the action descriptor; Minimal APIs have
+    /// no descriptor, so the endpoint's <see cref="IAcceptsMetadata"/> names the type the
+    /// framework bound from the body and the matching argument is that model. Without this
+    /// a cached <c>MapPost</c> recorded no body at all, and its replay — sent bodyless —
+    /// was answered 400 or 415, so refresh could never replace the entry.
+    /// </remarks>
+    private static object? GetBoundBody(EndpointFilterInvocationContext context, bool variesByRequest)
+    {
+        // An entry that varies by request is skipped by refresh outright, so its payload
+        // could never be replayed — persisting it would put request bodies in the cache
+        // store for nothing. See ActionCacheBase.TryRefreshKeyAsync.
+        if (variesByRequest)
+        {
+            return null;
+        }
+
+        var requestType = context.HttpContext.GetEndpoint()?
+            .Metadata.GetMetadata<IAcceptsMetadata>()?.RequestType;
+
+        if (requestType is null)
+        {
+            return null;
+        }
+
+        foreach (var argument in context.Arguments)
+        {
+            if (argument is not null && requestType.IsInstanceOfType(argument))
+            {
+                return argument;
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Records the outcome of this request's cache lookup.
+    /// </summary>
+    /// <param name="status">The outcome.</param>
+    private void RecordLookup(CacheStatus status) =>
+        ActionCacheDiagnostics.RecordRequest(
+            Cache.GetNamespace().Value,
+            status == CacheStatus.Hit ? "hit" : "miss");
 }

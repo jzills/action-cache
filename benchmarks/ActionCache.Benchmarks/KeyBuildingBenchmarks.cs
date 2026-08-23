@@ -47,7 +47,7 @@ public class KeyBuildingBenchmarks
 
     [Benchmark]
     public string Plaintext() =>
-        new ActionCacheKeyBuilder(usePlaintextKeys: true)
+        new ActionCacheKeyBuilder(new ActionCacheKeyOptions { UsePlaintextKeys = true })
             .WithRouteValues(_routeValues)
             .WithActionArguments(_actionArguments)
             .Build();

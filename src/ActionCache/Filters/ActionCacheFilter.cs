@@ -1,5 +1,6 @@
 using ActionCache.Common.Caching;
 using ActionCache.Common.Concurrency;
+using ActionCache.Common.Diagnostics;
 using ActionCache.Common.Enums;
 using ActionCache.Common.Keys;
 using ActionCache.Common.Keys.VaryBy;
@@ -68,9 +69,12 @@ public class ActionCacheFilter : ActionCacheFilterBase, IAsyncActionFilter
 
         var varyByValues = await VaryByResolver.ResolveAsync(context.HttpContext, VaryByOptions, cancellationToken);
 
-        if (!context.TryGetKey(out var key, varyByValues, UsePlaintextKeys))
+        if (!context.TryGetKey(out var key, varyByValues, KeyOptions))
         {
             context.AddCacheStatus(CacheStatus.Miss);
+            // Counted, so the instrument totals requests rather than only the ones that got
+            // as far as a key. A request the cache could not serve is a miss.
+            RecordLookup(CacheStatus.Miss);
             LogCacheKeyUnavailable();
             await next();
             return;
@@ -80,12 +84,14 @@ public class ActionCacheFilter : ActionCacheFilterBase, IAsyncActionFilter
         if (cacheValue is not null)
         {
             context.AddCacheStatus(CacheStatus.Hit);
+            RecordLookup(CacheStatus.Hit);
             context.Result = CachedResponseFactory.ToActionResult(cacheValue);
             return;
         }
 
         if (!SingleFlightEnabled)
         {
+            RecordLookup(CacheStatus.Miss);
             await ExecuteAndCacheAsync(context, next, key, varyByValues.Count > 0, cancellationToken);
             return;
         }
@@ -103,11 +109,16 @@ public class ActionCacheFilter : ActionCacheFilterBase, IAsyncActionFilter
                 return null;
             });
 
-        if (result.WasCoalesced && result.Value is not null)
+        var coalescedHit = result.WasCoalesced && result.Value is not null;
+        if (coalescedHit)
         {
             context.AddCacheStatus(CacheStatus.Hit);
-            context.Result = CachedResponseFactory.ToActionResult(result.Value);
+            context.Result = CachedResponseFactory.ToActionResult(result.Value!);
         }
+
+        // A coalesced waiter was served without the action running, which is a hit by the
+        // only definition that matters to the ratio.
+        RecordLookup(coalescedHit ? CacheStatus.Hit : CacheStatus.Miss);
     }
 
     /// <summary>
@@ -131,7 +142,7 @@ public class ActionCacheFilter : ActionCacheFilterBase, IAsyncActionFilter
             actionExecutedContext.Result.IsCacheableResult() &&
             ResponseFactory.TryCreate(
                 actionExecutedContext.Result,
-                ResponseFactory.CreateRequest(context.HttpContext, GetBoundBody(context)),
+                ResponseFactory.CreateRequest(context.HttpContext, GetBoundBody(context, variesByRequest)),
                 variesByRequest,
                 out var cachedResponse))
         {
@@ -149,15 +160,20 @@ public class ActionCacheFilter : ActionCacheFilterBase, IAsyncActionFilter
     /// Finds the argument bound from the request body, if the action takes one.
     /// </summary>
     /// <param name="context">The action executing context.</param>
-    /// <returns>The bound body model, or <see langword="null"/> when the action has no body parameter.</returns>
+    /// <param name="variesByRequest">Whether the cache key varies by request context.</param>
+    /// <returns>The bound body model, or <see langword="null"/> when there is none to record.</returns>
     /// <remarks>
     /// Refresh replays the recorded request, so an action with a <c>[FromBody]</c> parameter
     /// has to carry its payload or the replay binds nothing and the endpoint answers 415 —
     /// overwriting a good cache entry with an error.
     /// </remarks>
-    private static object? GetBoundBody(ActionExecutingContext context)
+    private static object? GetBoundBody(ActionExecutingContext context, bool variesByRequest)
     {
-        if (context.ActionDescriptor is not ControllerActionDescriptor descriptor)
+        // An entry that varies by request is skipped by refresh outright, so its payload
+        // could never be replayed — persisting it would put request bodies, which is where
+        // credentials and PII live, in the cache store for nothing. Since VaryByUserMode.Auto
+        // that is every authenticated endpoint. See ActionCacheBase.TryRefreshKeyAsync.
+        if (variesByRequest || context.ActionDescriptor is not ControllerActionDescriptor descriptor)
         {
             return null;
         }
@@ -173,4 +189,13 @@ public class ActionCacheFilter : ActionCacheFilterBase, IAsyncActionFilter
 
         return null;
     }
+
+    /// <summary>
+    /// Records the outcome of this request's cache lookup.
+    /// </summary>
+    /// <param name="status">The outcome.</param>
+    private void RecordLookup(CacheStatus status) =>
+        ActionCacheDiagnostics.RecordRequest(
+            Cache.GetNamespace().Value,
+            status == CacheStatus.Hit ? "hit" : "miss");
 }

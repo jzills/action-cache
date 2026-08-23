@@ -42,6 +42,23 @@ public class ResilientActionCache : IActionCache
     private readonly TimeSpan? _operationTimeout;
 
     /// <summary>
+    /// The unresolved namespace template, used as the telemetry dimension.
+    /// </summary>
+    /// <remarks>
+    /// <see cref="_namespace"/> converts to a string with its route template tokens already
+    /// bound, so a templated namespace resolves per resource — <c>Account:42</c>. As a
+    /// metric tag that mints a time series per id. The template is what identifies the
+    /// cache, and it is bounded by the number of attributes in the application.
+    /// </remarks>
+    private readonly string _metricNamespace;
+
+    /// <summary>The span and metric name for removing a single key.</summary>
+    private const string RemoveKeyOperation = "RemoveKey";
+
+    /// <summary>The span and metric name for evicting an entire namespace.</summary>
+    private const string EvictNamespaceOperation = "EvictNamespace";
+
+    /// <summary>
     /// Initializes a new instance of the <see cref="ResilientActionCache"/> class.
     /// </summary>
     /// <param name="inner">The backing cache whose operations are guarded.</param>
@@ -64,6 +81,7 @@ public class ResilientActionCache : IActionCache
         _logger = logger;
         _failClosed = failClosed;
         _namespace = inner.GetNamespace();
+        _metricNamespace = _namespace.Value;
         _operationTimeout = operationTimeout;
     }
 
@@ -71,42 +89,28 @@ public class ResilientActionCache : IActionCache
     public Namespace GetNamespace() => _namespace;
 
     /// <inheritdoc/>
-    public async Task<IEnumerable<string>> GetKeysAsync(CancellationToken cancellationToken = default)
-    {
-        using var timeout = CreateTimeoutSource(cancellationToken);
-        using var activity = ActionCacheDiagnostics.StartOperation(nameof(GetKeysAsync), _namespace);
-
-        try
-        {
-            return await _inner.GetKeysAsync(timeout?.Token ?? cancellationToken);
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-            throw;
-        }
-        catch (Exception exception)
-        {
-            Degrade(exception, nameof(GetKeysAsync));
-            return [];
-        }
-    }
+    public Task<IEnumerable<string>> GetKeysAsync(CancellationToken cancellationToken = default) =>
+        GuardAsync(
+            nameof(GetKeysAsync),
+            token => _inner.GetKeysAsync(token),
+            degraded: [],
+            cancellationToken);
 
     /// <inheritdoc/>
-    public async Task<TValue?> GetAsync<TValue>(string key, CancellationToken cancellationToken = default)
-    {
-        using var timeout = CreateTimeoutSource(cancellationToken);
-        using var activity = ActionCacheDiagnostics.StartOperation(nameof(GetAsync), _namespace);
-        var stopwatch = ValueStopwatch.Start();
-
-        try
-        {
-            var value = await _inner.GetAsync<TValue>(key, timeout?.Token ?? cancellationToken);
-
-            ActionCacheDiagnostics.RecordRequest(_namespace, value is not null ? "hit" : "miss");
-            ActionCacheDiagnostics.RecordDuration(_namespace, nameof(GetAsync), stopwatch.Elapsed);
-            activity?.SetTag("actioncache.hit", value is not null);
-            if (_logger.IsEnabled(LogLevel.Debug))
+    public Task<TValue?> GetAsync<TValue>(string key, CancellationToken cancellationToken = default) =>
+        GuardAsync(
+            nameof(GetAsync),
+            token => _inner.GetAsync<TValue>(key, token),
+            degraded: default,
+            cancellationToken,
+            onCompleted: (activity, value) =>
             {
+                activity?.SetTag("actioncache.hit", value is not null);
+                if (!_logger.IsEnabled(LogLevel.Debug))
+                {
+                    return;
+                }
+
                 if (value is not null)
                 {
                     ActionCacheLog.CacheHit(_logger, key, (string)_namespace);
@@ -115,117 +119,143 @@ public class ResilientActionCache : IActionCache
                 {
                     ActionCacheLog.CacheMiss(_logger, key, (string)_namespace);
                 }
-            }
-
-            return value;
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-            throw;
-        }
-        catch (Exception exception)
-        {
-            Degrade(exception, nameof(GetAsync));
-            return default;
-        }
-    }
+            });
 
     /// <inheritdoc/>
-    public async Task SetAsync<TValue>(string key, TValue? value, CancellationToken cancellationToken = default)
+    public Task SetAsync<TValue>(string key, TValue? value, CancellationToken cancellationToken = default) =>
+        GuardAsync(
+            nameof(SetAsync),
+            token => _inner.SetAsync(key, value, token),
+            cancellationToken,
+            onCompleted: _ =>
+            {
+                if (_logger.IsEnabled(LogLevel.Debug))
+                {
+                    ActionCacheLog.CacheSet(_logger, key, (string)_namespace);
+                }
+            });
+
+    /// <inheritdoc/>
+    public Task RemoveAsync(string key, CancellationToken cancellationToken = default) =>
+        GuardAsync(
+            RemoveKeyOperation,
+            token => _inner.RemoveAsync(key, token),
+            cancellationToken,
+            onCompleted: _ =>
+            {
+                if (_logger.IsEnabled(LogLevel.Debug))
+                {
+                    ActionCacheLog.CacheKeyRemoved(_logger, key, (string)_namespace);
+                }
+            });
+
+    /// <inheritdoc/>
+    public Task RemoveAsync(CancellationToken cancellationToken = default) =>
+        GuardAsync(
+            EvictNamespaceOperation,
+            token => _inner.RemoveAsync(token),
+            cancellationToken,
+            onCompleted: _ =>
+            {
+                ActionCacheDiagnostics.Evictions.Add(1,
+                    new KeyValuePair<string, object?>("namespace", _metricNamespace));
+
+                if (_logger.IsEnabled(LogLevel.Debug))
+                {
+                    ActionCacheLog.CacheEvicted(_logger, (string)_namespace);
+                }
+            });
+
+    /// <inheritdoc/>
+    public Task RefreshAsync(CancellationToken cancellationToken = default) =>
+        GuardAsync(
+            nameof(RefreshAsync),
+            token => _inner.RefreshAsync(token),
+            cancellationToken,
+            onCompleted: _ =>
+            {
+                if (_logger.IsEnabled(LogLevel.Debug))
+                {
+                    ActionCacheLog.CacheRefreshed(_logger, (string)_namespace);
+                }
+            });
+
+    /// <summary>
+    /// Runs one backend operation under the resilience, cancellation and telemetry policy
+    /// every operation shares.
+    /// </summary>
+    /// <typeparam name="TResult">The operation's result type.</typeparam>
+    /// <param name="operation">The operation name, used for spans, metrics and logs.</param>
+    /// <param name="operate">Invokes the inner cache.</param>
+    /// <param name="degraded">The value to return when a failure is degraded.</param>
+    /// <param name="cancellationToken">The caller's token.</param>
+    /// <param name="onCompleted">Runs after a successful operation, with its span.</param>
+    /// <returns>The operation's result, or <paramref name="degraded"/>.</returns>
+    /// <remarks>
+    /// One body rather than six near-copies. The copies had already drifted: namespace
+    /// eviction alone was missing the cancellation rethrow and started no span, the
+    /// duration histogram was recorded on one operation's success path only, and one
+    /// method carried a duplicated catch clause. Sharing the policy is what stops the next
+    /// operation from drifting the same way.
+    /// </remarks>
+    private async Task<TResult> GuardAsync<TResult>(
+        string operation,
+        Func<CancellationToken, Task<TResult>> operate,
+        TResult degraded,
+        CancellationToken cancellationToken,
+        Action<Activity?, TResult>? onCompleted = null)
     {
         using var timeout = CreateTimeoutSource(cancellationToken);
-        using var activity = ActionCacheDiagnostics.StartOperation(nameof(SetAsync), _namespace);
+        using var activity = ActionCacheDiagnostics.StartOperation(operation, _metricNamespace);
+        var stopwatch = ValueStopwatch.Start();
+        var outcome = ActionCacheDiagnostics.Outcomes.Ok;
 
         try
         {
-            await _inner.SetAsync(key, value, timeout?.Token ?? cancellationToken);
-            if (_logger.IsEnabled(LogLevel.Debug))
-            {
-                ActionCacheLog.CacheSet(_logger, key, (string)_namespace);
-            }
+            var result = await operate(timeout?.Token ?? cancellationToken);
+            onCompleted?.Invoke(activity, result);
+            return result;
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
+            outcome = ActionCacheDiagnostics.Outcomes.Cancelled;
             throw;
         }
         catch (Exception exception)
         {
-            Degrade(exception, nameof(SetAsync));
+            outcome = ActionCacheDiagnostics.Outcomes.Error;
+            Degrade(exception, operation, activity);
+            return degraded;
+        }
+        finally
+        {
+            ActionCacheDiagnostics.RecordDuration(_metricNamespace, operation, outcome, stopwatch.Elapsed);
         }
     }
 
-    /// <inheritdoc/>
-    public async Task RemoveAsync(string key, CancellationToken cancellationToken = default)
-    {
-        using var timeout = CreateTimeoutSource(cancellationToken);
-        using var activity = ActionCacheDiagnostics.StartOperation(nameof(RemoveAsync), _namespace);
-
-        try
-        {
-            await _inner.RemoveAsync(key, timeout?.Token ?? cancellationToken);
-            if (_logger.IsEnabled(LogLevel.Debug))
+    /// <summary>
+    /// Runs one backend operation that produces no value.
+    /// </summary>
+    /// <param name="operation">The operation name, used for spans, metrics and logs.</param>
+    /// <param name="operate">Invokes the inner cache.</param>
+    /// <param name="cancellationToken">The caller's token.</param>
+    /// <param name="onCompleted">Runs after a successful operation, with its span.</param>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    private Task GuardAsync(
+        string operation,
+        Func<CancellationToken, Task> operate,
+        CancellationToken cancellationToken,
+        Action<Activity?>? onCompleted = null) =>
+        GuardAsync<object?>(
+            operation,
+            async token =>
             {
-                ActionCacheLog.CacheKeyRemoved(_logger, key, (string)_namespace);
-            }
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-            throw;
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-            throw;
-        }
-        catch (Exception exception)
-        {
-            Degrade(exception, nameof(RemoveAsync));
-        }
-    }
-
-    /// <inheritdoc/>
-    public async Task RemoveAsync(CancellationToken cancellationToken = default)
-    {
-        using var timeout = CreateTimeoutSource(cancellationToken);
-
-        try
-        {
-            await _inner.RemoveAsync(timeout?.Token ?? cancellationToken);
-            ActionCacheDiagnostics.Evictions.Add(1,
-                new KeyValuePair<string, object?>("namespace", (string)_namespace));
-            if (_logger.IsEnabled(LogLevel.Debug))
-            {
-                ActionCacheLog.CacheEvicted(_logger, (string)_namespace);
-            }
-        }
-        catch (Exception exception)
-        {
-            Degrade(exception, nameof(RemoveAsync));
-        }
-    }
-
-    /// <inheritdoc/>
-    public async Task RefreshAsync(CancellationToken cancellationToken = default)
-    {
-        using var timeout = CreateTimeoutSource(cancellationToken);
-        using var activity = ActionCacheDiagnostics.StartOperation(nameof(RefreshAsync), _namespace);
-
-        try
-        {
-            await _inner.RefreshAsync(timeout?.Token ?? cancellationToken);
-            if (_logger.IsEnabled(LogLevel.Debug))
-            {
-                ActionCacheLog.CacheRefreshed(_logger, (string)_namespace);
-            }
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-            throw;
-        }
-        catch (Exception exception)
-        {
-            Degrade(exception, nameof(RefreshAsync));
-        }
-    }
+                await operate(token);
+                return null;
+            },
+            degraded: null,
+            cancellationToken,
+            onCompleted is null ? null : (activity, _) => onCompleted(activity));
 
     /// <summary>
     /// Creates a token source that cancels when the configured operation timeout elapses,
@@ -245,9 +275,23 @@ public class ResilientActionCache : IActionCache
         return source;
     }
 
-    private void Degrade(Exception exception, string operation)
+    /// <summary>
+    /// Logs a failed operation and, under fail-closed, rethrows it.
+    /// </summary>
+    /// <param name="exception">The backend failure.</param>
+    /// <param name="operation">The operation that failed.</param>
+    /// <param name="activity">The operation's own span, or <see langword="null"/>.</param>
+    /// <remarks>
+    /// The status goes on the span this operation started, never on
+    /// <see cref="Activity.Current"/>. When nothing subscribes to ActionCache's activity
+    /// source — an app that traces only ASP.NET Core, which is the common case — the
+    /// current activity is the incoming <b>request</b> span. Marking that one would report
+    /// a request that returned 200 as failed, because a cache read degraded exactly as
+    /// fail-open is designed to.
+    /// </remarks>
+    private void Degrade(Exception exception, string operation, Activity? activity)
     {
-        Activity.Current?.SetStatus(ActivityStatusCode.Error, exception.Message);
+        activity?.SetStatus(ActivityStatusCode.Error, exception.Message);
 
         if (_failClosed)
         {

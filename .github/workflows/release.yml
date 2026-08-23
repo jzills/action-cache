@@ -78,7 +78,19 @@ jobs:
           VERSION: ${{ steps.version.outputs.value }}
         run: |
           set -euo pipefail
-          for package in ActionCache.Abstractions ActionCache ActionCache.Redis ActionCache.SqlServer ActionCache.AzureCosmos; do
+          packages=(ActionCache.Abstractions ActionCache ActionCache.Redis ActionCache.SqlServer ActionCache.AzureCosmos)
+
+          # The list is explicit for ordering, so it can silently fall behind the solution:
+          # a package added later would pack, never publish, and the release would stay
+          # green. Fail the release instead of shipping a partial one.
+          packed=$(find ./nupkg -maxdepth 1 -name '*.nupkg' | wc -l)
+          if [ "$packed" -ne "${#packages[@]}" ]; then
+            echo "::error::Packed $packed package(s) but the push list names ${#packages[@]}." >&2
+            find ./nupkg -maxdepth 1 -name '*.nupkg' -printf '  %f\n' >&2
+            exit 1
+          fi
+
+          for package in "${packages[@]}"; do
             echo "Pushing $package.$VERSION"
             dotnet nuget push "./nupkg/$package.$VERSION.nupkg" \
               --api-key "$NUGET_API_KEY" \
