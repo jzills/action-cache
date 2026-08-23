@@ -32,17 +32,26 @@ public class Test_ActionCacheEvictionEndpointFilter
     }
 
     [Test]
-    public async Task Test()
+    public async Task Eviction_RemovesTheEntry_SoTheNextRequestRepopulatesIt()
     {
-        var route = "teams";
-        var response = await Client.GetAsync(route);
-        response.EnsureSuccessStatusCode();
+        const string route = "/teams";
 
-        response = await Client.DeleteAsync(route);
-        response.EnsureSuccessStatusCode();
+        var first = await Client.GetAsync(route);
+        first.EnsureSuccessStatusCode();
 
-        Assert.That(response.Headers.Contains(CacheHeaders.CacheStatus));
-        Assert.That(response.Headers.GetValues(CacheHeaders.CacheStatus).First(), Is.EqualTo(Enum.GetName(CacheStatus.Evict)));
+        var hit = await Client.GetAsync(route);
+        hit.EnsureSuccessStatusCode();
+        Assert.That(hit.Headers.GetValues(CacheHeaders.CacheStatus).First(), Is.EqualTo(nameof(CacheStatus.Hit)));
+
+        var eviction = await Client.DeleteAsync(route);
+        eviction.EnsureSuccessStatusCode();
+        Assert.That(eviction.Headers.GetValues(CacheHeaders.CacheStatus).First(), Is.EqualTo(nameof(CacheStatus.Evict)));
+
+        // The header only reports that eviction ran; this proves the entry is gone.
+        var afterEviction = await Client.GetAsync(route);
+        afterEviction.EnsureSuccessStatusCode();
+        Assert.That(afterEviction.Headers.GetValues(CacheHeaders.CacheStatus).First(),
+            Is.EqualTo(nameof(CacheStatus.Add)), "the evicted entry must no longer be served from cache");
     }
 
     [TearDown]

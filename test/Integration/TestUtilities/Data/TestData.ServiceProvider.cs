@@ -20,7 +20,16 @@ public static class TestData
         services.AddMvc();
         services.AddActionCache(options =>
         {
-            options.UseEntryOptions(entryOptions => { });
+            options.UseEntryOptions(entryOptions =>
+            {
+                // These fixtures resolve IActionCache straight from the factory, so they get
+                // an *undecorated* cache — unlike the filters, which wrap it in
+                // ResilientActionCache. A distributed-lock acquisition that exceeds the
+                // timeout therefore throws here instead of degrading, and a loaded CI
+                // machine can push SQL Server's sp_getapplock past the 10s default. The
+                // generous timeout keeps that infrastructure noise out of the assertions.
+                entryOptions.LockTimeout = TimeSpan.FromSeconds(60);
+            });
             options.UseRedisCache(options => options.Configuration = "127.0.0.1:6379");
         });
 
@@ -36,7 +45,16 @@ public static class TestData
         services.AddMvc();
         services.AddActionCache(options =>
         {
-            options.UseEntryOptions(entryOptions => { });
+            options.UseEntryOptions(entryOptions =>
+            {
+                // These fixtures resolve IActionCache straight from the factory, so they get
+                // an *undecorated* cache — unlike the filters, which wrap it in
+                // ResilientActionCache. A distributed-lock acquisition that exceeds the
+                // timeout therefore throws here instead of degrading, and a loaded CI
+                // machine can push SQL Server's sp_getapplock past the 10s default. The
+                // generous timeout keeps that infrastructure noise out of the assertions.
+                entryOptions.LockTimeout = TimeSpan.FromSeconds(60);
+            });
             options.UseSqlServerCache(options =>
             {
                 options.ConnectionString = "Server=localhost;Database=ActionCache;User Id=sa;Password=Password1;Encrypt=True;TrustServerCertificate=True;";
@@ -57,7 +75,16 @@ public static class TestData
         services.AddMvc();
         services.AddActionCache(options =>
         {
-            options.UseEntryOptions(entryOptions => { });
+            options.UseEntryOptions(entryOptions =>
+            {
+                // These fixtures resolve IActionCache straight from the factory, so they get
+                // an *undecorated* cache — unlike the filters, which wrap it in
+                // ResilientActionCache. A distributed-lock acquisition that exceeds the
+                // timeout therefore throws here instead of degrading, and a loaded CI
+                // machine can push SQL Server's sp_getapplock past the 10s default. The
+                // generous timeout keeps that infrastructure noise out of the assertions.
+                entryOptions.LockTimeout = TimeSpan.FromSeconds(60);
+            });
             options.UseAzureCosmosCache(options =>
             {
                 options.DatabaseId = "ActionCache";
@@ -86,7 +113,16 @@ public static class TestData
         services.AddMvc();
         services.AddActionCache(options =>
         {
-            options.UseEntryOptions(entryOptions => { });
+            options.UseEntryOptions(entryOptions =>
+            {
+                // These fixtures resolve IActionCache straight from the factory, so they get
+                // an *undecorated* cache — unlike the filters, which wrap it in
+                // ResilientActionCache. A distributed-lock acquisition that exceeds the
+                // timeout therefore throws here instead of degrading, and a loaded CI
+                // machine can push SQL Server's sp_getapplock past the 10s default. The
+                // generous timeout keeps that infrastructure noise out of the assertions.
+                entryOptions.LockTimeout = TimeSpan.FromSeconds(60);
+            });
             options.UseMemoryCache(options => options.SizeLimit = 1000);
             options.UseRedisCache(options => options.Configuration = "127.0.0.1:6379");
             options.UseSqlServerCache(options =>

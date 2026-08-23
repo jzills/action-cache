@@ -1,8 +1,11 @@
+using ActionCache.Common.Keys;
 using Unit.TestUtilities.Builders;
 using ActionCache;
 using ActionCache.Common.Caching;
 using ActionCache.Common.Enums;
 using ActionCache.Common.Filters;
+using ActionCache.EndpointFilters;
+using ActionCache.Filters;
 using ActionCache.Exceptions;
 using ActionCache.Utilities;
 using Microsoft.AspNetCore.Routing.Template;
@@ -16,9 +19,9 @@ namespace Unit.Common.EndpointFilters;
 [TestFixture]
 public class ActionCacheEndpointFilterAbstractFactoryTests
 {
-    private Mock<IActionCacheFactory> _cacheFactoryMock;
+    private Mock<IActionCacheFactory> _cacheFactoryMock = null!;
     private Mock<IActionCache> _cacheMock;
-    private TemplateBinderFactory _binderFactory;
+    private TemplateBinderFactory _binderFactory = null!;
     private ActionCacheEndpointFilterAbstractFactory _sut;
 
     [SetUp]
@@ -46,23 +49,24 @@ public class ActionCacheEndpointFilterAbstractFactoryTests
             Options.Create(new ActionCacheResilienceOptions()));
 
         _sut = new ActionCacheEndpointFilterAbstractFactory(
-            [_cacheFactoryMock.Object], _binderFactory, resilientDecorator, NullLoggerFactory.Instance, SingleFlightBuilder.Build(), VaryByBuilder.Resolver(), ResponseFactoryBuilder.Build());
+            [_cacheFactoryMock.Object], _binderFactory, resilientDecorator, NullLoggerFactory.Instance, SingleFlightBuilder.Build(), VaryByBuilder.Resolver(), ResponseFactoryBuilder.Build(), new ActionCacheKeyOptions());
     }
 
+    // Same gap as the MVC factory: non-null could not tell Add from Evict.
     [Test]
-    public void CreateInstance_WithAddType_ReturnsNonNullFilter()
+    public void CreateInstance_WithAddType_ReturnsTheCachingFilter()
     {
         var result = _sut.CreateInstance((Namespace)"Test", FilterType.Add);
 
-        result.Should().NotBeNull();
+        result.Should().BeOfType<ActionCacheEndpointFilter>();
     }
 
     [Test]
-    public void CreateInstance_WithEvictType_ReturnsNonNullFilter()
+    public void CreateInstance_WithEvictType_ReturnsTheEvictionFilter()
     {
         var result = _sut.CreateInstance((Namespace)"Test", FilterType.Evict);
 
-        result.Should().NotBeNull();
+        result.Should().BeOfType<ActionCacheEndpointEvictionFilter>();
     }
 
     [Test]
@@ -78,9 +82,9 @@ public class ActionCacheEndpointFilterAbstractFactoryTests
     {
         var result = _sut.CreateInstance((Namespace)"Test", TimeSpan.FromSeconds(30), null, FilterType.Add);
 
-        result.Should().NotBeNull();
+        result.Should().BeOfType<ActionCacheEndpointFilter>();
         _cacheFactoryMock.Verify(
-            factory => factory.Create(It.IsAny<Namespace>(), It.IsAny<TimeSpan?>(), It.IsAny<TimeSpan?>()),
+            factory => factory.Create(It.IsAny<Namespace>(), TimeSpan.FromSeconds(30), null),
             Times.AtLeastOnce);
     }
 
@@ -97,7 +101,7 @@ public class ActionCacheEndpointFilterAbstractFactoryTests
     {
         var result = _sut.CreateHandler([_cacheMock.Object], FilterType.Add);
 
-        result.Should().NotBeNull();
+        result.Should().BeOfType<ActionCacheEndpointFilter>();
     }
 
     [Test]

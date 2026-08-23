@@ -6,7 +6,7 @@ namespace Unit.Common;
 [TestFixture]
 public class ActionCacheRemoveNamespaceTests
 {
-    private IActionCacheFactory _factory;
+    private IActionCacheFactory _factory = null!;
 
     [SetUp]
     public void SetUp() => _factory = MemoryActionCacheFactoryBuilder.Build();

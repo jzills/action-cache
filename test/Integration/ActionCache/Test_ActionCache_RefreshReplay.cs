@@ -24,7 +24,7 @@ public class Test_ActionCache_RefreshReplay
 
         App = builder.Build();
         App.UseRouting();
-        App.UseEndpoints(options => options.MapControllers());
+        App.MapControllers();
 
         await App.StartAsync();
         Client = App.GetTestServer().CreateClient();

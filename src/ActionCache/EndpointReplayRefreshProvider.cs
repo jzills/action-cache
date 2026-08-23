@@ -1,3 +1,4 @@
+using System.Globalization;
 using ActionCache.Common.Diagnostics;
 using ActionCache.Common.Responses;
 using Microsoft.AspNetCore.Http;
@@ -60,6 +61,7 @@ public class EndpointReplayRefreshProvider : IActionCacheRefreshProvider
             return null;
         }
 
+        using var activity = ActionCacheDiagnostics.StartOperation("RefreshReplay", request.Path);
         using var scope = _scopeFactory.CreateScope();
         using var body = new MemoryStream();
 
@@ -67,9 +69,22 @@ public class EndpointReplayRefreshProvider : IActionCacheRefreshProvider
 
         await endpoint!.RequestDelegate!(httpContext);
 
+        var statusCode = httpContext.Response.StatusCode;
+        activity?.SetTag("http.response.status_code", statusCode);
+
+        // Only a successful replay may replace an entry. A transient 500, a 404 from a
+        // deleted resource, or a binding failure would otherwise overwrite a good cached
+        // response with an error and serve it until expiry — refresh actively making things
+        // worse than doing nothing.
+        if (statusCode < StatusCodes.Status200OK || statusCode > StatusCodes.Status226IMUsed)
+        {
+            ActionCacheLog.RefreshReplayNotSuccessful(_logger, request.Method, request.Path, statusCode);
+            return null;
+        }
+
         return new CachedResponse
         {
-            StatusCode = httpContext.Response.StatusCode,
+            StatusCode = statusCode,
             ContentType = httpContext.Response.ContentType,
             Body = ReadBody(body),
             Request = request
@@ -95,7 +110,7 @@ public class EndpointReplayRefreshProvider : IActionCacheRefreshProvider
                 new RouteTemplate(candidate.RoutePattern),
                 new RouteValueDictionary(candidate.RoutePattern.Defaults));
 
-            if (matcher.TryMatch(request.Path, values))
+            if (matcher.TryMatch(request.Path, values) && SatisfiesRequiredValues(candidate, values))
             {
                 endpoint = candidate;
                 routeValues = values;
@@ -105,6 +120,50 @@ public class EndpointReplayRefreshProvider : IActionCacheRefreshProvider
 
         endpoint = null;
         return false;
+    }
+
+    /// <summary>
+    /// Checks the endpoint's required route values against what the path actually matched.
+    /// </summary>
+    /// <param name="endpoint">The candidate endpoint.</param>
+    /// <param name="values">The route values the template matcher produced.</param>
+    /// <returns><see langword="true"/> when the endpoint is a genuine match for those values.</returns>
+    /// <remarks>
+    /// Conventional routing gives every action the same pattern — <c>{controller}/{action}</c>
+    /// — and distinguishes them only by required values. Matching on the template alone
+    /// therefore returns whichever action happens to come first, and every entry in the
+    /// namespace gets refreshed with that one action's response. Attribute-routed endpoints
+    /// carry controller and action as required values too, but their patterns bind neither,
+    /// so a key the match did not produce is left alone rather than treated as a mismatch.
+    /// </remarks>
+    private static bool SatisfiesRequiredValues(RouteEndpoint endpoint, RouteValueDictionary values)
+    {
+        foreach (var required in endpoint.RoutePattern.RequiredValues)
+        {
+            // MVC's required values are strings; the "matches any value" sentinel is a
+            // private object, so anything that is not a non-empty string constrains nothing.
+            if (required.Value is not string expected || expected.Length == 0)
+            {
+                continue;
+            }
+
+            // A key the pattern does not bind — controller and action on an attribute-routed
+            // endpoint — never appears in the match and is not a mismatch.
+            if (!values.TryGetValue(required.Key, out var matched))
+            {
+                continue;
+            }
+
+            if (!string.Equals(
+                    Convert.ToString(matched, CultureInfo.InvariantCulture),
+                    expected,
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     private static bool AcceptsMethod(Endpoint endpoint, string method)
@@ -135,6 +194,14 @@ public class EndpointReplayRefreshProvider : IActionCacheRefreshProvider
         httpContext.Request.QueryString = request.QueryString is null
             ? QueryString.Empty
             : new QueryString(request.QueryString);
+
+        if (request.Body is not null)
+        {
+            var payload = System.Text.Encoding.UTF8.GetBytes(request.Body);
+            httpContext.Request.Body = new MemoryStream(payload);
+            httpContext.Request.ContentLength = payload.Length;
+            httpContext.Request.ContentType = request.ContentType;
+        }
 
         httpContext.Response.Body = body;
         httpContext.Features.Set<IRoutingFeature>(new RoutingFeature { RouteData = new RouteData(routeValues) });

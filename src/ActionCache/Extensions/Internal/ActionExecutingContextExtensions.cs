@@ -17,13 +17,15 @@ internal static class ActionExecutingContextExtensions
     /// <param name="context">The action executing context containing necessary data.</param>
     /// <param name="key">Outputs the generated cache key.</param>
     /// <param name="varyByValues">The resolved vary-by values that must separate one cached response from another.</param>
+    /// <param name="usePlaintextKeys">Whether to emit a readable, reversible key instead of a hash.</param>
     /// <returns>True if a key is successfully generated, otherwise false.</returns>
     internal static bool TryGetKey(
         this ActionExecutingContext context,
         out string key,
-        SortedDictionary<string, string?>? varyByValues = null) 
+        SortedDictionary<string, string?>? varyByValues = null,
+        bool usePlaintextKeys = false) 
     {
-        key = new ActionCacheKeyBuilder()
+        key = new ActionCacheKeyBuilder(usePlaintextKeys)
             .WithRouteValues(context.RouteData.Values)
             .WithActionArguments(context.ActionArguments)
             .WithVaryByValues(varyByValues)

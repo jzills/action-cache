@@ -14,11 +14,11 @@ namespace Unit.Redis;
 [TestFixture]
 public class RedisActionCacheFactoryTests
 {
-    private Mock<IConnectionMultiplexer> _multiplexerMock;
+    private Mock<IConnectionMultiplexer> _multiplexerMock = null!;
     private Mock<IDatabase> _databaseMock;
-    private Mock<IActionCacheRefreshProvider> _refreshProviderMock;
+    private Mock<IActionCacheRefreshProvider> _refreshProviderMock = null!;
     private IOptions<ActionCacheEntryOptions> _entryOptions;
-    private RedisActionCacheFactory _sut;
+    private RedisActionCacheFactory _sut = null!;
 
     [SetUp]
     public void SetUp()

@@ -26,6 +26,33 @@ ActionCache adds a caching layer to ASP.NET Core by annotating your endpoints. C
 response, evict entries by namespace, or refresh cached actions with a single attribute —
 against an in-process or distributed backend, or several layered together.
 
+## Why not `[OutputCache]` or `HybridCache`?
+
+Fair question, and worth answering before you install anything.
+
+| | `[OutputCache]` | `HybridCache` | **ActionCache** |
+|---|---|---|---|
+| Ships with ASP.NET Core | Yes | Yes (.NET 9+) | No — a package |
+| Caches | Full HTTP response | Arbitrary values you fetch yourself | Action/endpoint responses |
+| Attribute-driven | Yes | No — you call it in code | Yes |
+| Stampede protection | No | Yes | Yes |
+| L1 + L2 layering | No | Yes (memory + `IDistributedCache`) | Yes, and any number of layers |
+| Backends | Memory, `IDistributedCache` | Memory + `IDistributedCache` | Memory, Redis, **SQL Server**, **Cosmos DB** |
+| Invalidate a group | Tags | Tags | Namespaces, with **route parameters** (`Account:{id}`) |
+| Vary by caller | `VaryByValue` (manual) | Your key, your problem | **Automatic** for authenticated requests |
+| Re-warm entries | No | No | Yes — replays the recorded request |
+
+**Use `[OutputCache]`** if it covers you. It is built in, costs no dependency, and needs no
+explanation to the next person who reads your code.
+
+**Use `HybridCache`** if you are caching values rather than responses, and want stampede
+protection and two-tier caching from the framework.
+
+**Reach for ActionCache** when you want attribute-driven response caching *and* something
+the other two don't do: eviction scoped to a route parameter, SQL Server or Cosmos as a
+backend, warming entries ahead of expiry, or per-user keys you don't have to remember to
+ask for.
+
 ## Features
 
 - **Attribute-driven** — add caching, eviction, or refresh to any endpoint with one

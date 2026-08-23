@@ -1,7 +1,9 @@
+using ActionCache.Common.Keys;
 using Unit.TestUtilities.Builders;
 using ActionCache;
 using ActionCache.Common.Caching;
 using ActionCache.Common.Filters;
+using ActionCache.EndpointFilters;
 using ActionCache.Filters;
 using ActionCache.Utilities;
 using Microsoft.AspNetCore.Http;
@@ -17,7 +19,8 @@ namespace Unit.Common.Filters;
 [TestFixture]
 public class ActionCacheFilterFactoriesTests
 {
-    private ServiceProvider _serviceProvider;
+    private ServiceProvider _serviceProvider = null!;
+    private Mock<IActionCacheFactory> _cacheFactoryMock = null!;
 
     [TearDown]
     public void TearDown() => _serviceProvider.Dispose();
@@ -28,11 +31,11 @@ public class ActionCacheFilterFactoriesTests
         var cacheMock = new Mock<IActionCache>();
         cacheMock.Setup(cache => cache.GetNamespace()).Returns(new Namespace("Test"));
 
-        var cacheFactoryMock = new Mock<IActionCacheFactory>();
-        cacheFactoryMock
+        _cacheFactoryMock = new Mock<IActionCacheFactory>();
+        _cacheFactoryMock
             .Setup(factory => factory.Create(It.IsAny<Namespace>()))
             .Returns(cacheMock.Object);
-        cacheFactoryMock
+        _cacheFactoryMock
             .Setup(factory => factory.Create(It.IsAny<Namespace>(), It.IsAny<TimeSpan?>(), It.IsAny<TimeSpan?>()))
             .Returns(cacheMock.Object);
 
@@ -47,10 +50,10 @@ public class ActionCacheFilterFactoriesTests
             Options.Create(new ActionCacheResilienceOptions()));
 
         var mvcAbstractFactory = new ActionCacheFilterAbstractFactory(
-            [cacheFactoryMock.Object], binderFactory, resilientDecorator, NullLoggerFactory.Instance, SingleFlightBuilder.Build(), VaryByBuilder.Resolver(), ResponseFactoryBuilder.Build());
+            [_cacheFactoryMock.Object], binderFactory, resilientDecorator, NullLoggerFactory.Instance, SingleFlightBuilder.Build(), VaryByBuilder.Resolver(), ResponseFactoryBuilder.Build(), new ActionCacheKeyOptions());
 
         var endpointAbstractFactory = new ActionCacheEndpointFilterAbstractFactory(
-            [cacheFactoryMock.Object], binderFactory, resilientDecorator, NullLoggerFactory.Instance, SingleFlightBuilder.Build(), VaryByBuilder.Resolver(), ResponseFactoryBuilder.Build());
+            [_cacheFactoryMock.Object], binderFactory, resilientDecorator, NullLoggerFactory.Instance, SingleFlightBuilder.Build(), VaryByBuilder.Resolver(), ResponseFactoryBuilder.Build(), new ActionCacheKeyOptions());
 
         var services = new ServiceCollection();
         services.AddSingleton<IActionCacheFilterAbstractFactory<IFilterMetadata>>(mvcAbstractFactory);
@@ -58,6 +61,9 @@ public class ActionCacheFilterFactoriesTests
         _serviceProvider = services.BuildServiceProvider() as ServiceProvider ?? throw new InvalidOperationException();
     }
 
+    // Each of these named a specific filter and then asserted only non-null, so all five
+    // passed identically whatever the factories returned — including all returning the same
+    // filter. The type is the whole distinction between them.
     [Test]
     public void ActionCacheFilterFactory_CreateInstance_ReturnsAddFilter()
     {
@@ -65,7 +71,7 @@ public class ActionCacheFilterFactoriesTests
 
         var result = factory.CreateInstance(_serviceProvider);
 
-        result.Should().NotBeNull();
+        result.Should().BeOfType<ActionCacheFilter>();
     }
 
     [Test]
@@ -75,7 +81,7 @@ public class ActionCacheFilterFactoriesTests
 
         var result = factory.CreateInstance(_serviceProvider);
 
-        result.Should().NotBeNull();
+        result.Should().BeOfType<ActionCacheEvictionFilter>();
     }
 
     [Test]
@@ -85,7 +91,7 @@ public class ActionCacheFilterFactoriesTests
 
         var result = factory.CreateInstance(_serviceProvider);
 
-        result.Should().NotBeNull();
+        result.Should().BeOfType<ActionCacheRefreshFilter>();
     }
 
     [Test]
@@ -95,7 +101,7 @@ public class ActionCacheFilterFactoriesTests
 
         var result = factory.CreateInstance(_serviceProvider);
 
-        result.Should().NotBeNull();
+        result.Should().BeOfType<ActionCacheEndpointFilter>();
     }
 
     [Test]
@@ -105,7 +111,7 @@ public class ActionCacheFilterFactoriesTests
 
         var result = factory.CreateInstance(_serviceProvider);
 
-        result.Should().NotBeNull();
+        result.Should().BeOfType<ActionCacheEndpointEvictionFilter>();
     }
 
     [Test]
@@ -119,7 +125,13 @@ public class ActionCacheFilterFactoriesTests
 
         var result = factory.CreateInstance(_serviceProvider);
 
-        result.Should().NotBeNull();
+        // The name promises the expiration reaches the cache. Non-null did not check that:
+        // a factory that discarded AbsoluteExpiration entirely still passed.
+        result.Should().BeOfType<ActionCacheFilter>();
+        _cacheFactoryMock.Verify(
+            cacheFactory => cacheFactory.Create(
+                It.IsAny<Namespace>(), TimeSpan.FromMilliseconds(5000), null),
+            Times.AtLeastOnce);
     }
 
     [Test]

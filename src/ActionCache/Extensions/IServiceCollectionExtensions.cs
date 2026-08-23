@@ -1,5 +1,6 @@
 using ActionCache.Common.Caching;
 using ActionCache.Common.Concurrency;
+using ActionCache.Common.Keys;
 using ActionCache.Common.Keys.VaryBy;
 using ActionCache.Common.Responses;
 using ActionCache.Common.Extensions.Internal;
@@ -40,6 +41,8 @@ public static class IServiceCollectionExtensions
             configureOptions.SlidingExpiration = options.EntryOptions.SlidingExpiration;
             configureOptions.AbsoluteExpiration = options.EntryOptions.AbsoluteExpiration;
         });
+
+        services.TryAddSingleton(new ActionCacheKeyOptions { UsePlaintextKeys = options.UsePlaintextKeys });
 
         services.Configure<ActionCacheResilienceOptions>(resilienceOptions =>
         {

@@ -13,13 +13,24 @@ public class ActionCacheKeyBuilder
     protected static readonly char KeySeparator = ':';
 
     /// <summary>
-    /// Encodes key components into a reversible, non-confidential representation.
-    /// This is hex encoding, NOT encryption: cache keys embed the serialized route
-    /// values and action arguments in cleartext and can be decoded by anyone with
-    /// read access to the cache store. Do not place secrets in route values or
-    /// action arguments, and secure the cache store accordingly.
-    /// </summary> 
+    /// Encodes key components reversibly, used only when plaintext keys are enabled.
+    /// </summary>
     protected readonly KeyEncoder KeyEncoder = new();
+
+    /// <summary>
+    /// Whether to emit a readable, reversible key instead of a hash.
+    /// </summary>
+    private readonly bool _usePlaintextKeys;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ActionCacheKeyBuilder"/> class.
+    /// </summary>
+    /// <param name="usePlaintextKeys">
+    /// <see langword="true"/> to emit readable, reversible keys for debugging;
+    /// <see langword="false"/> (default) to hash them.
+    /// </param>
+    public ActionCacheKeyBuilder(bool usePlaintextKeys = false) =>
+        _usePlaintextKeys = usePlaintextKeys;
 
     /// <summary>
     /// A key component derived from the route data and action arguments associated with an incoming request. 
@@ -66,5 +77,19 @@ public class ActionCacheKeyBuilder
     /// Builds the final cache key.
     /// </summary>
     /// <returns>The constructed cache key.</returns>
-    public string Build() => KeyEncoder.Encode(KeyComponents.Serialize());
+    /// <remarks>
+    /// Hashed by default: the components include route values and action arguments, and a
+    /// reversible key hands every one of them to anyone who can read the cache. Nothing
+    /// needs to reverse a key any more — refresh replays the request recorded on the entry
+    /// itself — so hashing costs nothing but inspectability, which
+    /// <see cref="ActionCacheKeyOptions.UsePlaintextKeys"/> restores when debugging.
+    /// </remarks>
+    public string Build()
+    {
+        var components = KeyComponents.Serialize();
+
+        return _usePlaintextKeys
+            ? KeyEncoder.Encode(components)
+            : KeyHashGenerator.ToHash(components);
+    }
 }

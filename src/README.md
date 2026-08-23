@@ -231,6 +231,43 @@ Add an `ActionCacheAttribute` to any controller actions that should be cached. T
     {
     }
 
+## Observability
+
+ActionCache publishes a `Meter` and an `ActivitySource`, both named `ActionCache`. Neither
+does anything until something subscribes, so there is no flag to turn them on:
+
+    builder.Services.AddOpenTelemetry()
+        .WithMetrics(metrics => metrics.AddMeter(ActionCacheDiagnostics.MeterName))
+        .WithTracing(tracing => tracing.AddSource(ActionCacheDiagnostics.ActivitySourceName));
+
+| Instrument | Meaning |
+|-----------|---------|
+| `actioncache.requests` | Lookups, tagged `namespace` and `status` (`hit` / `miss`) |
+| `actioncache.operation.duration` | How long one backend operation took, in ms |
+| `actioncache.evictions` | Namespace evictions |
+| `actioncache.single_flight.coalesced` | Requests served by another request's in-flight execution |
+
+Spans cover each backend operation and each refresh replay, and a degraded operation marks
+its span as an error.
+
+## Cache Keys
+
+Keys are **hashed** (SHA-256 over the route values, action arguments and vary-by values).
+Nothing needs to reverse a key — refresh replays the request recorded on the entry itself —
+so hashing costs nothing but inspectability.
+
+If you want to read keys while debugging:
+
+    builder.Services.AddActionCache(options =>
+    {
+        options.UseMemoryCache(memory => { });
+        options.UsePlaintextKeys();
+    });
+
+Plaintext keys embed every route value and action argument that produced an entry — ids,
+filters, search terms — in a form anyone with read access to the cache can recover. Look at
+what yours would contain before leaving that on outside development.
+
 ## Cache Key Creation
 
 Both the route values and the action arguments are serialized then encoded to generate the cache key suffix. This suffix is appended to the string "ActionCache:{Namespace}".

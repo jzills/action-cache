@@ -14,9 +14,9 @@ namespace Unit.Common.EndpointFilters;
 [TestFixture]
 public class ActionCacheEndpointEvictionFilterTests
 {
-    private Mock<IActionCache> _cacheMock;
+    private Mock<IActionCache> _cacheMock = null!;
     private TemplateBinderFactory _binderFactory;
-    private ActionCacheEndpointEvictionFilter _sut;
+    private ActionCacheEndpointEvictionFilter _sut = null!;
 
     [SetUp]
     public void SetUp()

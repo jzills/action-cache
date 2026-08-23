@@ -18,9 +18,9 @@ namespace Unit.Common;
 [TestFixture]
 public class ActionCacheFilterTests
 {
-    private IActionCache _cache;
+    private IActionCache _cache = null!;
     private IActionCacheFactory _factory;
-    private TemplateBinderFactory _binderFactory;
+    private TemplateBinderFactory _binderFactory = null!;
 
     [SetUp]
     public void SetUp()
@@ -56,11 +56,11 @@ public class ActionCacheFilterTests
         var actionExecutingContext = new ActionExecutingContext(
             actionContext,
             metadata,
-            new Dictionary<string, object>(),
-            null);
+            new Dictionary<string, object?>(),
+            controller: new object());
         ActionExecutionDelegate next = () =>
         {
-            var context = new ActionExecutedContext(actionExecutingContext, metadata, null)
+            var context = new ActionExecutedContext(actionExecutingContext, metadata, controller: new object())
             {
                 Result = new OkObjectResult("Foo")
             };
@@ -68,7 +68,7 @@ public class ActionCacheFilterTests
         };
 
         _cache = _factory.Create(@namespace)!;
-        var filter = new ActionCacheFilter(_cache, _binderFactory, NullLogger.Instance, SingleFlightBuilder.Build(), true, VaryByBuilder.Resolver(), VaryByBuilder.Options(), ResponseFactoryBuilder.Build());
+        var filter = new ActionCacheFilter(_cache, _binderFactory, NullLogger.Instance, SingleFlightBuilder.Build(), true, VaryByBuilder.Resolver(), VaryByBuilder.Options(), ResponseFactoryBuilder.Build(), new ActionCacheKeyOptions());
 
         await filter.OnActionExecutionAsync(actionExecutingContext, next);
 

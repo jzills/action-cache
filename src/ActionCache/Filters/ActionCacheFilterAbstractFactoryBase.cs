@@ -1,6 +1,7 @@
 using ActionCache.Common.Caching;
 using ActionCache.Common.Concurrency;
 using ActionCache.Common.Enums;
+using ActionCache.Common.Keys;
 using ActionCache.Common.Keys.VaryBy;
 using ActionCache.Common.Responses;
 using ActionCache.Common.Extensions.Internal;
@@ -56,6 +57,11 @@ public abstract class ActionCacheFilterAbstractFactoryBase<TFilter> : IActionCac
     protected readonly CachedResponseFactory ResponseFactory;
 
     /// <summary>
+    /// Controls how cache keys are formed.
+    /// </summary>
+    protected readonly ActionCacheKeyOptions KeyOptions;
+
+    /// <summary>
     /// Initializes a new instance of the <see cref="ActionCacheFilterAbstractFactoryBase{TFilter}"/> class.
     /// </summary>
     /// <param name="cacheFactories">The cache factories used to create caches.</param>
@@ -65,6 +71,7 @@ public abstract class ActionCacheFilterAbstractFactoryBase<TFilter> : IActionCac
     /// <param name="singleFlight">Coalesces concurrent misses for the same key.</param>
     /// <param name="varyByResolver">Resolves the request dimensions that form part of the cache key.</param>
     /// <param name="responseFactory">Converts between endpoint results and stored responses.</param>
+    /// <param name="keyOptions">Controls how cache keys are formed.</param>
     protected ActionCacheFilterAbstractFactoryBase(
         IEnumerable<IActionCacheFactory> cacheFactories,
         TemplateBinderFactory binderFactory,
@@ -72,7 +79,8 @@ public abstract class ActionCacheFilterAbstractFactoryBase<TFilter> : IActionCac
         ILoggerFactory loggerFactory,
         IActionCacheSingleFlight singleFlight,
         ActionCacheVaryByResolver varyByResolver,
-        CachedResponseFactory responseFactory
+        CachedResponseFactory responseFactory,
+        ActionCacheKeyOptions keyOptions
     )
     {
         CacheFactories = cacheFactories;
@@ -82,6 +90,7 @@ public abstract class ActionCacheFilterAbstractFactoryBase<TFilter> : IActionCac
         SingleFlight = singleFlight;
         VaryByResolver = varyByResolver;
         ResponseFactory = responseFactory;
+        KeyOptions = keyOptions;
     }
 
     /// <inheritdoc/>

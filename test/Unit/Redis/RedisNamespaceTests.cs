@@ -23,7 +23,7 @@ public class RedisNamespaceTests
         RedisKey key = redisNamespace;
 
         key.Should().NotBeNull();
-        ((string)key).Should().Contain("TestNs");
+        ((string?)key).Should().Contain("TestNs");
     }
 
     [Test]

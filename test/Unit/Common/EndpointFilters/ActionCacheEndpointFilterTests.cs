@@ -1,3 +1,4 @@
+using ActionCache.Common.Keys;
 using Unit.TestUtilities.Builders;
 using ActionCache;
 using ActionCache.Common.Responses;
@@ -16,9 +17,9 @@ namespace Unit.Common.EndpointFilters;
 [TestFixture]
 public class ActionCacheEndpointFilterTests
 {
-    private Mock<IActionCache> _cacheMock;
+    private Mock<IActionCache> _cacheMock = null!;
     private TemplateBinderFactory _binderFactory;
-    private ActionCacheEndpointFilter _sut;
+    private ActionCacheEndpointFilter _sut = null!;
 
     [SetUp]
     public void SetUp()
@@ -32,7 +33,7 @@ public class ActionCacheEndpointFilterTests
             .BuildServiceProvider()
             .GetRequiredService<TemplateBinderFactory>();
 
-        _sut = new ActionCacheEndpointFilter(_cacheMock.Object, _binderFactory, NullLogger.Instance, SingleFlightBuilder.Build(), true, VaryByBuilder.Resolver(), VaryByBuilder.Options(), ResponseFactoryBuilder.Build());
+        _sut = new ActionCacheEndpointFilter(_cacheMock.Object, _binderFactory, NullLogger.Instance, SingleFlightBuilder.Build(), true, VaryByBuilder.Resolver(), VaryByBuilder.Options(), ResponseFactoryBuilder.Build(), new ActionCacheKeyOptions());
     }
 
     [Test]

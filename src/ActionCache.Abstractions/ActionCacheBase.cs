@@ -71,36 +71,70 @@ public abstract class ActionCacheBase<TLock> : IActionCache where TLock : CacheL
             requested++;
             cancellationToken.ThrowIfCancellationRequested();
 
-            var entry = await GetAsync<CachedResponse>(key, cancellationToken);
-            if (entry is null)
+            // One entry must not be able to end the pass. A replay executes the endpoint,
+            // so an action that throws — for a resource deleted since it was cached, say —
+            // propagates straight out of here, and every remaining key in the namespace
+            // silently goes unrefreshed. Failures are per key; only the caller cancelling
+            // stops the loop.
+            try
             {
-                continue;
+                if (await TryRefreshKeyAsync(key, namespaceValue, cancellationToken))
+                {
+                    refreshed++;
+                }
             }
-
-            if (entry.VariesByRequest)
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
-                // Replaying another caller's request would mean impersonating them.
-                ActionCacheLog.RefreshKeySkippedVaryBy(Logger, key, namespaceValue);
-                continue;
+                throw;
             }
-
-            if (entry.Request is null)
+            catch (Exception exception)
             {
-                ActionCacheLog.RefreshKeySkipped(Logger, key, namespaceValue, "no request was recorded for it");
-                continue;
+                ActionCacheLog.RefreshKeyFailed(Logger, exception, key, namespaceValue);
             }
-
-            var replayed = await RefreshProvider.ReplayAsync(entry.Request, cancellationToken);
-            if (replayed is null)
-            {
-                continue;
-            }
-
-            await SetAsync(key, replayed, cancellationToken);
-            refreshed++;
         }
 
         ActionCacheLog.RefreshSummary(Logger, namespaceValue, refreshed, requested);
+    }
+
+    /// <summary>
+    /// Refreshes a single cache entry.
+    /// </summary>
+    /// <param name="key">The cache key to refresh.</param>
+    /// <param name="namespaceValue">The namespace being refreshed, for logging.</param>
+    /// <param name="cancellationToken">A token to observe while waiting for the operation to complete.</param>
+    /// <returns><see langword="true"/> when the entry was replaced with a fresh response.</returns>
+    private async Task<bool> TryRefreshKeyAsync(
+        string key,
+        string namespaceValue,
+        CancellationToken cancellationToken)
+    {
+        var entry = await GetAsync<CachedResponse>(key, cancellationToken);
+        if (entry is null)
+        {
+            return false;
+        }
+
+        if (entry.VariesByRequest)
+        {
+            // Replaying another caller's request would mean impersonating them.
+            ActionCacheLog.RefreshKeySkippedVaryBy(Logger, key, namespaceValue);
+            return false;
+        }
+
+        if (entry.Request is null)
+        {
+            ActionCacheLog.RefreshKeySkipped(Logger, key, namespaceValue, "no request was recorded for it");
+            return false;
+        }
+
+        var replayed = await RefreshProvider.ReplayAsync(entry.Request, cancellationToken);
+        if (replayed is null)
+        {
+            return false;
+        }
+
+        await SetAsync(key, replayed, cancellationToken);
+        return true;
     }
 
     /// <inheritdoc/>

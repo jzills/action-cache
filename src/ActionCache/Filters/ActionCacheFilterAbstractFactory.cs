@@ -1,6 +1,7 @@
 using ActionCache.Common.Caching;
 using ActionCache.Common.Concurrency;
 using ActionCache.Common.Enums;
+using ActionCache.Common.Keys;
 using ActionCache.Common.Keys.VaryBy;
 using ActionCache.Common.Responses;
 using ActionCache.Exceptions;
@@ -26,6 +27,7 @@ public class ActionCacheFilterAbstractFactory : ActionCacheFilterAbstractFactory
     /// <param name="singleFlight">Coalesces concurrent misses for the same key.</param>
     /// <param name="varyByResolver">Resolves the request dimensions that form part of the cache key.</param>
     /// <param name="responseFactory">Converts between endpoint results and stored responses.</param>
+    /// <param name="keyOptions">Controls how cache keys are formed.</param>
     public ActionCacheFilterAbstractFactory(
         IEnumerable<IActionCacheFactory> cacheFactories,
         TemplateBinderFactory binderFactory,
@@ -33,8 +35,9 @@ public class ActionCacheFilterAbstractFactory : ActionCacheFilterAbstractFactory
         ILoggerFactory loggerFactory,
         IActionCacheSingleFlight singleFlight,
         ActionCacheVaryByResolver varyByResolver,
-        CachedResponseFactory responseFactory
-    ) : base(cacheFactories, binderFactory, resilientDecorator, loggerFactory, singleFlight, varyByResolver, responseFactory)
+        CachedResponseFactory responseFactory,
+        ActionCacheKeyOptions keyOptions
+    ) : base(cacheFactories, binderFactory, resilientDecorator, loggerFactory, singleFlight, varyByResolver, responseFactory, keyOptions)
     {
     }
 
@@ -42,7 +45,7 @@ public class ActionCacheFilterAbstractFactory : ActionCacheFilterAbstractFactory
     internal override IFilterMetadata CreateFilter(ActionCacheHandler cache, FilterType type, bool singleFlight, VaryByOptions varyByOptions) =>
         type switch
         {
-            FilterType.Add      => new ActionCacheFilter(cache, BinderFactory, LoggerFactory.CreateLogger<ActionCacheFilter>(), SingleFlight, singleFlight, VaryByResolver, varyByOptions, ResponseFactory),
+            FilterType.Add      => new ActionCacheFilter(cache, BinderFactory, LoggerFactory.CreateLogger<ActionCacheFilter>(), SingleFlight, singleFlight, VaryByResolver, varyByOptions, ResponseFactory, KeyOptions),
             FilterType.Evict    => new ActionCacheEvictionFilter(cache, BinderFactory, LoggerFactory.CreateLogger<ActionCacheEvictionFilter>()),
             FilterType.Refresh  => new ActionCacheRefreshFilter(cache, BinderFactory, LoggerFactory.CreateLogger<ActionCacheRefreshFilter>()),
             _                   => throw new FilterTypeNotSupportedException(type)

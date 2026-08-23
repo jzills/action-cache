@@ -2,6 +2,8 @@ using ActionCache.Memory.Extensions.Internal;
 using ActionCache.Utilities;
 using Microsoft.Extensions.Caching.Memory;
 
+using Unit.TestUtilities;
+
 namespace Unit.Common.Extensions;
 
 [TestFixture]
@@ -21,28 +23,30 @@ public class IMemoryCacheExtensionsTests
     public void TearDown() => _cache.Dispose();
 
     [Test]
-    public void SetKey_WhenOneKeyExpires_DoesNotTakeTheIndexWithIt()
+    public async Task SetKey_WhenOneKeyExpires_DoesNotTakeTheIndexWithIt()
     {
         // The index entry must not inherit a caller's expiration: one short-lived response
         // expiring cannot be allowed to drop the whole namespace's index, or a later
         // eviction would no longer know which keys to remove.
         Namespace @namespace = "Expiring";
         _cache.SetKey(@namespace, "Permanent", absoluteExpiration: null, _indexOptions);
-        _cache.SetKey(@namespace, "Ephemeral", absoluteExpiration: DateTimeOffset.UtcNow.AddMilliseconds(30), _indexOptions);
+        var ephemeralExpiry = DateTimeOffset.UtcNow.AddMilliseconds(30);
+        _cache.SetKey(@namespace, "Ephemeral", absoluteExpiration: ephemeralExpiry, _indexOptions);
 
-        Thread.Sleep(120);
+        await WallClock.WaitUntilPast(ephemeralExpiry);
 
         _cache.GetKeys(@namespace, _indexOptions).Keys.Should().BeEquivalentTo(["Permanent"]);
     }
 
     [Test]
-    public void GetKeys_RemovesEntriesWhoseAbsoluteExpirationHasPassed()
+    public async Task GetKeys_RemovesEntriesWhoseAbsoluteExpirationHasPassed()
     {
         Namespace @namespace = "Sweeping";
         _cache.SetKey(@namespace, "Fresh", absoluteExpiration: DateTimeOffset.UtcNow.AddMinutes(5), _indexOptions);
-        _cache.SetKey(@namespace, "Stale", absoluteExpiration: DateTimeOffset.UtcNow.AddMilliseconds(20), _indexOptions);
+        var staleExpiry = DateTimeOffset.UtcNow.AddMilliseconds(20);
+        _cache.SetKey(@namespace, "Stale", absoluteExpiration: staleExpiry, _indexOptions);
 
-        Thread.Sleep(80);
+        await WallClock.WaitUntilPast(staleExpiry);
 
         var keys = _cache.GetKeys(@namespace, _indexOptions);
         keys.Keys.Should().BeEquivalentTo(["Fresh"]);

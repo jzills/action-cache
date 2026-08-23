@@ -94,6 +94,22 @@ public class ActionCacheOptionsBuilder
     }
 
     /// <summary>
+    /// Emits readable, reversible cache keys instead of hashes.
+    /// </summary>
+    /// <returns>Returns this instance of <see cref="ActionCacheOptionsBuilder"/>.</returns>
+    /// <remarks>
+    /// For debugging. Plaintext keys embed every route value and action argument that
+    /// produced an entry — ids, filters, search terms — in a form anyone with read access
+    /// to the cache can recover. Leave keys hashed in production unless you have looked at
+    /// what yours would contain.
+    /// </remarks>
+    public ActionCacheOptionsBuilder UsePlaintextKeys()
+    {
+        Options.UsePlaintextKeys = true;
+        return this;
+    }
+
+    /// <summary>
     /// Registers a backend's services. Called by a backend package's <c>Use…Cache</c>
     /// extension, so the core package never has to know which backends exist.
     /// </summary>

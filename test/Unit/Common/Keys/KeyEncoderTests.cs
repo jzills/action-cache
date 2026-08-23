@@ -5,7 +5,7 @@ namespace Unit.Common.Keys;
 [TestFixture]
 public class KeyEncoderTests
 {
-    private KeyEncoder _sut;
+    private KeyEncoder _sut = null!;
 
     [SetUp]
     public void SetUp() => _sut = new KeyEncoder();

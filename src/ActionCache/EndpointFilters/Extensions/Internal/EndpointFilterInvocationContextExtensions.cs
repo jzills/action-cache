@@ -18,11 +18,13 @@ internal static class EndpointFilterInvocationContextExtensions
     /// <param name="context">The endpoint filter invocation context containing necessary data.</param>
     /// <param name="key">Outputs the generated cache key.</param>
     /// <param name="varyByValues">The resolved vary-by values that must separate one cached response from another.</param>
+    /// <param name="usePlaintextKeys">Whether to emit a readable, reversible key instead of a hash.</param>
     /// <returns>True if a key is successfully generated, otherwise false.</returns>
     internal static bool TryGetKey(
         this EndpointFilterInvocationContext context,
         out string key,
-        SortedDictionary<string, string?>? varyByValues = null) 
+        SortedDictionary<string, string?>? varyByValues = null,
+        bool usePlaintextKeys = false) 
     {
         var endpoint = context.HttpContext.GetEndpoint();
         if (endpoint is null)
@@ -38,7 +40,7 @@ internal static class EndpointFilterInvocationContextExtensions
                 .Where(pair => pair.Name is not null)
                 .ToDictionary(pair => pair.Name!, pair => pair.argument);
 
-            key = new ActionCacheKeyBuilder()
+            key = new ActionCacheKeyBuilder(usePlaintextKeys)
                 .WithRouteValues(context.HttpContext.GetRouteData().Values)
                 .WithActionArguments(actionArguments ?? [])
                 .WithVaryByValues(varyByValues)

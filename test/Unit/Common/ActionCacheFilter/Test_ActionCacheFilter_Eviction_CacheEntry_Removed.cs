@@ -16,7 +16,7 @@ namespace Unit.Common;
 [TestFixture]
 public class ActionCacheEvictionFilterTests
 {
-    private IActionCacheFactory _factory;
+    private IActionCacheFactory _factory = null!;
     private TemplateBinderFactory _binderFactory;
 
     [SetUp]
@@ -49,11 +49,11 @@ public class ActionCacheEvictionFilterTests
         var actionExecutingContext = new ActionExecutingContext(
             actionContext,
             metadata,
-            new Dictionary<string, object>(),
-            null);
+            new Dictionary<string, object?>(),
+            controller: new object());
         ActionExecutionDelegate next = () =>
         {
-            var context = new ActionExecutedContext(actionExecutingContext, metadata, null)
+            var context = new ActionExecutedContext(actionExecutingContext, metadata, controller: new object())
             {
                 Result = new OkObjectResult("Foo")
             };

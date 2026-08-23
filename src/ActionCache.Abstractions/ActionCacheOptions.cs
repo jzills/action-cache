@@ -38,6 +38,12 @@ public class ActionCacheOptions
     public ActionCacheSingleFlightOptions SingleFlightOptions { get; } = new();
 
     /// <summary>
+    /// Whether cache keys are readable and reversible rather than hashed.
+    /// Defaults to <see langword="false"/>.
+    /// </summary>
+    public bool UsePlaintextKeys { get; set; }
+
+    /// <summary>
     /// Registrations contributed by backend packages.
     /// </summary>
     /// <remarks>

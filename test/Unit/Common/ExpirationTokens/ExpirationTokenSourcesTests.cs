@@ -6,7 +6,7 @@ namespace Unit.Common;
 [TestFixture]
 public class ExpirationTokenSourcesTests
 {
-    private ExpirationTokenSources _sources;
+    private ExpirationTokenSources _sources = null!;
 
     [SetUp]
     public void SetUp() =>

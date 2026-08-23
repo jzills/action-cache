@@ -9,7 +9,7 @@ namespace Unit.Common.Extensions;
 [TestFixture]
 public class NamespaceExtensionsTests
 {
-    private TemplateBinderFactory _binderFactory;
+    private TemplateBinderFactory _binderFactory = null!;
 
     [SetUp]
     public void SetUp()

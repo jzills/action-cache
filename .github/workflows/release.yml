@@ -27,8 +27,12 @@ jobs:
       - name: Run unit tests
         run: dotnet test test/Unit/Unit.csproj --verbosity normal
 
-      - name: Run integration tests
-        run: dotnet test test/Integration/Integration.csproj -p:TestTfmsInParallel=false --verbosity normal
+      # Sequential per framework — see the note in pr.yml.
+      - name: Run integration tests (net8.0)
+        run: dotnet test test/Integration/Integration.csproj -f net8.0 --verbosity normal
+
+      - name: Run integration tests (net10.0)
+        run: dotnet test test/Integration/Integration.csproj -f net10.0 --verbosity normal
 
   publish:
     name: Pack and Publish
@@ -64,12 +68,23 @@ jobs:
       - name: Assert the core package carries no backend dependencies
         run: bash .github/scripts/verify-package-dependencies.sh ./nupkg
 
+      # Dependency order, not glob order. NuGet pushes are not transactional, so if one
+      # fails partway the packages already published should still resolve: Abstractions
+      # before the core that depends on it, core before the backends that depend on it.
+      # Each push also uploads the matching .snupkg automatically.
       - name: Push to NuGet
-        run: >
-          dotnet nuget push ./nupkg/*.nupkg
-          --api-key ${{ secrets.NUGET_API_KEY }}
-          --source https://api.nuget.org/v3/index.json
-          --skip-duplicate
+        env:
+          NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
+          VERSION: ${{ steps.version.outputs.value }}
+        run: |
+          set -euo pipefail
+          for package in ActionCache.Abstractions ActionCache ActionCache.Redis ActionCache.SqlServer ActionCache.AzureCosmos; do
+            echo "Pushing $package.$VERSION"
+            dotnet nuget push "./nupkg/$package.$VERSION.nupkg" \
+              --api-key "$NUGET_API_KEY" \
+              --source https://api.nuget.org/v3/index.json \
+              --skip-duplicate
+          done
 
   merge:
     name: Open PR to Main

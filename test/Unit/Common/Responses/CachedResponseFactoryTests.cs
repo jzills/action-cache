@@ -146,10 +146,38 @@ public class CachedResponseFactoryTests
         httpContext.Request.Path = "/users/me";
         httpContext.Request.QueryString = new QueryString("?page=2");
 
-        var request = CachedResponseFactory.CreateRequest(httpContext);
+        var request = Create().CreateRequest(httpContext);
 
         request.Method.Should().Be("GET");
         request.Path.Should().Be("/users/me");
         request.QueryString.Should().Be("?page=2");
+    }
+
+    [Test]
+    public void CreateRequest_WithABoundBody_RecordsItSoRefreshCanReplayIt()
+    {
+        // Without this a cached [FromBody] action replays with an empty body, model binding
+        // rejects it, and the 415 overwrites a working entry.
+        var httpContext = new DefaultHttpContext();
+        httpContext.Request.Method = "POST";
+        httpContext.Request.Path = "/users/query";
+
+        var request = Create().CreateRequest(httpContext, new Forecast("Sunny", 21));
+
+        request.Body.Should().Be("""{"summary":"Sunny","temperatureC":21}""");
+        request.ContentType.Should().Be("application/json");
+    }
+
+    [Test]
+    public void CreateRequest_WithNoBody_RecordsNeitherBodyNorContentType()
+    {
+        var httpContext = new DefaultHttpContext();
+        httpContext.Request.Method = "GET";
+        httpContext.Request.Path = "/users";
+
+        var request = Create().CreateRequest(httpContext);
+
+        request.Body.Should().BeNull();
+        request.ContentType.Should().BeNull();
     }
 }

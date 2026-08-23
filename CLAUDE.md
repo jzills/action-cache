@@ -16,7 +16,10 @@ dotnet test --filter "TestMethodName"
 
 # Run only unit or integration tests
 dotnet test test/Unit/Unit.csproj
-dotnet test test/Integration/Integration.csproj
+# One framework at a time: both target the same Redis/SQL/Cosmos containers with the same
+# namespaces, so concurrent runs evict each other's entries mid-test.
+dotnet test test/Integration/Integration.csproj -f net8.0
+dotnet test test/Integration/Integration.csproj -f net10.0
 ```
 
 The library targets both `net8.0` and `net10.0`.

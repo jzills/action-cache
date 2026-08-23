@@ -1,3 +1,4 @@
+using ActionCache.Common.Keys;
 using System.Security.Claims;
 using ActionCache;
 using ActionCache.Common.Keys.VaryBy;
@@ -55,7 +56,7 @@ public class ActionCacheFilterVaryByTests
 
     private ActionCacheFilter CreateFilter(IActionCache cache, VaryByOptions options) =>
         new(cache, _binderFactory, NullLogger.Instance,
-            SingleFlightBuilder.Build(), false, VaryByBuilder.Resolver(), options, ResponseFactoryBuilder.Build());
+            SingleFlightBuilder.Build(), false, VaryByBuilder.Resolver(), options, ResponseFactoryBuilder.Build(), new ActionCacheKeyOptions());
 
     private static ActionExecutingContext ContextFor(string? userId)
     {

@@ -7,7 +7,7 @@ namespace Unit.Redis;
 [TestFixture]
 public class AssemblyExtensionsTests
 {
-    private Assembly _assembly;
+    private Assembly _assembly = null!;
 
     [SetUp]
     public void SetUp() => _assembly = typeof(RedisActionCache).Assembly;

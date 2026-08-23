@@ -1,4 +1,5 @@
 using ActionCache;
+using Unit.TestUtilities;
 using Unit.TestUtilities.Builders;
 
 namespace Unit.Common;
@@ -6,7 +7,7 @@ namespace Unit.Common;
 [TestFixture]
 public class ActionCacheAbsoluteExpirationTests
 {
-    private IActionCache _cache;
+    private IActionCache _cache = null!;
     private IActionCacheFactory _factory;
 
     [SetUp]
@@ -22,13 +23,18 @@ public class ActionCacheAbsoluteExpirationTests
 
         await _cache.SetAsync("Key_Expiration_1", "Value_1");
 
+        // Captured after the write, so the entry's expiry is at or before this plus two
+        // seconds. Wait past that with the same headroom the original delay had — see
+        // WallClock for why this is a clock deadline rather than a Task.Delay.
+        var expiredWell = DateTimeOffset.UtcNow.AddSeconds(2).AddSeconds(2);
+
         var resultBefore = await _cache.GetAsync<string?>("Key_Expiration_1");
         var keysBefore = await _cache.GetKeysAsync();
 
         resultBefore.Should().Be("Value_1");
         keysBefore.Should().HaveCount(1);
 
-        await Task.Delay(TimeSpan.FromSeconds(4));
+        await WallClock.WaitUntilPast(expiredWell);
 
         var resultAfter = await _cache.GetAsync<string?>("Key_Expiration_1");
         var keysAfter = await _cache.GetKeysAsync();
@@ -44,13 +50,18 @@ public class ActionCacheAbsoluteExpirationTests
 
         await _cache.SetAsync("Key_Expiration_1", "Value_1");
 
+        // Captured after the write, so the entry's expiry is at or before this plus two
+        // seconds. Wait past that with the same headroom the original delay had — see
+        // WallClock for why this is a clock deadline rather than a Task.Delay.
+        var expiredWell = DateTimeOffset.UtcNow.AddSeconds(2).AddSeconds(2);
+
         var resultBefore = await _cache.GetAsync<string?>("Key_Expiration_1");
         var keysBefore = await _cache.GetKeysAsync();
 
         resultBefore.Should().Be("Value_1");
         keysBefore.Should().HaveCount(1);
 
-        await Task.Delay(TimeSpan.FromSeconds(4));
+        await WallClock.WaitUntilPast(expiredWell);
 
         var resultAfter = await _cache.GetAsync<string?>("Key_Expiration_1");
         var keysAfter = await _cache.GetKeysAsync();

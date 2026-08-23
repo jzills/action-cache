@@ -1,11 +1,14 @@
 using ActionCache.Common.Caching;
 using ActionCache.Common.Concurrency;
 using ActionCache.Common.Enums;
+using ActionCache.Common.Keys;
 using ActionCache.Common.Keys.VaryBy;
 using ActionCache.Common.Responses;
 using ActionCache.Common.Extensions;
 using ActionCache.Common.Extensions.Internal;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Controllers;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.AspNetCore.Routing.Template;
 using Microsoft.Extensions.Logging;
@@ -28,6 +31,7 @@ public class ActionCacheFilter : ActionCacheFilterBase, IAsyncActionFilter
     /// <param name="varyByResolver">Resolves the request dimensions that form part of the cache key.</param>
     /// <param name="varyByOptions">Which request dimensions this endpoint varies its cache key by.</param>
     /// <param name="responseFactory">Converts between action results and stored responses.</param>
+    /// <param name="keyOptions">Controls how cache keys are formed.</param>
     public ActionCacheFilter(
         IActionCache cache,
         TemplateBinderFactory binderFactory,
@@ -36,8 +40,9 @@ public class ActionCacheFilter : ActionCacheFilterBase, IAsyncActionFilter
         bool singleFlightEnabled,
         ActionCacheVaryByResolver varyByResolver,
         VaryByOptions varyByOptions,
-        CachedResponseFactory responseFactory
-    ) : base(cache, binderFactory, logger, singleFlight, singleFlightEnabled, varyByResolver, varyByOptions, responseFactory)
+        CachedResponseFactory responseFactory,
+        ActionCacheKeyOptions keyOptions
+    ) : base(cache, binderFactory, logger, singleFlight, singleFlightEnabled, varyByResolver, varyByOptions, responseFactory, keyOptions)
     {
     }
 
@@ -63,7 +68,7 @@ public class ActionCacheFilter : ActionCacheFilterBase, IAsyncActionFilter
 
         var varyByValues = await VaryByResolver.ResolveAsync(context.HttpContext, VaryByOptions, cancellationToken);
 
-        if (!context.TryGetKey(out var key, varyByValues))
+        if (!context.TryGetKey(out var key, varyByValues, UsePlaintextKeys))
         {
             context.AddCacheStatus(CacheStatus.Miss);
             LogCacheKeyUnavailable();
@@ -126,7 +131,7 @@ public class ActionCacheFilter : ActionCacheFilterBase, IAsyncActionFilter
             actionExecutedContext.Result.IsCacheableResult() &&
             ResponseFactory.TryCreate(
                 actionExecutedContext.Result,
-                CachedResponseFactory.CreateRequest(context.HttpContext),
+                ResponseFactory.CreateRequest(context.HttpContext, GetBoundBody(context)),
                 variesByRequest,
                 out var cachedResponse))
         {
@@ -138,5 +143,34 @@ public class ActionCacheFilter : ActionCacheFilterBase, IAsyncActionFilter
             context.AddCacheStatus(CacheStatus.None);
             LogResultNotCacheable();
         }
+    }
+
+    /// <summary>
+    /// Finds the argument bound from the request body, if the action takes one.
+    /// </summary>
+    /// <param name="context">The action executing context.</param>
+    /// <returns>The bound body model, or <see langword="null"/> when the action has no body parameter.</returns>
+    /// <remarks>
+    /// Refresh replays the recorded request, so an action with a <c>[FromBody]</c> parameter
+    /// has to carry its payload or the replay binds nothing and the endpoint answers 415 —
+    /// overwriting a good cache entry with an error.
+    /// </remarks>
+    private static object? GetBoundBody(ActionExecutingContext context)
+    {
+        if (context.ActionDescriptor is not ControllerActionDescriptor descriptor)
+        {
+            return null;
+        }
+
+        foreach (var parameter in descriptor.Parameters)
+        {
+            if (parameter.BindingInfo?.BindingSource == BindingSource.Body &&
+                context.ActionArguments.TryGetValue(parameter.Name, out var value))
+            {
+                return value;
+            }
+        }
+
+        return null;
     }
 }

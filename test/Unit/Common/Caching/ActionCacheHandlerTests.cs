@@ -8,9 +8,9 @@ namespace Unit.Common.Caching;
 [TestFixture]
 public class ActionCacheHandlerTests
 {
-    private Mock<IActionCache> _cacheMock;
+    private Mock<IActionCache> _cacheMock = null!;
     private Mock<IActionCache> _nextCacheMock;
-    private ActionCacheHandler _sut;
+    private ActionCacheHandler _sut = null!;
 
     [SetUp]
     public void SetUp()
