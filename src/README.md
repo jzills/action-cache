@@ -243,9 +243,17 @@ does anything until something subscribes, so there is no flag to turn them on:
 | Instrument | Meaning |
 |-----------|---------|
 | `actioncache.requests` | Lookups, tagged `namespace` and `status` (`hit` / `miss`) |
-| `actioncache.operation.duration` | How long one backend operation took, in ms |
-| `actioncache.evictions` | Namespace evictions |
-| `actioncache.single_flight.coalesced` | Requests served by another request's in-flight execution |
+| `actioncache.operation.duration` | How long one backend operation took, in ms, tagged `namespace`, `operation` and `outcome` (`ok` / `error` / `cancelled`) |
+| `actioncache.evictions` | Namespace evictions, tagged `namespace` |
+| `actioncache.single_flight.coalesced` | Requests served by another request's in-flight execution, tagged `namespace` |
+
+Every `namespace` tag carries the **unresolved** template — `Account:{id}`, not
+`Account:42`. The resolved form is per-resource, which as a metric dimension is unbounded
+cardinality.
+
+`actioncache.requests` and `actioncache.evictions` are recorded once per request. The
+others are per backend operation, so a layered chain or a single-flight re-check
+contributes more than one.
 
 Spans cover each backend operation and each refresh replay, and a degraded operation marks
 its span as an error.

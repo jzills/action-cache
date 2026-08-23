@@ -39,7 +39,7 @@ public static class ActionCacheDiagnostics
     /// </summary>
     internal static readonly Counter<long> Requests =
         Meter.CreateCounter<long>("actioncache.requests", unit: "{request}",
-            description: "Cache lookups, tagged by namespace and outcome.");
+            description: "Cache lookups, tagged by namespace and status.");
 
     /// <summary>
     /// Times individual backend operations.

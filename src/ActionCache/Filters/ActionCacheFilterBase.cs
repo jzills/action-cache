@@ -140,4 +140,22 @@ public abstract class ActionCacheFilterBase
             ActionCacheLog.FilterResultNotCacheable(_logger, GetType().Name, (string)Cache.GetNamespace());
         }
     }
+
+    /// <summary>
+    /// Records that this request evicted its namespace.
+    /// </summary>
+    /// <remarks>
+    /// Recorded here, once per request, rather than on <c>ResilientActionCache</c>. That
+    /// decorator wraps each backend individually and <c>ActionCacheHandler</c> fans a
+    /// namespace eviction out to every layer, so one <c>[ActionCacheEviction]</c> request
+    /// against a Memory + Redis + SQL chain published three evictions — the published count
+    /// was of backend calls, not of evictions. This is the same move
+    /// <c>actioncache.requests</c> already made off that decorator.
+    ///
+    /// The tag is the unresolved namespace template, matching every other instrument; a
+    /// comma-separated multi-namespace attribute is counted once, under the first of them.
+    /// </remarks>
+    protected void RecordEviction() =>
+        ActionCacheDiagnostics.Evictions.Add(1,
+            new KeyValuePair<string, object?>("namespace", Cache.GetNamespace().Value));
 }

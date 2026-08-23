@@ -43,6 +43,7 @@ public class ActionCacheEvictionFilter : ActionCacheFilterBase, IAsyncActionFilt
 
             context.AddCacheStatus(CacheStatus.Evict);
             await Cache.RemoveAsync();
+            RecordEviction();
         }
     }
 }

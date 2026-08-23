@@ -61,7 +61,7 @@ public class InProcessSingleFlight : IActionCacheSingleFlight
             {
                 ActionCacheLog.SingleFlightCoalesced(_logger, key, @namespace);
                 ActionCacheDiagnostics.SingleFlightCoalesced.Add(1,
-                    new KeyValuePair<string, object?>("namespace", (string)@namespace));
+                    new KeyValuePair<string, object?>("namespace", @namespace.Value));
                 return new SingleFlightResult<TValue>(cached, WasCoalesced: true);
             }
 
