@@ -27,6 +27,31 @@ jobs:
       - name: Test
         run: dotnet test test/Unit/Unit.csproj --no-build --verbosity normal
 
+  samples:
+    name: Samples
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: |
+            8.0.x
+            10.0.x
+
+      # The samples are the library's worked examples, but they are deliberately outside
+      # ActionCache.slnx, so nothing else here compiles them. That is how they came to
+      # reference src/ActionCache.csproj for several releases after the package split moved
+      # it — broken in the one place a new user looks first, with every check green.
+      - name: Build samples
+        run: |
+          set -euo pipefail
+          for sample in samples/*/*.csproj; do
+            echo "Building $sample"
+            dotnet build "$sample" --verbosity minimal
+          done
+
   integration-tests:
     name: Integration Tests
     runs-on: ubuntu-latest
