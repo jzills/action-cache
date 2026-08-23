@@ -19,16 +19,13 @@ jobs:
             10.0.x
 
       - name: Restore
-        working-directory: ./test/Unit
-        run: dotnet restore
+        run: dotnet restore ActionCache.slnx
 
       - name: Build
-        working-directory: ./test/Unit
-        run: dotnet build --no-restore
+        run: dotnet build ActionCache.slnx --no-restore
 
       - name: Test
-        working-directory: ./test/Unit
-        run: dotnet test --no-build --verbosity normal
+        run: dotnet test test/Unit/Unit.csproj --no-build --verbosity normal
 
   integration-tests:
     name: Integration Tests
@@ -47,13 +44,29 @@ jobs:
         run: docker compose -f test/Integration/docker-compose.yml up -d --wait
 
       - name: Restore
-        working-directory: ./test/Integration
-        run: dotnet restore
+        run: dotnet restore ActionCache.slnx
 
       - name: Build
-        working-directory: ./test/Integration
-        run: dotnet build --no-restore
+        run: dotnet build ActionCache.slnx --no-restore
 
       - name: Test
-        working-directory: ./test/Integration
-        run: dotnet test -p:TestTfmsInParallel=false --no-build --verbosity normal
+        run: dotnet test test/Integration/Integration.csproj -p:TestTfmsInParallel=false --no-build --verbosity normal
+
+  package-dependencies:
+    name: Package Dependencies
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: |
+            8.0.x
+            10.0.x
+
+      - name: Pack
+        run: dotnet pack ActionCache.slnx --configuration Release --output ./nupkg
+
+      - name: Assert the core package carries no backend dependencies
+        run: bash .github/scripts/verify-package-dependencies.sh ./nupkg

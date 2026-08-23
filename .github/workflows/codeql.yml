@@ -31,8 +31,7 @@ jobs:
             10.0.x
 
       - name: Build
-        working-directory: ./src
-        run: dotnet build
+        run: dotnet build ActionCache.slnx
 
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v4

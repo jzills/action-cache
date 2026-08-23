@@ -13,7 +13,7 @@ namespace ActionCache.Common.Caching;
 /// are not wrapped in <see cref="ResilientActionCache"/> when this factory is resolved directly (e.g. by a
 /// consumer injecting <see cref="IActionCacheFactory"/> outside the filter pipeline). That wrapping — and the
 /// per-operation degradation logging it provides — is applied only by the filter abstract factories
-/// (<c>ActionCacheFilterAbstractFactoryBase</c>) via <see cref="ResilientCacheDecorator"/>. Consumers using this
+/// (<c>ActionCacheFilterAbstractFactoryBase</c>) via <c>ResilientCacheDecorator</c>. Consumers using this
 /// factory directly still receive a log entry if cache creation itself fails.
 /// </remarks>
 public abstract class ActionCacheFactoryBase : IActionCacheFactory

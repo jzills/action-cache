@@ -5,6 +5,10 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
 
+    <!-- Inherited from the root Directory.Build.props, which targets shipping packages. -->
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <IsPackable>false</IsPackable>
+
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
     <RunSettingsFilePath>$(MSBuildThisFileDirectory)Integration.runsettings</RunSettingsFilePath>
@@ -28,7 +32,10 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\ActionCache.csproj" />
+    <ProjectReference Include="..\..\src\ActionCache\ActionCache.csproj" />
+    <ProjectReference Include="..\..\src\ActionCache.Redis\ActionCache.Redis.csproj" />
+    <ProjectReference Include="..\..\src\ActionCache.SqlServer\ActionCache.SqlServer.csproj" />
+    <ProjectReference Include="..\..\src\ActionCache.AzureCosmos\ActionCache.AzureCosmos.csproj" />
   </ItemGroup>
 
 </Project>

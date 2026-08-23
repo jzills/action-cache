@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <PackageId>ActionCache</PackageId>
+    <Description>Namespaced response caching for ASP.NET Core via attributes, for MVC controllers and Minimal APIs. Includes the in-memory backend; add ActionCache.Redis, ActionCache.SqlServer or ActionCache.AzureCosmos for distributed caching.</Description>
+    <PackageTags>mvc;minimal-api;cache;aspnetcore;memory;output-cache</PackageTags>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="../README.md" Pack="true" PackagePath="" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../ActionCache.Abstractions/ActionCache.Abstractions.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Backends call AddActionCacheCommon and share diagnostics; see the note in
+         ActionCache.Abstractions.csproj. Co-released assemblies, not a public contract. -->
+    <InternalsVisibleTo Include="ActionCache.Redis" />
+    <InternalsVisibleTo Include="ActionCache.SqlServer" />
+    <InternalsVisibleTo Include="ActionCache.AzureCosmos" />
+    <InternalsVisibleTo Include="Unit" />
+  </ItemGroup>
+
+</Project>

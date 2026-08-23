@@ -45,6 +45,24 @@ Each attribute triggers a corresponding filter (`ActionCacheFilter`, `ActionCach
 | `IActionCacheFilterAbstractFactory` | Selects MVC vs. Minimal APIs filter implementation |
 | `IActionCacheRefreshProvider` | Replays a recorded request to refresh a cache entry |
 
+### Projects
+
+| Project | Contents |
+|---------|----------|
+| `src/ActionCache.Abstractions` | `IActionCache`, `ActionCacheBase`, contexts, entry options, `Namespace`, concurrency primitives, `CachedResponse`, serializer, diagnostics |
+| `src/ActionCache` | Attributes, filters, endpoint filters, keys, vary-by, DI, and the in-memory backend |
+| `src/ActionCache.Redis` / `.SqlServer` / `.AzureCosmos` | One backend each |
+
+Backends reference `ActionCache`, never the reverse. Each contributes its own
+`Use…Cache` extension on `ActionCacheOptionsBuilder` (declared in
+`ActionCache.Common.Extensions` so call sites need no new `using`) and registers itself via
+`AddBackend`. `ActionCacheOptions` deliberately names no backend — that coupling is what
+previously forced every consumer to take every backend's dependencies. A backend offering
+distributed locking also calls `AddDistributedLocker`, which is how
+`UseDistributedSingleFlight()` finds one.
+
+Build with `dotnet build ActionCache.slnx`.
+
 ### Cache Backends
 
 Each backend lives in its own directory and follows the same pattern:

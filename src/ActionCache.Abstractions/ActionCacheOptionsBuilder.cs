@@ -1,8 +1,5 @@
-using ActionCache.AzureCosmos;
 using ActionCache.Common.Concurrency;
-using Microsoft.Extensions.Caching.Memory;
-using Microsoft.Extensions.Caching.SqlServer;
-using Microsoft.Extensions.Caching.StackExchangeRedis;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace ActionCache.Common;
 
@@ -27,53 +24,10 @@ public class ActionCacheOptionsBuilder
         return this;
     }
 
-    /// <summary>
-    /// Enables the use of the memory cache.
-    /// </summary>
-    /// <returns>Returns this instance of <see cref="ActionCacheOptionsBuilder"/>.</returns>
-    public ActionCacheOptionsBuilder UseMemoryCache(Action<MemoryCacheOptions> configureOptions)
-    {
-        Options.ConfigureMemoryCacheOptions = configureOptions;
-        return this;
-    }
 
-    /// <summary>
-    /// Enables the use of the Redis cache.
-    /// </summary>
-    /// <returns>Returns this instance of <see cref="ActionCacheOptionsBuilder"/>.</returns>
-    public ActionCacheOptionsBuilder UseRedisCache(Action<RedisCacheOptions> configureOptions)
-    {
-        Options.ConfigureRedisCacheOptions = configureOptions;
-        return this;
-    }
 
-    /// <summary>
-    /// Enables the use of the Redis cache with the specified configuration.
-    /// </summary>
-    /// <returns>Returns this instance of <see cref="ActionCacheOptionsBuilder"/>.</returns>
-    public ActionCacheOptionsBuilder UseRedisCache(string configuration) =>
-        UseRedisCache(configureOptions => 
-            configureOptions.Configuration = configuration);
 
-    /// <summary>
-    /// Enables the use of SQL Server cache.
-    /// </summary>
-    /// <returns>Returns this instance of <see cref="ActionCacheOptionsBuilder"/>.</returns>
-    public ActionCacheOptionsBuilder UseSqlServerCache(Action<SqlServerCacheOptions> configureOptions)
-    {
-        Options.ConfigureSqlServerCacheOptions = configureOptions;
-        return this;
-    }
 
-    /// <summary>
-    /// Enables the use of Azure Cosmos DB as a cache backend.
-    /// </summary>
-    /// <returns>Returns this instance of <see cref="ActionCacheOptionsBuilder"/>.</returns>
-    public ActionCacheOptionsBuilder UseAzureCosmosCache(Action<AzureCosmosCacheOptions> configureOptions)
-    {
-        Options.ConfigureAzureCosmosCacheOptions = configureOptions;
-        return this;
-    }
 
     /// <summary>
     /// Configures ActionCache to fail closed: cache-backend failures propagate to the
@@ -136,6 +90,31 @@ public class ActionCacheOptionsBuilder
         Action<ActionCacheSingleFlightOptions> configureOptions)
     {
         configureOptions.Invoke(Options.SingleFlightOptions);
+        return this;
+    }
+
+    /// <summary>
+    /// Registers a backend's services. Called by a backend package's <c>Use…Cache</c>
+    /// extension, so the core package never has to know which backends exist.
+    /// </summary>
+    /// <param name="register">Adds the backend's services to the container.</param>
+    /// <returns>Returns this instance of <see cref="ActionCacheOptionsBuilder"/>.</returns>
+    public ActionCacheOptionsBuilder AddBackend(Action<IServiceCollection> register)
+    {
+        Options.BackendRegistrations.Add(register);
+        return this;
+    }
+
+    /// <summary>
+    /// Supplies the distributed locker that <see cref="UseDistributedSingleFlight"/> uses.
+    /// Called by a backend package that offers distributed locking.
+    /// </summary>
+    /// <param name="lockerFactory">Builds the locker from the application's services.</param>
+    /// <returns>Returns this instance of <see cref="ActionCacheOptionsBuilder"/>.</returns>
+    public ActionCacheOptionsBuilder AddDistributedLocker(
+        Func<IServiceProvider, ICacheLockerHandler> lockerFactory)
+    {
+        Options.DistributedLockerFactory = lockerFactory;
         return this;
     }
 
