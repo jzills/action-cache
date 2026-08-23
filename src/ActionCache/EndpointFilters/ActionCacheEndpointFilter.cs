@@ -1,3 +1,4 @@
+using System.Reflection;
 using ActionCache.Common.Caching;
 using ActionCache.Common.Concurrency;
 using ActionCache.Common.Diagnostics;
@@ -158,10 +159,19 @@ public class ActionCacheEndpointFilter : ActionCacheFilterBase, IEndpointFilter
     /// <returns>The bound body model, or <see langword="null"/> when there is none to record.</returns>
     /// <remarks>
     /// The MVC filter reads the body parameter off the action descriptor; Minimal APIs have
-    /// no descriptor, so the endpoint's <see cref="IAcceptsMetadata"/> names the type the
-    /// framework bound from the body and the matching argument is that model. Without this
-    /// a cached <c>MapPost</c> recorded no body at all, and its replay — sent bodyless —
-    /// was answered 400 or 415, so refresh could never replace the entry.
+    /// no descriptor. <see cref="IAcceptsMetadata"/> names the type bound from the body, but
+    /// the type alone does not identify the argument: in
+    /// <c>MapPost("/echo/{name}", (string name, [FromBody] string payload) =&gt; ...)</c> the
+    /// request type is <c>string</c> and so is the route value, and matching on type picked
+    /// <c>name</c> — refresh then replayed the route value as the payload and overwrote a
+    /// good entry with a response computed for different input, under the original key.
+    ///
+    /// The handler's <see cref="MethodInfo"/> is in the endpoint metadata, and its parameters
+    /// line up positionally with <see cref="EndpointFilterInvocationContext.Arguments"/>, so
+    /// the body parameter can be identified rather than guessed. When it cannot be — no
+    /// method metadata, or more than one equally plausible candidate — this records nothing.
+    /// Refresh then skips the entry and says so, which is the safe direction: a wrong body
+    /// silently corrupts the entry, a missing one only leaves it stale.
     /// </remarks>
     private static object? GetBoundBody(EndpointFilterInvocationContext context, bool variesByRequest)
     {
@@ -173,24 +183,120 @@ public class ActionCacheEndpointFilter : ActionCacheFilterBase, IEndpointFilter
             return null;
         }
 
-        var requestType = context.HttpContext.GetEndpoint()?
-            .Metadata.GetMetadata<IAcceptsMetadata>()?.RequestType;
-
+        var endpoint = context.HttpContext.GetEndpoint();
+        var requestType = endpoint?.Metadata.GetMetadata<IAcceptsMetadata>()?.RequestType;
         if (requestType is null)
         {
             return null;
         }
 
-        foreach (var argument in context.Arguments)
+        var index = FindBodyParameterIndex(endpoint!, requestType, context);
+        if (index is not null)
         {
-            if (argument is not null && requestType.IsInstanceOfType(argument))
-            {
-                return argument;
-            }
+            return context.Arguments[index.Value];
         }
 
-        return null;
+        // No usable method metadata. Fall back to matching on type, but only when exactly
+        // one argument matches — the ambiguous case is what produced the wrong body.
+        object? match = null;
+        foreach (var argument in context.Arguments)
+        {
+            if (argument is null || !requestType.IsInstanceOfType(argument))
+            {
+                continue;
+            }
+
+            if (match is not null)
+            {
+                return null;
+            }
+
+            match = argument;
+        }
+
+        return match;
     }
+
+    /// <summary>
+    /// Locates the handler parameter bound from the request body.
+    /// </summary>
+    /// <param name="endpoint">The endpoint being invoked.</param>
+    /// <param name="requestType">The type <see cref="IAcceptsMetadata"/> names for the body.</param>
+    /// <param name="context">The endpoint filter invocation context.</param>
+    /// <returns>
+    /// The index into <see cref="EndpointFilterInvocationContext.Arguments"/>, or
+    /// <see langword="null"/> when the body parameter cannot be identified unambiguously.
+    /// </returns>
+    private static int? FindBodyParameterIndex(
+        Endpoint endpoint,
+        Type requestType,
+        EndpointFilterInvocationContext context)
+    {
+        var parameters = endpoint.Metadata.GetMetadata<MethodInfo>()?.GetParameters();
+
+        // Arguments are positional against the handler's parameters. If the counts disagree
+        // the two cannot be lined up, so nothing here can be trusted.
+        if (parameters is null || parameters.Length != context.Arguments.Count)
+        {
+            return null;
+        }
+
+        // An explicit [FromBody] settles it outright, whatever the types involved.
+        var explicitBody = IndexOfSingle(parameters, static parameter =>
+            parameter.GetCustomAttributes(inherit: false).OfType<IFromBodyMetadata>().Any());
+
+        if (explicitBody is not null)
+        {
+            return explicitBody;
+        }
+
+        // Otherwise the body is the parameter of the accepted type that nothing else claims:
+        // not bound from route, query, header, form or services, and not named after a route
+        // token — an unattributed parameter matching a route token binds from the route.
+        var routeValues = context.HttpContext.Request.RouteValues;
+
+        return IndexOfSingle(parameters, parameter =>
+            requestType.IsAssignableFrom(parameter.ParameterType) &&
+            !HasNonBodyBindingSource(parameter) &&
+            (parameter.Name is null || !routeValues.ContainsKey(parameter.Name)));
+    }
+
+    /// <summary>
+    /// Returns the index of the only parameter satisfying <paramref name="predicate"/>.
+    /// </summary>
+    /// <param name="parameters">The handler's parameters.</param>
+    /// <param name="predicate">The test to apply.</param>
+    /// <returns>The single matching index, or <see langword="null"/> for none or several.</returns>
+    private static int? IndexOfSingle(ParameterInfo[] parameters, Func<ParameterInfo, bool> predicate)
+    {
+        int? found = null;
+        for (var index = 0; index < parameters.Length; index++)
+        {
+            if (!predicate(parameters[index]))
+            {
+                continue;
+            }
+
+            if (found is not null)
+            {
+                return null;
+            }
+
+            found = index;
+        }
+
+        return found;
+    }
+
+    /// <summary>
+    /// Whether the parameter declares a binding source other than the request body.
+    /// </summary>
+    /// <param name="parameter">The handler parameter.</param>
+    /// <returns><see langword="true"/> when something other than the body binds it.</returns>
+    private static bool HasNonBodyBindingSource(ParameterInfo parameter) =>
+        parameter.GetCustomAttributes(inherit: false).Any(attribute =>
+            attribute is IFromRouteMetadata or IFromQueryMetadata or IFromHeaderMetadata
+                      or IFromFormMetadata or IFromServiceMetadata);
 
     /// <summary>
     /// Records the outcome of this request's cache lookup.
