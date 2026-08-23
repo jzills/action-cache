@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Text;
 using ActionCache.Common.Diagnostics;
 using ActionCache.Common.Responses;
 using Microsoft.AspNetCore.Http;
@@ -61,7 +62,11 @@ public class EndpointReplayRefreshProvider : IActionCacheRefreshProvider
             return null;
         }
 
-        using var activity = ActionCacheDiagnostics.StartOperation("RefreshReplay", request.Path);
+        // No namespace tag: this operation does not belong to one, and the request path is
+        // per-resource, so putting it there would both mislabel the attribute and make it
+        // unbounded. The method is bounded and worth having.
+        using var activity = ActionCacheDiagnostics.StartOperation("RefreshReplay");
+        activity?.SetTag("http.request.method", request.Method);
         using var scope = _scopeFactory.CreateScope();
         using var body = new MemoryStream();
 
@@ -197,7 +202,7 @@ public class EndpointReplayRefreshProvider : IActionCacheRefreshProvider
 
         if (request.Body is not null)
         {
-            var payload = System.Text.Encoding.UTF8.GetBytes(request.Body);
+            var payload = Encoding.UTF8.GetBytes(request.Body);
             httpContext.Request.Body = new MemoryStream(payload);
             httpContext.Request.ContentLength = payload.Length;
             httpContext.Request.ContentType = request.ContentType;

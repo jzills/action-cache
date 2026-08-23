@@ -61,13 +61,8 @@ public class CacheLockTests
     }
 
     [Test]
-    public void RedisCacheLock_DateRequested_IsApproximatelyNow()
-    {
-        var before = DateTime.UtcNow;
-        var cacheLock = new RedisCacheLock("r", TimeSpan.Zero);
-        var after = DateTime.UtcNow;
-        cacheLock.DateRequested.Should().BeOnOrAfter(before).And.BeOnOrBefore(after);
-    }
+    public void RedisCacheLock_DateRequested_IsApproximatelyNow() =>
+        AssertStampedOnConstruction(new RedisCacheLock("r", TimeSpan.Zero));
 
     [Test]
     public void SqlServerCacheLock_Resource_IsSet()
@@ -91,11 +86,25 @@ public class CacheLockTests
     }
 
     [Test]
-    public void CacheLock_DateRequested_IsApproximatelyNow()
-    {
-        var before = DateTime.UtcNow;
-        var cacheLock = new NullCacheLock("r");
-        var after = DateTime.UtcNow;
-        cacheLock.DateRequested.Should().BeOnOrAfter(before).And.BeOnOrBefore(after);
-    }
+    public void CacheLock_DateRequested_IsApproximatelyNow() =>
+        AssertStampedOnConstruction(new NullCacheLock("r"));
+
+    /// <summary>
+    /// Asserts that <see cref="CacheLock.DateRequested"/> was stamped at construction.
+    /// </summary>
+    /// <param name="cacheLock">The lock to inspect.</param>
+    /// <remarks>
+    /// Deliberately a tolerance rather than a <c>before &lt;= DateRequested &lt;= after</c>
+    /// bracket. That bracket assumes <see cref="DateTime.UtcNow"/> only moves forward, and
+    /// it does not: the host clock steps whenever it is adjusted, and on WSL2 an NTP resync
+    /// routinely moves it. A run of this test was observed reading a timestamp 153ms
+    /// <b>earlier</b> than the one captured on the line above it, which failed the lower
+    /// bound while the code under test was behaving perfectly.
+    ///
+    /// The exactness bought nothing anyway. What the property has to be is stamped at
+    /// construction rather than left at <c>default</c>, and a minute of slack still catches
+    /// that — <c>default(DateTime)</c> is year 1.
+    /// </remarks>
+    private static void AssertStampedOnConstruction(CacheLock cacheLock) =>
+        cacheLock.DateRequested.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromMinutes(1));
 }

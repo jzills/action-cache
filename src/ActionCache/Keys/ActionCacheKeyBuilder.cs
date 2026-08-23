@@ -18,19 +18,18 @@ public class ActionCacheKeyBuilder
     protected readonly KeyEncoder KeyEncoder = new();
 
     /// <summary>
-    /// Whether to emit a readable, reversible key instead of a hash.
+    /// Controls how the key is formed.
     /// </summary>
-    private readonly bool _usePlaintextKeys;
+    private readonly ActionCacheKeyOptions _options;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ActionCacheKeyBuilder"/> class.
     /// </summary>
-    /// <param name="usePlaintextKeys">
-    /// <see langword="true"/> to emit readable, reversible keys for debugging;
-    /// <see langword="false"/> (default) to hash them.
+    /// <param name="options">
+    /// How to form the key, or <see langword="null"/> for the hashed default.
     /// </param>
-    public ActionCacheKeyBuilder(bool usePlaintextKeys = false) =>
-        _usePlaintextKeys = usePlaintextKeys;
+    public ActionCacheKeyBuilder(ActionCacheKeyOptions? options = null) =>
+        _options = options ?? new ActionCacheKeyOptions();
 
     /// <summary>
     /// A key component derived from the route data and action arguments associated with an incoming request. 
@@ -88,7 +87,7 @@ public class ActionCacheKeyBuilder
     {
         var components = KeyComponents.Serialize();
 
-        return _usePlaintextKeys
+        return _options.UsePlaintextKeys
             ? KeyEncoder.Encode(components)
             : KeyHashGenerator.ToHash(components);
     }

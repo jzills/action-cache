@@ -85,7 +85,7 @@ public class ActionCacheKeyBuilderTests
     {
         // The debugging escape hatch: readable and reversible, at the cost of exposing
         // every route value and action argument to anyone who can read the cache.
-        var key = new ActionCacheKeyBuilder(usePlaintextKeys: true)
+        var key = new ActionCacheKeyBuilder(new ActionCacheKeyOptions { UsePlaintextKeys = true })
             .WithRouteValues(routeValues)
             .WithActionArguments(actionArguments)
             .Build();

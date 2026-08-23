@@ -52,9 +52,9 @@ public abstract class ActionCacheFilterBase
     protected readonly CachedResponseFactory ResponseFactory;
 
     /// <summary>
-    /// Whether cache keys are readable and reversible rather than hashed.
+    /// Controls how cache keys are formed.
     /// </summary>
-    protected readonly bool UsePlaintextKeys;
+    protected readonly ActionCacheKeyOptions KeyOptions;
 
     /// <summary>
     /// The logger used to record filter-level conditions the cache layer cannot observe.
@@ -92,7 +92,7 @@ public abstract class ActionCacheFilterBase
         VaryByResolver = varyByResolver;
         VaryByOptions = varyByOptions;
         ResponseFactory = responseFactory;
-        UsePlaintextKeys = keyOptions.UsePlaintextKeys;
+        KeyOptions = keyOptions;
     }
 
     /// <summary>

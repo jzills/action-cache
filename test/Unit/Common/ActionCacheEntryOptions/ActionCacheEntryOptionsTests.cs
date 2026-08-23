@@ -17,12 +17,15 @@ public class ActionCacheEntryOptionsTests
     {
         var duration = TimeSpan.FromMinutes(10);
         var options = new ActionCacheEntryOptions { AbsoluteExpiration = duration };
-        var before = DateTimeOffset.UtcNow.Add(duration);
+
         var result = options.GetAbsoluteExpirationFromUtcNow();
-        var after = DateTimeOffset.UtcNow.Add(duration);
 
         result.Should().NotBeNull();
-        result!.Value.Should().BeOnOrAfter(before).And.BeOnOrBefore(after);
+
+        // A tolerance, not a before/after bracket: that bracket assumes UtcNow only moves
+        // forward, and a host clock adjustment — an NTP resync on WSL2, routinely — steps
+        // it either way. What matters is that the offset is measured from now.
+        result!.Value.Should().BeCloseTo(DateTimeOffset.UtcNow.Add(duration), TimeSpan.FromSeconds(30));
     }
 
     [Test]

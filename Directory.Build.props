@@ -9,6 +9,14 @@
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <EnableNETAnalyzers>true</EnableNETAnalyzers>
     <AnalysisLevel>latest</AnalysisLevel>
+    <!--
+      Every project, not only the packable ones. A warning that reaches a released package
+      is a defect nobody sees, and one in a test or benchmark is the same defect caught
+      earlier. This lived in Directory.Build.targets to condition on IsPackable, which is
+      set inside each csproj — but it never carried that condition, so the import ordering
+      bought nothing.
+    -->
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
 
   </PropertyGroup>
 

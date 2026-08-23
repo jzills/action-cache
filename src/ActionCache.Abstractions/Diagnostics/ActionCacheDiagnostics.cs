@@ -46,7 +46,7 @@ public static class ActionCacheDiagnostics
     /// </summary>
     internal static readonly Histogram<double> OperationDuration =
         Meter.CreateHistogram<double>("actioncache.operation.duration", unit: "ms",
-            description: "Duration of a single cache-backend operation.");
+            description: "Duration of a single cache-backend operation, tagged by outcome.");
 
     /// <summary>
     /// Counts namespace evictions.
@@ -63,10 +63,31 @@ public static class ActionCacheDiagnostics
             description: "Requests served by another request's in-flight execution.");
 
     /// <summary>
+    /// The values of the <c>outcome</c> tag on <see cref="OperationDuration"/>.
+    /// </summary>
+    /// <remarks>
+    /// A backend that hangs until the operation timeout elapses is the case the histogram
+    /// exists for, so failures and abandonments are sampled alongside successes rather than
+    /// dropped. Without the tag a timeout would be indistinguishable from a slow success.
+    /// </remarks>
+    internal static class Outcomes
+    {
+        internal const string Ok = "ok";
+        internal const string Error = "error";
+        internal const string Cancelled = "cancelled";
+    }
+
+    /// <summary>
     /// Records a cache lookup outcome.
     /// </summary>
-    /// <param name="namespace">The cache namespace.</param>
+    /// <param name="namespace">The cache namespace template.</param>
     /// <param name="status">The outcome, such as hit or miss.</param>
+    /// <remarks>
+    /// Recorded by the filters, once per request, rather than by the backend decorator.
+    /// A single logical lookup reads the backend more than once — single flight re-checks
+    /// under the lock, and a layered chain reads every layer — so counting it per backend
+    /// call made the published hit ratio a count of reads, not of requests.
+    /// </remarks>
     internal static void RecordRequest(string @namespace, string status) =>
         Requests.Add(1, new KeyValuePair<string, object?>("namespace", @namespace),
                         new KeyValuePair<string, object?>("status", status));
@@ -74,26 +95,47 @@ public static class ActionCacheDiagnostics
     /// <summary>
     /// Records how long a backend operation took.
     /// </summary>
-    /// <param name="namespace">The cache namespace.</param>
+    /// <param name="namespace">The cache namespace template.</param>
     /// <param name="operation">The operation name.</param>
+    /// <param name="outcome">One of <see cref="Outcomes"/>.</param>
     /// <param name="elapsed">How long it took.</param>
-    internal static void RecordDuration(string @namespace, string operation, TimeSpan elapsed) =>
+    internal static void RecordDuration(string @namespace, string operation, string outcome, TimeSpan elapsed) =>
         OperationDuration.Record(elapsed.TotalMilliseconds,
             new KeyValuePair<string, object?>("namespace", @namespace),
-            new KeyValuePair<string, object?>("operation", operation));
+            new KeyValuePair<string, object?>("operation", operation),
+            new KeyValuePair<string, object?>("outcome", outcome));
 
     /// <summary>
     /// Starts a span for a cache operation, or returns <see langword="null"/> when nothing
     /// is listening.
     /// </summary>
     /// <param name="operation">The operation name.</param>
-    /// <param name="namespace">The cache namespace.</param>
+    /// <param name="namespace">
+    /// The cache namespace template, or <see langword="null"/> for an operation that does
+    /// not belong to one.
+    /// </param>
     /// <returns>The started activity, or <see langword="null"/>.</returns>
-    internal static Activity? StartOperation(string operation, string @namespace)
+    /// <remarks>
+    /// The namespace tag carries the unresolved template — <c>Account:{id}</c>, not
+    /// <c>Account:42</c>. The resolved form is per-resource, and as a metric dimension or a
+    /// span attribute that is unbounded cardinality. Callers with nothing to put here pass
+    /// <see langword="null"/> rather than substituting a request path, which is unbounded
+    /// in the same way and is not a namespace.
+    /// </remarks>
+    internal static Activity? StartOperation(string operation, string? @namespace = null)
     {
         var activity = ActivitySource.StartActivity($"ActionCache {operation}", ActivityKind.Internal);
-        activity?.SetTag("actioncache.namespace", @namespace);
-        activity?.SetTag("actioncache.operation", operation);
+        if (activity is null)
+        {
+            return null;
+        }
+
+        if (@namespace is not null)
+        {
+            activity.SetTag("actioncache.namespace", @namespace);
+        }
+
+        activity.SetTag("actioncache.operation", operation);
         return activity;
     }
 }
