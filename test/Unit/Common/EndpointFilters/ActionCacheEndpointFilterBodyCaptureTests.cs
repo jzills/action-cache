@@ -96,6 +96,16 @@ public class ActionCacheEndpointFilterBodyCaptureTests
 
         // MapPost("/obj/{id}", (int id, Payload payload) => ...)
         internal static Payload ComplexBody(int id, Payload payload) => payload;
+
+        // MapPost("/todos", (Payload payload) => ...) — the ordinary Minimal API POST,
+        // with no attribute anywhere and no route token.
+        internal static Payload CanonicalBody(Payload payload) => payload;
+
+        // A parameter of the body's own type, claimed by the query string.
+        internal static string QueryAlongsideBody([FromQuery] string filter, string payload) => payload;
+
+        // The same, claimed by a header.
+        internal static string HeaderAlongsideBody([FromHeader] string trace, string payload) => payload;
     }
 
     private static object? Invoke(EndpointFilterInvocationContext context, bool variesByRequest) =>
@@ -104,15 +114,18 @@ public class ActionCacheEndpointFilterBodyCaptureTests
             .Invoke(null, [context, variesByRequest]);
 
     [Test]
-    public void GetBoundBody_ForAnEndpointThatAcceptsABody_RecordsTheMatchingArgument()
+    public void GetBoundBody_WithoutTheHandlerMethodMetadata_RecordsNothing()
     {
         var payload = new Payload("Ada");
 
-        // The route value argument is not the body; IAcceptsMetadata.RequestType is what
-        // distinguishes them.
+        // Without the handler's MethodInfo there is nothing to line the arguments up
+        // against, and IAcceptsMetadata.RequestType alone does not identify which argument
+        // is the body. Every Minimal API endpoint carries that metadata, so this is the
+        // exotic shape rather than the ordinary one; guessing here is what recorded a route
+        // value as the body.
         var captured = Invoke(BuildContext([42, payload], acceptsBody: true), variesByRequest: false);
 
-        captured.Should().BeSameAs(payload);
+        captured.Should().BeNull();
     }
 
     [Test]
@@ -186,17 +199,58 @@ public class ActionCacheEndpointFilterBodyCaptureTests
     }
 
     [Test]
-    public void GetBoundBody_WhenArgumentsDoNotLineUpWithTheHandler_FallsBackToAUniqueTypeMatch()
+    public void GetBoundBody_WhenArgumentsDoNotLineUpWithTheHandler_RecordsNothing()
     {
         var payload = new Payload("Ada");
 
-        // Arity disagrees with the handler, so the positional mapping cannot be trusted;
-        // exactly one argument is of the accepted type, which is unambiguous on its own.
+        // Arity disagrees with the handler, so the positional mapping cannot be trusted at
+        // all — including for the arguments that happen to look right.
         var context = BuildContext(
             Handler(nameof(Handlers.ComplexBody)),
             typeof(Payload),
             [1, 2, payload]);
 
+        Invoke(context, variesByRequest: false).Should().BeNull();
+    }
+
+    [Test]
+    public void GetBoundBody_ForTheCanonicalMinimalApiPost_RecordsTheBody()
+    {
+        // MapPost("/todos", (Payload payload) => ...) — one unattributed complex parameter,
+        // no route token, no [FromBody]. This is the shape Minimal APIs are designed
+        // around, and the reason body capture cannot key off [FromBody] alone: the
+        // attribute is absent here, and refresh has to work for this endpoint above all.
+        var payload = new Payload("Ada");
+
+        var context = BuildContext(
+            Handler(nameof(Handlers.CanonicalBody)),
+            typeof(Payload),
+            [payload]);
+
         Invoke(context, variesByRequest: false).Should().BeSameAs(payload);
+    }
+
+    [Test]
+    public void GetBoundBody_WhenAParameterOfTheBodyTypeIsBoundFromQuery_RecordsTheBody()
+    {
+        // Both parameters are strings and neither is named after a route token, so type
+        // and name cannot separate them — the binding source is what does.
+        var context = BuildContext(
+            Handler(nameof(Handlers.QueryAlongsideBody)),
+            typeof(string),
+            ["the-filter", "the-payload"]);
+
+        Invoke(context, variesByRequest: false).Should().Be("the-payload");
+    }
+
+    [Test]
+    public void GetBoundBody_WhenAParameterOfTheBodyTypeIsBoundFromAHeader_RecordsTheBody()
+    {
+        var context = BuildContext(
+            Handler(nameof(Handlers.HeaderAlongsideBody)),
+            typeof(string),
+            ["the-trace-id", "the-payload"]);
+
+        Invoke(context, variesByRequest: false).Should().Be("the-payload");
     }
 }
