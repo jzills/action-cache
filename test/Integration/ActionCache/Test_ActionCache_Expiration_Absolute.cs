@@ -18,8 +18,10 @@ public class Test_ActionCache_Expiration_Absolute
         await Cache!.SetAsync("Key_Expiration_1", "Value_1");
 
         // Captured after the write, so the entry expires at or before this point. A clock
-        // deadline rather than a sleep — see WallClock.
-        var expiresBy = DateTimeOffset.UtcNow.AddSeconds(5);
+        // deadline rather than a sleep — see WallClock — plus the same headroom the original
+        // sleep had: TTL enforcement is eventual on Cosmos and the key-index sweeps are lazy,
+        // so passing the expiry instant by a hair is not enough.
+        var expiredWell = DateTimeOffset.UtcNow.AddSeconds(5).AddSeconds(5);
 
         var result = await Cache!.GetAsync<string?>("Key_Expiration_1");
         var keys = await Cache!.GetKeysAsync();
@@ -27,7 +29,7 @@ public class Test_ActionCache_Expiration_Absolute
         Assert.That(result, Is.EqualTo("Value_1"));
         Assert.That(keys.Count(), Is.EqualTo(1));
 
-        await WallClock.WaitUntilPast(expiresBy);
+        await WallClock.WaitUntilPast(expiredWell);
 
         result = await Cache!.GetAsync<string?>("Key_Expiration_1");
         keys = await Cache!.GetKeysAsync();
@@ -46,8 +48,10 @@ public class Test_ActionCache_Expiration_Absolute
         await Cache!.SetAsync("Key_Expiration_1", "Value_1");
 
         // Captured after the write, so the entry expires at or before this point. A clock
-        // deadline rather than a sleep — see WallClock.
-        var expiresBy = DateTimeOffset.UtcNow.AddSeconds(5);
+        // deadline rather than a sleep — see WallClock — plus the same headroom the original
+        // sleep had: TTL enforcement is eventual on Cosmos and the key-index sweeps are lazy,
+        // so passing the expiry instant by a hair is not enough.
+        var expiredWell = DateTimeOffset.UtcNow.AddSeconds(5).AddSeconds(5);
 
         var result = await Cache!.GetAsync<string?>("Key_Expiration_1");
         var keys = await Cache!.GetKeysAsync();
@@ -55,7 +59,7 @@ public class Test_ActionCache_Expiration_Absolute
         Assert.That(result, Is.EqualTo("Value_1"));
         Assert.That(keys.Count(), Is.EqualTo(1));
 
-        await WallClock.WaitUntilPast(expiresBy);
+        await WallClock.WaitUntilPast(expiredWell);
 
         keys = await Cache!.GetKeysAsync();
         result = await Cache!.GetAsync<string?>("Key_Expiration_1");

@@ -77,4 +77,7 @@ internal static partial class ActionCacheLog
 
     [LoggerMessage(EventId = 3004, Level = LogLevel.Warning, Message = "ActionCache refresh replayed '{Method} {Path}' but it returned {StatusCode}; the cached entry was left unchanged.")]
     public static partial void RefreshReplayNotSuccessful(ILogger logger, string method, string path, int statusCode);
+
+    [LoggerMessage(EventId = 3005, Level = LogLevel.Error, Message = "ActionCache refresh failed on key '{Key}' in namespace '{Namespace}'; that entry was left unchanged and the refresh continued with the remaining keys.")]
+    public static partial void RefreshKeyFailed(ILogger logger, Exception exception, string key, string @namespace);
 }
