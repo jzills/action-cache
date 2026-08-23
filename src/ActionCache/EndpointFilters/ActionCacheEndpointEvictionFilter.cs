@@ -44,6 +44,7 @@ public class ActionCacheEndpointEvictionFilter : ActionCacheFilterBase, IEndpoin
             context.HttpContext.Response.Headers.AddCacheStatus(CacheStatus.Evict);
 
             await Cache.RemoveAsync();
+            RecordEviction();
         }
 
         return result;

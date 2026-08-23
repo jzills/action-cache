@@ -16,7 +16,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\ActionCache.csproj" />
+    <ProjectReference Include="..\..\src\ActionCache\ActionCache.csproj" />
+    <ProjectReference Include="..\..\src\ActionCache.Redis\ActionCache.Redis.csproj" />
   </ItemGroup>
 
 </Project>

@@ -151,13 +151,23 @@ public abstract class ActionCacheFilterAbstractFactoryBase<TFilter> : IActionCac
         }
         else
         {
-            var cacheHandler = new ActionCacheHandler(caches.First());
+            // Each layer gets its own handler, so the layer after it has somewhere to hang.
+            // Calling SetNext repeatedly on the head instead assigned over the previous
+            // value, leaving the chain as first -> last with every layer between them
+            // unreachable: never read, written, evicted or refreshed, and absent from the
+            // GetKeysAsync union that eviction and refresh drive off. Two instances — one
+            // backend and one namespace — happened to be the only shape that behaved.
+            var head = new ActionCacheHandler(caches[0]);
+            var tail = head;
+
             foreach (var cache in caches.Skip(1))
             {
-                cacheHandler.SetNext(cache);
+                var next = new ActionCacheHandler(cache);
+                tail.SetNext(next);
+                tail = next;
             }
 
-            return CreateFilter(cacheHandler, type, singleFlight, varyByOptions ?? new VaryByOptions());
+            return CreateFilter(head, type, singleFlight, varyByOptions ?? new VaryByOptions());
         }
     }
 

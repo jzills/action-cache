@@ -157,9 +157,11 @@ public class ResilientActionCache : IActionCache
             cancellationToken,
             onCompleted: _ =>
             {
-                ActionCacheDiagnostics.Evictions.Add(1,
-                    new KeyValuePair<string, object?>("namespace", _metricNamespace));
-
+                // The actioncache.evictions counter is deliberately not recorded here. This
+                // decorator wraps every backend individually, and ActionCacheHandler fans a
+                // namespace eviction out to each layer, so a Memory + Redis + SQL chain
+                // published three evictions for one request. The eviction filters record it
+                // once per request instead — the same move the request counter already made.
                 if (_logger.IsEnabled(LogLevel.Debug))
                 {
                     ActionCacheLog.CacheEvicted(_logger, (string)_namespace);

@@ -1,3 +1,4 @@
+using System.Reflection;
 using ActionCache.Common.Caching;
 using ActionCache.Common.Concurrency;
 using ActionCache.Common.Diagnostics;
@@ -158,10 +159,19 @@ public class ActionCacheEndpointFilter : ActionCacheFilterBase, IEndpointFilter
     /// <returns>The bound body model, or <see langword="null"/> when there is none to record.</returns>
     /// <remarks>
     /// The MVC filter reads the body parameter off the action descriptor; Minimal APIs have
-    /// no descriptor, so the endpoint's <see cref="IAcceptsMetadata"/> names the type the
-    /// framework bound from the body and the matching argument is that model. Without this
-    /// a cached <c>MapPost</c> recorded no body at all, and its replay — sent bodyless —
-    /// was answered 400 or 415, so refresh could never replace the entry.
+    /// no descriptor. <see cref="IAcceptsMetadata"/> names the type bound from the body, but
+    /// the type alone does not identify the argument: in
+    /// <c>MapPost("/echo/{name}", (string name, [FromBody] string payload) =&gt; ...)</c> the
+    /// request type is <c>string</c> and so is the route value, and matching on type picked
+    /// <c>name</c> — refresh then replayed the route value as the payload and overwrote a
+    /// good entry with a response computed for different input, under the original key.
+    ///
+    /// The handler's <see cref="MethodInfo"/> is in the endpoint metadata and its parameters
+    /// line up positionally with <see cref="EndpointFilterInvocationContext.Arguments"/>, so
+    /// the body parameter is identified rather than guessed. Anything short of exactly one
+    /// candidate records nothing, and refresh then skips the entry and says so. That is the
+    /// safe direction: a wrong body corrupts the entry on replay, a missing one only leaves
+    /// it stale.
     /// </remarks>
     private static object? GetBoundBody(EndpointFilterInvocationContext context, bool variesByRequest)
     {
@@ -173,23 +183,77 @@ public class ActionCacheEndpointFilter : ActionCacheFilterBase, IEndpointFilter
             return null;
         }
 
-        var requestType = context.HttpContext.GetEndpoint()?
-            .Metadata.GetMetadata<IAcceptsMetadata>()?.RequestType;
-
-        if (requestType is null)
+        var endpoint = context.HttpContext.GetEndpoint();
+        if (endpoint?.Metadata.GetMetadata<IAcceptsMetadata>()?.RequestType is not { } requestType)
         {
             return null;
         }
 
-        foreach (var argument in context.Arguments)
+        // Arguments are positional against the handler's parameters. If the counts disagree
+        // the two cannot be lined up, so nothing here can be trusted.
+        var parameters = endpoint.Metadata.GetMetadata<MethodInfo>()?.GetParameters();
+        if (parameters is null || parameters.Length != context.Arguments.Count)
         {
-            if (argument is not null && requestType.IsInstanceOfType(argument))
-            {
-                return argument;
-            }
+            return null;
         }
 
-        return null;
+        var routeValues = context.HttpContext.Request.RouteValues;
+        int? found = null;
+
+        for (var index = 0; index < parameters.Length; index++)
+        {
+            if (!IsBodyParameter(parameters[index], requestType, routeValues))
+            {
+                continue;
+            }
+
+            if (found is not null)
+            {
+                return null;
+            }
+
+            found = index;
+        }
+
+        return found is null ? null : context.Arguments[found.Value];
+    }
+
+    /// <summary>
+    /// Whether this handler parameter is the one bound from the request body.
+    /// </summary>
+    /// <param name="parameter">The handler parameter.</param>
+    /// <param name="requestType">The type <see cref="IAcceptsMetadata"/> names for the body.</param>
+    /// <param name="routeValues">The route values the request matched.</param>
+    /// <returns><see langword="true"/> when the body binds this parameter.</returns>
+    /// <remarks>
+    /// An explicit <c>[FromBody]</c> says so outright. Failing that the body is the
+    /// parameter of the accepted type that nothing else claims: not bound from route,
+    /// query, header, form or services, and not named after a route token — an unattributed
+    /// parameter matching a route token binds from the route. Minimal APIs infer the body
+    /// for a complex type rather than requiring the attribute, so the inference, not the
+    /// attribute, is the path the ordinary <c>MapPost</c> takes.
+    /// </remarks>
+    private static bool IsBodyParameter(
+        ParameterInfo parameter,
+        Type requestType,
+        RouteValueDictionary routeValues)
+    {
+        var attributes = parameter.GetCustomAttributes(inherit: false);
+
+        if (attributes.OfType<IFromBodyMetadata>().Any())
+        {
+            return true;
+        }
+
+        if (attributes.Any(attribute =>
+                attribute is IFromRouteMetadata or IFromQueryMetadata or IFromHeaderMetadata
+                          or IFromFormMetadata or IFromServiceMetadata))
+        {
+            return false;
+        }
+
+        return requestType.IsAssignableFrom(parameter.ParameterType) &&
+               (parameter.Name is null || !routeValues.ContainsKey(parameter.Name));
     }
 
     /// <summary>

@@ -12,11 +12,6 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - name: Setup Redis
-        uses: supercharge/redis-github-action@1.8.1
-        with:
-          redis-version: 7
-
       - name: Setup .NET
         uses: actions/setup-dotnet@v6
         with:
@@ -26,6 +21,14 @@ jobs:
 
       - name: Run unit tests
         run: dotnet test test/Unit/Unit.csproj --verbosity normal
+
+      # The same compose file pr.yml uses. This job previously started Redis alone, but the
+      # integration suite is parameterized over every backend — SQL Server on 1433 and
+      # Cosmos on 8081 as well — and nothing in it skips a backend that is absent. Every
+      # SQL Server and Cosmos case therefore failed, so no push to release/** could ever
+      # reach the publish job.
+      - name: Start services
+        run: docker compose -f test/Integration/docker-compose.yml up -d --wait
 
       # Sequential per framework — see the note in pr.yml.
       - name: Run integration tests (net8.0)

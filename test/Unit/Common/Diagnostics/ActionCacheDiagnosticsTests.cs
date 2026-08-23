@@ -138,24 +138,29 @@ public class ActionCacheDiagnosticsTests
     }
 
     [Test]
-    public async Task RemoveAsync_RecordsAnEviction()
-    {
-        using var collector = new Collector("actioncache.evictions");
-
-        var cache = ResilientCacheBuilder.Decorate(
-            _factory.Create(nameof(RemoveAsync_RecordsAnEviction))!);
-
-        await cache.RemoveAsync();
-
-        collector.Measurements.Should().ContainSingle();
-    }
-
-    [Test]
     public void MeterAndActivitySourceNames_AreStable()
     {
         // These are what a consumer wires into OpenTelemetry; renaming them silently
         // breaks every dashboard built on them.
         ActionCacheDiagnostics.MeterName.Should().Be("ActionCache");
         ActionCacheDiagnostics.ActivitySourceName.Should().Be("ActionCache");
+    }
+
+    [Test]
+    public async Task NamespaceEviction_OnTheDecorator_RecordsNoEviction()
+    {
+        // ResilientActionCache decorates each backend, and ActionCacheHandler fans a
+        // namespace eviction out to every layer, so a Memory + Redis + SQL chain published
+        // three evictions for one request — a count of backend calls, not of evictions.
+        // The eviction filters record it once per request instead.
+        using var collector = new Collector("actioncache.evictions");
+
+        var cache = ResilientCacheBuilder.Decorate(
+            _factory.Create(nameof(NamespaceEviction_OnTheDecorator_RecordsNoEviction))!);
+
+        await cache.SetAsync("Key", "Value");
+        await cache.RemoveAsync();
+
+        collector.Measurements.Should().BeEmpty();
     }
 }
