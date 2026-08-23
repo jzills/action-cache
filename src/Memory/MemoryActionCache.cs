@@ -76,10 +76,14 @@ public class MemoryActionCache : ActionCacheBase<SemaphoreSlimLock>
     /// Asynchronously gets a value from the cache.
     /// </summary>
     /// <param name="key">The key of the cache entry.</param>
+    /// <param name="cancellationToken">A token to observe while waiting for the operation to complete.</param>
     /// <returns>The cached value or null if not found.</returns> 
 #pragma warning disable CS8609, CS8619
-    public override Task<TValue> GetAsync<TValue>(string key) =>
-        Task.FromResult(Cache.Get<TValue>(Namespace.Create(key)));
+    public override Task<TValue> GetAsync<TValue>(string key, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        return Task.FromResult(Cache.Get<TValue>(Namespace.Create(key)));
+    }
 #pragma warning restore CS8609, CS8619
 
     /// <summary>
@@ -87,8 +91,11 @@ public class MemoryActionCache : ActionCacheBase<SemaphoreSlimLock>
     /// </summary>
     /// <param name="key">The cache key to set the value for.</param>
     /// <param name="value">The value to set in the cache.</param>
-    public override Task SetAsync<TValue>(string key, [AllowNull] TValue value)
+    /// <param name="cancellationToken">A token to observe while waiting for the operation to complete.</param>
+    public override Task SetAsync<TValue>(string key, [AllowNull] TValue value, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
+
         var entryOptions = CreateEntryOptions();
         Cache.Set(Namespace.Create(key), value, entryOptions);
 
@@ -100,8 +107,11 @@ public class MemoryActionCache : ActionCacheBase<SemaphoreSlimLock>
     /// Asynchronously removes a value from the cache.
     /// </summary>
     /// <param name="key">The key of the cache entry to remove.</param>
-    public override Task RemoveAsync(string key)
+    /// <param name="cancellationToken">A token to observe while waiting for the operation to complete.</param>
+    public override Task RemoveAsync(string key, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
+
         Cache.Remove(Namespace.Create(key));
 
         return CacheLocker.WaitForLockThenAsync(Namespace, 
@@ -111,8 +121,11 @@ public class MemoryActionCache : ActionCacheBase<SemaphoreSlimLock>
     /// <summary>
     /// Asynchronously removes all values from the cache.
     /// </summary>
-    public override Task RemoveAsync()
+    /// <param name="cancellationToken">A token to observe while waiting for the operation to complete.</param>
+    public override Task RemoveAsync(CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
+
         // Cancelling the namespace's token source evicts every entry carrying it, the key
         // index included. Lifecycle lives in the token source, which owns the store.
         ExpirationTokens.Reset(Namespace);
@@ -122,9 +135,12 @@ public class MemoryActionCache : ActionCacheBase<SemaphoreSlimLock>
     /// <summary>
     /// Retrieves all keys associated with this cache.
     /// </summary>
+    /// <param name="cancellationToken">A token to observe while waiting for the operation to complete.</param>
     /// <returns>An enumerable of strings representing current cache entry keys.</returns>
-    public override async Task<IEnumerable<string>> GetKeysAsync()
+    public override async Task<IEnumerable<string>> GetKeysAsync(CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
+
         var keysWithAbsoluteExpiration = await CacheLocker.WaitForLockThenAsync(Namespace,
             () => Cache.GetKeys(Namespace, CreateIndexOptions()));
 

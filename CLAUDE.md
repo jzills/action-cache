@@ -78,6 +78,22 @@ separate lockers make a key collision impossible.
 
 Cache keys include a namespace component. Namespaces can embed route parameter tokens (e.g., `"Account:{id}"`), so eviction can target a specific resource. Key construction is in `Common/Keys/ActionCacheKeyBuilder`.
 
+### Cache Key Composition
+
+A key has three components (`Common/Keys/ActionCacheKeyComponents`): route values, action arguments, and **vary-by values**. The third is resolved per request by `ActionCacheVaryByResolver` from the attribute's `VaryByUser` / `VaryByHeader` / `VaryByQuery` / `VaryByClaim` plus every registered `IActionCacheKeyContributor`.
+
+`VaryByUserMode.Auto` is the default and varies by the authenticated user's identity — without it, two users on one `[Authorize]` endpoint share a cache entry and the second is served the first's response. The component is only serialized when non-empty, so keys for endpoints that vary by nothing are unchanged from before the feature existed.
+
+`ActionCacheRefreshProvider` **skips** keys carrying vary-by values: it re-invokes actions by reflection with no `HttpContext` and cannot reproduce per-request context.
+
+### Cancellation
+
+Every `IActionCache` method takes a trailing `CancellationToken`; filters pass `HttpContext.RequestAborted`. `ResilientActionCache` rethrows `OperationCanceledException` when the *caller's* token is cancelled (even fail-open) but treats an elapsed `ActionCacheResilienceOptions.OperationTimeout` as a degradable backend failure. `IMemoryCache` is synchronous and StackExchange.Redis's `IDatabase` accepts no token, so those two check the token before dispatch; SQL Server and Cosmos forward it.
+
+### Layered Backends
+
+`ActionCacheHandler` chains one cache per backend. `GetAsync` promotes a deeper-layer hit into the first layer; `GetKeysAsync` unions every layer (eviction and refresh depend on seeing all keys).
+
 ### DI Registration
 
 ```csharp

@@ -40,6 +40,7 @@ public class ActionCacheKeyComponentsBuilder
         new ActionCacheKeyComponents 
         { 
             RouteValues     = NameValues.ParseValueAsJson<RouteValueDictionary>(ActionCacheKeyComponents.RouteValuesKey), 
-            ActionArguments = NameValues.ParseValueAsJson<Dictionary<string, object?>>(ActionCacheKeyComponents.ActionArgumentsKey)
+            ActionArguments = NameValues.ParseValueAsJson<Dictionary<string, object?>>(ActionCacheKeyComponents.ActionArgumentsKey),
+            VaryByValues    = NameValues.ParseValueAsJson<SortedDictionary<string, string?>>(ActionCacheKeyComponents.VaryByValuesKey)
         };
 }

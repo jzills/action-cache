@@ -43,7 +43,7 @@ public class ResilientActionCacheTests
     [Test]
     public async Task GetAsync_WhenInnerThrows_FailOpen_ReturnsDefaultAndLogsWarning()
     {
-        _inner.Setup(cache => cache.GetAsync<string>(It.IsAny<string>()))
+        _inner.Setup(cache => cache.GetAsync<string>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
               .ThrowsAsync(new InvalidOperationException("backend down"));
 
         var result = await CreateSut().GetAsync<string>("key");
@@ -55,7 +55,7 @@ public class ResilientActionCacheTests
     [Test]
     public async Task GetAsync_WhenInnerThrows_FailClosed_Rethrows()
     {
-        _inner.Setup(cache => cache.GetAsync<string>(It.IsAny<string>()))
+        _inner.Setup(cache => cache.GetAsync<string>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
               .ThrowsAsync(new InvalidOperationException("backend down"));
 
         var act = async () => await CreateSut(failClosed: true).GetAsync<string>("key");
@@ -66,7 +66,7 @@ public class ResilientActionCacheTests
     [Test]
     public async Task GetAsync_WhenInnerThrows_FailClosed_LogsErrorAndRethrows()
     {
-        _inner.Setup(cache => cache.GetAsync<string>(It.IsAny<string>()))
+        _inner.Setup(cache => cache.GetAsync<string>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
               .ThrowsAsync(new InvalidOperationException("backend down"));
 
         var act = async () => await CreateSut(failClosed: true).GetAsync<string>("key");
@@ -79,7 +79,7 @@ public class ResilientActionCacheTests
     [Test]
     public async Task GetKeysAsync_WhenInnerThrows_FailOpen_ReturnsEmpty()
     {
-        _inner.Setup(cache => cache.GetKeysAsync())
+        _inner.Setup(cache => cache.GetKeysAsync(It.IsAny<CancellationToken>()))
               .ThrowsAsync(new InvalidOperationException());
 
         var result = await CreateSut().GetKeysAsync();
@@ -91,7 +91,7 @@ public class ResilientActionCacheTests
     [Test]
     public async Task SetAsync_WhenInnerThrows_FailOpen_SwallowsAndLogs()
     {
-        _inner.Setup(cache => cache.SetAsync(It.IsAny<string>(), It.IsAny<string?>()))
+        _inner.Setup(cache => cache.SetAsync(It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
               .ThrowsAsync(new InvalidOperationException());
 
         var act = async () => await CreateSut().SetAsync("key", "value");
@@ -103,7 +103,7 @@ public class ResilientActionCacheTests
     [Test]
     public async Task SetAsync_WhenInnerThrows_FailClosed_Rethrows()
     {
-        _inner.Setup(cache => cache.SetAsync(It.IsAny<string>(), It.IsAny<string?>()))
+        _inner.Setup(cache => cache.SetAsync(It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
               .ThrowsAsync(new InvalidOperationException());
 
         var act = async () => await CreateSut(failClosed: true).SetAsync("key", "value");
@@ -114,7 +114,7 @@ public class ResilientActionCacheTests
     [Test]
     public async Task RemoveAsyncByKey_WhenInnerThrows_FailOpen_Swallows()
     {
-        _inner.Setup(cache => cache.RemoveAsync(It.IsAny<string>()))
+        _inner.Setup(cache => cache.RemoveAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
               .ThrowsAsync(new InvalidOperationException());
 
         var act = async () => await CreateSut().RemoveAsync("key");
@@ -126,7 +126,7 @@ public class ResilientActionCacheTests
     [Test]
     public async Task RemoveAsyncAll_WhenInnerThrows_FailClosed_Rethrows()
     {
-        _inner.Setup(cache => cache.RemoveAsync())
+        _inner.Setup(cache => cache.RemoveAsync(It.IsAny<CancellationToken>()))
               .ThrowsAsync(new InvalidOperationException());
 
         var act = async () => await CreateSut(failClosed: true).RemoveAsync();
@@ -137,7 +137,7 @@ public class ResilientActionCacheTests
     [Test]
     public async Task RefreshAsync_WhenInnerThrows_FailOpen_Swallows()
     {
-        _inner.Setup(cache => cache.RefreshAsync())
+        _inner.Setup(cache => cache.RefreshAsync(It.IsAny<CancellationToken>()))
               .ThrowsAsync(new InvalidOperationException());
 
         var act = async () => await CreateSut().RefreshAsync();
@@ -149,7 +149,7 @@ public class ResilientActionCacheTests
     [Test]
     public async Task GetKeysAsync_WhenInnerThrows_FailClosed_Rethrows()
     {
-        _inner.Setup(cache => cache.GetKeysAsync())
+        _inner.Setup(cache => cache.GetKeysAsync(It.IsAny<CancellationToken>()))
               .ThrowsAsync(new InvalidOperationException());
 
         var act = async () => await CreateSut(failClosed: true).GetKeysAsync();
@@ -160,7 +160,7 @@ public class ResilientActionCacheTests
     [Test]
     public async Task RemoveAsyncByKey_WhenInnerThrows_FailClosed_Rethrows()
     {
-        _inner.Setup(cache => cache.RemoveAsync(It.IsAny<string>()))
+        _inner.Setup(cache => cache.RemoveAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
               .ThrowsAsync(new InvalidOperationException());
 
         var act = async () => await CreateSut(failClosed: true).RemoveAsync("key");
@@ -171,7 +171,7 @@ public class ResilientActionCacheTests
     [Test]
     public async Task RefreshAsync_WhenInnerThrows_FailClosed_Rethrows()
     {
-        _inner.Setup(cache => cache.RefreshAsync())
+        _inner.Setup(cache => cache.RefreshAsync(It.IsAny<CancellationToken>()))
               .ThrowsAsync(new InvalidOperationException());
 
         var act = async () => await CreateSut(failClosed: true).RefreshAsync();
@@ -182,8 +182,8 @@ public class ResilientActionCacheTests
     [Test]
     public async Task HealthyInner_PassesThroughValuesWithoutLogging()
     {
-        _inner.Setup(cache => cache.GetAsync<string>("key")).ReturnsAsync("value");
-        _inner.Setup(cache => cache.GetKeysAsync()).ReturnsAsync(["a", "b"]);
+        _inner.Setup(cache => cache.GetAsync<string>("key", It.IsAny<CancellationToken>())).ReturnsAsync("value");
+        _inner.Setup(cache => cache.GetKeysAsync(It.IsAny<CancellationToken>())).ReturnsAsync(["a", "b"]);
 
         var sut = CreateSut();
 
@@ -192,7 +192,7 @@ public class ResilientActionCacheTests
         await sut.SetAsync("key", "value");
         sut.GetNamespace().Should().Be(new Namespace("Test"));
 
-        _inner.Verify(cache => cache.SetAsync("key", "value"), Times.Once);
+        _inner.Verify(cache => cache.SetAsync("key", "value", It.IsAny<CancellationToken>()), Times.Once);
         VerifyWarningLogged(Times.Never());
     }
 }

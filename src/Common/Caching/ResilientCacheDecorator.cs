@@ -12,6 +12,7 @@ public class ResilientCacheDecorator
 {
     private readonly ILogger<ResilientActionCache> _logger;
     private readonly bool _failClosed;
+    private readonly TimeSpan? _operationTimeout;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ResilientCacheDecorator"/> class.
@@ -24,6 +25,7 @@ public class ResilientCacheDecorator
     {
         _logger = loggerFactory.CreateLogger<ResilientActionCache>();
         _failClosed = resilienceOptions.Value.FailClosed;
+        _operationTimeout = resilienceOptions.Value.OperationTimeout;
     }
 
     /// <summary>
@@ -32,5 +34,5 @@ public class ResilientCacheDecorator
     /// <param name="cache">The backing cache to guard.</param>
     /// <returns>A resilient cache decorating <paramref name="cache"/>.</returns>
     public IActionCache Decorate(IActionCache cache) =>
-        new ResilientActionCache(cache, _logger, _failClosed);
+        new ResilientActionCache(cache, _logger, _failClosed, _operationTimeout);
 }

@@ -1,6 +1,7 @@
 using ActionCache.Common.Caching;
 using ActionCache.Common.Concurrency;
 using ActionCache.Common.Enums;
+using ActionCache.Common.Keys.VaryBy;
 using ActionCache.EndpointFilters;
 using ActionCache.Exceptions;
 using ActionCache.Filters;
@@ -23,21 +24,23 @@ public class ActionCacheEndpointFilterAbstractFactory : ActionCacheFilterAbstrac
     /// <param name="resilientDecorator">Wraps created caches for graceful degradation.</param>
     /// <param name="loggerFactory">The factory used to create loggers for the filters this factory produces.</param>
     /// <param name="singleFlight">Coalesces concurrent misses for the same key.</param>
+    /// <param name="varyByResolver">Resolves the request dimensions that form part of the cache key.</param>
     public ActionCacheEndpointFilterAbstractFactory(
         IEnumerable<IActionCacheFactory> cacheFactories,
         TemplateBinderFactory binderFactory,
         ResilientCacheDecorator resilientDecorator,
         ILoggerFactory loggerFactory,
-        IActionCacheSingleFlight singleFlight
-    ) : base(cacheFactories, binderFactory, resilientDecorator, loggerFactory, singleFlight)
+        IActionCacheSingleFlight singleFlight,
+        ActionCacheVaryByResolver varyByResolver
+    ) : base(cacheFactories, binderFactory, resilientDecorator, loggerFactory, singleFlight, varyByResolver)
     {
     }
 
     /// <inheritdoc/>
-    internal override IEndpointFilter CreateFilter(ActionCacheHandler cache, FilterType type, bool singleFlight) =>
+    internal override IEndpointFilter CreateFilter(ActionCacheHandler cache, FilterType type, bool singleFlight, VaryByOptions varyByOptions) =>
         type switch
         {
-            FilterType.Add      => new ActionCacheEndpointFilter(cache, BinderFactory, LoggerFactory.CreateLogger<ActionCacheEndpointFilter>(), SingleFlight, singleFlight),
+            FilterType.Add      => new ActionCacheEndpointFilter(cache, BinderFactory, LoggerFactory.CreateLogger<ActionCacheEndpointFilter>(), SingleFlight, singleFlight, VaryByResolver, varyByOptions),
             FilterType.Evict    => new ActionCacheEndpointEvictionFilter(cache, BinderFactory, LoggerFactory.CreateLogger<ActionCacheEndpointEvictionFilter>()),
             _                   => throw new FilterTypeNotSupportedException(type)
         };

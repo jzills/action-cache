@@ -90,6 +90,21 @@ public class ActionCacheOptionsBuilder
     }
 
     /// <summary>
+    /// Bounds how long a single cache-backend operation may take before it is abandoned.
+    /// </summary>
+    /// <param name="timeout">The maximum duration of one backend operation.</param>
+    /// <returns>Returns this instance of <see cref="ActionCacheOptionsBuilder"/>.</returns>
+    /// <remarks>
+    /// Fail-open catches exceptions; it does not bound a backend that hangs rather than
+    /// throws. Without a timeout such a backend hangs the request indefinitely.
+    /// </remarks>
+    public ActionCacheOptionsBuilder UseOperationTimeout(TimeSpan timeout)
+    {
+        Options.OperationTimeout = timeout;
+        return this;
+    }
+
+    /// <summary>
     /// Coordinates single-flight across every instance of the application using the
     /// configured Redis or SQL Server backend's distributed lock, instead of coalescing
     /// only within one process.

@@ -23,19 +23,19 @@ public class ActionCacheHandlerTests
     [Test]
     public async Task GetAsync_WhenCacheHit_ReturnsPrimaryValue()
     {
-        _cacheMock.Setup(cache => cache.GetAsync<string>("key")).ReturnsAsync("cached");
+        _cacheMock.Setup(cache => cache.GetAsync<string>("key", It.IsAny<CancellationToken>())).ReturnsAsync("cached");
 
         var result = await _sut.GetAsync<string>("key");
 
         result.Should().Be("cached");
-        _nextCacheMock.Verify(cache => cache.GetAsync<string>("key"), Times.Never);
+        _nextCacheMock.Verify(cache => cache.GetAsync<string>("key", It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Test]
     public async Task GetAsync_WhenCacheMissAndNextExists_ReturnsNextValue()
     {
-        _cacheMock.Setup(cache => cache.GetAsync<string>("key")).ReturnsAsync((string?)null);
-        _nextCacheMock.Setup(cache => cache.GetAsync<string>("key")).ReturnsAsync("from-next");
+        _cacheMock.Setup(cache => cache.GetAsync<string>("key", It.IsAny<CancellationToken>())).ReturnsAsync((string?)null);
+        _nextCacheMock.Setup(cache => cache.GetAsync<string>("key", It.IsAny<CancellationToken>())).ReturnsAsync("from-next");
         _sut.SetNext(_nextCacheMock.Object);
 
         var result = await _sut.GetAsync<string>("key");
@@ -46,7 +46,7 @@ public class ActionCacheHandlerTests
     [Test]
     public async Task GetAsync_WhenCacheMissAndNoNext_ReturnsNull()
     {
-        _cacheMock.Setup(cache => cache.GetAsync<string>("key")).ReturnsAsync((string?)null);
+        _cacheMock.Setup(cache => cache.GetAsync<string>("key", It.IsAny<CancellationToken>())).ReturnsAsync((string?)null);
 
         var result = await _sut.GetAsync<string>("key");
 
@@ -56,7 +56,7 @@ public class ActionCacheHandlerTests
     [Test]
     public async Task GetKeysAsync_WhenPrimaryHasKeys_ReturnsPrimaryKeys()
     {
-        _cacheMock.Setup(cache => cache.GetKeysAsync()).ReturnsAsync(new[] { "k1", "k2" });
+        _cacheMock.Setup(cache => cache.GetKeysAsync(It.IsAny<CancellationToken>())).ReturnsAsync(new[] { "k1", "k2" });
 
         var result = await _sut.GetKeysAsync();
 
@@ -66,8 +66,8 @@ public class ActionCacheHandlerTests
     [Test]
     public async Task GetKeysAsync_WhenPrimaryReturnsNullAndNextExists_ReturnsNextKeys()
     {
-        _cacheMock.Setup(cache => cache.GetKeysAsync()).ReturnsAsync((IEnumerable<string>?)null!);
-        _nextCacheMock.Setup(cache => cache.GetKeysAsync()).ReturnsAsync(new[] { "k3" });
+        _cacheMock.Setup(cache => cache.GetKeysAsync(It.IsAny<CancellationToken>())).ReturnsAsync((IEnumerable<string>?)null!);
+        _nextCacheMock.Setup(cache => cache.GetKeysAsync(It.IsAny<CancellationToken>())).ReturnsAsync(new[] { "k3" });
         _sut.SetNext(_nextCacheMock.Object);
 
         var result = await _sut.GetKeysAsync();
@@ -78,7 +78,7 @@ public class ActionCacheHandlerTests
     [Test]
     public async Task GetKeysAsync_WhenBothCachesReturnNull_ReturnsEmptyCollection()
     {
-        _cacheMock.Setup(cache => cache.GetKeysAsync()).ReturnsAsync((IEnumerable<string>?)null!);
+        _cacheMock.Setup(cache => cache.GetKeysAsync(It.IsAny<CancellationToken>())).ReturnsAsync((IEnumerable<string>?)null!);
 
         var result = await _sut.GetKeysAsync();
 
@@ -101,7 +101,7 @@ public class ActionCacheHandlerTests
     {
         await _sut.RefreshAsync();
 
-        _cacheMock.Verify(cache => cache.RefreshAsync(), Times.Once);
+        _cacheMock.Verify(cache => cache.RefreshAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Test]
@@ -111,7 +111,7 @@ public class ActionCacheHandlerTests
 
         await _sut.RefreshAsync();
 
-        _nextCacheMock.Verify(cache => cache.RefreshAsync(), Times.Once);
+        _nextCacheMock.Verify(cache => cache.RefreshAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Test]
@@ -119,7 +119,7 @@ public class ActionCacheHandlerTests
     {
         await _sut.RefreshAsync();
 
-        _nextCacheMock.Verify(cache => cache.RefreshAsync(), Times.Never);
+        _nextCacheMock.Verify(cache => cache.RefreshAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Test]
@@ -127,7 +127,7 @@ public class ActionCacheHandlerTests
     {
         await _sut.RemoveAsync("key");
 
-        _cacheMock.Verify(cache => cache.RemoveAsync("key"), Times.Once);
+        _cacheMock.Verify(cache => cache.RemoveAsync("key", It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Test]
@@ -137,7 +137,7 @@ public class ActionCacheHandlerTests
 
         await _sut.RemoveAsync("key");
 
-        _nextCacheMock.Verify(cache => cache.RemoveAsync("key"), Times.Once);
+        _nextCacheMock.Verify(cache => cache.RemoveAsync("key", It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Test]
@@ -145,7 +145,7 @@ public class ActionCacheHandlerTests
     {
         await _sut.RemoveAsync();
 
-        _cacheMock.Verify(cache => cache.RemoveAsync(), Times.Once);
+        _cacheMock.Verify(cache => cache.RemoveAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Test]
@@ -155,7 +155,7 @@ public class ActionCacheHandlerTests
 
         await _sut.RemoveAsync();
 
-        _nextCacheMock.Verify(cache => cache.RemoveAsync(), Times.Once);
+        _nextCacheMock.Verify(cache => cache.RemoveAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Test]
@@ -163,7 +163,7 @@ public class ActionCacheHandlerTests
     {
         await _sut.SetAsync("key", "value");
 
-        _cacheMock.Verify(cache => cache.SetAsync("key", "value"), Times.Once);
+        _cacheMock.Verify(cache => cache.SetAsync("key", "value", It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Test]
@@ -173,7 +173,7 @@ public class ActionCacheHandlerTests
 
         await _sut.SetAsync("key", "value");
 
-        _nextCacheMock.Verify(cache => cache.SetAsync("key", "value"), Times.Once);
+        _nextCacheMock.Verify(cache => cache.SetAsync("key", "value", It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Test]

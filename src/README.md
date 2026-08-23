@@ -96,6 +96,71 @@ To make backend failures propagate to the caller instead, opt in to **fail-close
         options.FailClosed();
     });
 
+## Vary-By (Who the Response Belongs To)
+
+A cache key is built from the route values and action arguments. On an endpoint that
+returns data belonging to the caller, that is not enough on its own — two authenticated
+users would produce the same key, and the second would be served the first one's response.
+
+**ActionCache varies by the authenticated user automatically.** If a request is
+authenticated, the caller's identity joins the cache key without you having to ask:
+
+    [HttpGet("me")]
+    [Authorize]
+    [ActionCache(Namespace = "Me")]          // already per-user
+    public IActionResult GetMe() => Ok(_repository.ForUser(User));
+
+Anonymous requests are unaffected — there is no identity to separate, so they continue to
+share one entry.
+
+If a response genuinely does not depend on who asked for it, opt back out to recover the
+shared entry:
+
+    [ActionCache(Namespace = "Rates", VaryByUser = VaryByUserMode.Never)]
+
+Other dimensions are declared the same way, each a comma-separated list:
+
+    [ActionCache(
+        Namespace = "Catalog",
+        VaryByHeader = "Accept-Language",
+        VaryByQuery = "page,sort",
+        VaryByClaim = "tenant_id")]
+
+A named-but-absent header or query value is recorded as empty rather than skipped, so
+`Accept-Language: en` and no `Accept-Language` at all cannot collide on one entry.
+
+For anything the attributes cannot express — a tenant read from a subdomain, a
+feature-flag cohort, a negotiated API version — implement a contributor:
+
+    public class TenantKeyContributor : IActionCacheKeyContributor
+    {
+        public ValueTask ContributeAsync(
+            HttpContext httpContext,
+            IDictionary<string, string?> varyByValues,
+            CancellationToken cancellationToken)
+        {
+            varyByValues["tenant"] = httpContext.Request.Host.Host.Split('.')[0];
+            return ValueTask.CompletedTask;
+        }
+    }
+
+    builder.Services.AddActionCacheKeyContributor<TenantKeyContributor>();
+
+Every registered contributor runs for every cached request. Values are stored sorted, so
+the order contributors run in cannot change the key.
+
+### Two caveats worth knowing
+
+**Cardinality.** Per-user keys mean one entry per user per endpoint. On the memory backend
+set a `SizeLimit` so the cache cannot grow without bound:
+
+    options.UseMemoryCache(memory => memory.SizeLimit = 10_000);
+
+**Refresh skips varied entries.** `[ActionCacheRefresh]` re-invokes actions by reflection
+with no `HttpContext`, so it cannot reproduce the request a varied entry was built from.
+Rather than warm every variant with one identical value, it skips them and logs a warning.
+Varied entries are refreshed by ordinary expiry instead.
+
 ## Cache Stampede Protection
 
 When a hot entry expires, every concurrent request misses at once and they all execute the
@@ -127,6 +192,33 @@ opt in to the distributed lock:
 This requires Redis or SQL Server (Redis is preferred when both are configured) and throws
 at startup if neither is present. Note that every cache miss then costs a lock round-trip
 to the backend, which is why it is not the default.
+
+## Cancellation and Timeouts
+
+Every `IActionCache` operation takes a `CancellationToken`, and the filters pass
+`HttpContext.RequestAborted`, so a client that disconnects stops backend work in flight.
+A cancelled request always propagates its `OperationCanceledException` — it is never
+degraded into a cache miss, since nobody is waiting for the answer.
+
+Fail-open catches exceptions, but it cannot bound a backend that *hangs* rather than
+throws. Set a timeout for that:
+
+    builder.Services.AddActionCache(options =>
+    {
+        options.UseRedisCache(...);
+        options.UseOperationTimeout(TimeSpan.FromMilliseconds(250));
+    });
+
+An elapsed timeout is treated as a backend failure: degraded under fail-open, propagated
+under fail-closed. No timeout is configured by default.
+
+## Layered Backends
+
+When several backends are registered they form a chain. A read is served by the first
+layer that has the entry, and a hit in a deeper layer is **promoted into the faster one**,
+so a Memory + Redis stack stops paying the Redis round-trip after the first request. Key
+enumeration — which drives namespace eviction and refresh — unions every layer, so nothing
+is missed.
 
 ## Basic Usage
 

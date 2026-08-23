@@ -1,5 +1,6 @@
 using ActionCache.Common;
 using ActionCache.Common.Enums;
+using ActionCache.Common.Keys.VaryBy;
 using Microsoft.AspNetCore.Mvc.Filters;
 
 namespace ActionCache.Filters;
@@ -22,6 +23,45 @@ public class ActionCacheFilterFactory : ActionCacheFilterFactoryBase
     /// <value>Defaults to 0 which represents no expiration.</value>
     public long SlidingExpiration { get; set; } = ActionCacheEntryOptions.NoExpiration;
 
+
+    /// <summary>
+    /// Whether the authenticated user's identity forms part of the cache key.
+    /// </summary>
+    /// <value>
+    /// Defaults to <see cref="VaryByUserMode.Auto"/>: authenticated requests get per-user
+    /// cache entries automatically, which is what stops one user's response being served
+    /// to another. Set to <see cref="VaryByUserMode.Never"/> for a response that genuinely
+    /// does not depend on who asked.
+    /// </value>
+    public VaryByUserMode VaryByUser { get; set; } = VaryByUserMode.Auto;
+
+    /// <summary>
+    /// A comma-separated list of request header names to vary the cache key by.
+    /// </summary>
+    public string? VaryByHeader { get; set; }
+
+    /// <summary>
+    /// A comma-separated list of query-string keys to vary the cache key by.
+    /// </summary>
+    public string? VaryByQuery { get; set; }
+
+    /// <summary>
+    /// A comma-separated list of claim types to vary the cache key by.
+    /// </summary>
+    public string? VaryByClaim { get; set; }
+
+    /// <summary>
+    /// Collects this attribute's vary-by settings.
+    /// </summary>
+    /// <returns>The vary-by options declared here.</returns>
+    internal VaryByOptions GetVaryByOptions() => new()
+    {
+        User = VaryByUser,
+        Headers = VaryByHeader,
+        Query = VaryByQuery,
+        Claims = VaryByClaim
+    };
+
     /// <summary>
     /// Whether concurrent misses for one cache key are coalesced so the action executes once.
     /// </summary>
@@ -42,6 +82,7 @@ public class ActionCacheFilterFactory : ActionCacheFilterFactoryBase
             FilterType.Add,
             TimeSpan.FromMilliseconds(AbsoluteExpiration),
             TimeSpan.FromMilliseconds(SlidingExpiration),
-            SingleFlight
+            SingleFlight,
+            GetVaryByOptions()
         );
 }

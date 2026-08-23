@@ -9,7 +9,7 @@ namespace ActionCache.Common.Diagnostics;
 /// <remarks>
 /// EventId ranges: 1xxx cache operations (<c>ResilientActionCache</c>), 2xxx filter-level
 /// conditions the cache layer cannot observe, 3xxx refresh provider, 4xxx factory
-/// cache-creation failures, 5xxx Redis expiry subscription retries, 6xxx single-flight.
+/// cache-creation failures, 5xxx Redis expiry subscription retries, 6xxx single-flight, 7xxx vary-by.
 /// Hit/miss/set/evict/refresh outcomes are logged only by the 1xxx events; filters do not
 /// duplicate them.
 /// </remarks>
@@ -65,4 +65,10 @@ internal static partial class ActionCacheLog
 
     [LoggerMessage(EventId = 6001, Level = LogLevel.Debug, Message = "ActionCache single-flight could not acquire the lock for key '{Key}' in namespace '{Namespace}' within the timeout; executing uncoalesced.")]
     public static partial void SingleFlightLockTimeout(ILogger logger, string key, string @namespace);
+
+    [LoggerMessage(EventId = 7000, Level = LogLevel.Debug, Message = "ActionCache vary-by contributed {Count} value(s) to the cache key.")]
+    public static partial void VaryByResolved(ILogger logger, int count);
+
+    [LoggerMessage(EventId = 7001, Level = LogLevel.Warning, Message = "ActionCache refresh skipped key '{Key}' in namespace '{Namespace}' because it varies by request context that refresh cannot reproduce.")]
+    public static partial void RefreshKeySkippedVaryBy(ILogger logger, string key, string @namespace);
 }

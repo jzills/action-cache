@@ -1,6 +1,7 @@
 using ActionCache.AzureCosmos.Extensions;
 using ActionCache.Common.Caching;
 using ActionCache.Common.Concurrency;
+using ActionCache.Common.Keys.VaryBy;
 using ActionCache.Redis.Concurrency;
 using ActionCache.SqlServer.Concurrency;
 using Microsoft.Extensions.Caching.SqlServer;
@@ -46,7 +47,10 @@ public static class IServiceCollectionExtensions
         });
 
         services.Configure<ActionCacheResilienceOptions>(resilienceOptions =>
-            resilienceOptions.FailClosed = options.FailClosed);
+        {
+            resilienceOptions.FailClosed = options.FailClosed;
+            resilienceOptions.OperationTimeout = options.OperationTimeout;
+        });
 
         // Validated here so a lease that cannot coalesce anything fails at startup rather
         // than degrading silently under load.
@@ -99,6 +103,7 @@ public static class IServiceCollectionExtensions
 
         return services
             .AddControllerInfo()
+            .AddScoped<ActionCacheVaryByResolver>()
             .AddSingleton<ActionCacheDescriptorProviderFactory>()
             .AddSingleton<ResilientCacheDecorator>()
             .AddScoped<IActionCacheFilterAbstractFactory<IFilterMetadata>, ActionCacheFilterAbstractFactory>()
@@ -178,4 +183,16 @@ public static class IServiceCollectionExtensions
                 "UseDistributedSingleFlight() requires SqlServerCacheOptions.ConnectionString to be set.")
             : connectionString;
     }
+
+    /// <summary>
+    /// Registers a cache-key contributor, adding a custom dimension to every cache key —
+    /// a tenant read from a subdomain, a feature-flag cohort, an API version.
+    /// </summary>
+    /// <typeparam name="TContributor">The contributor implementation.</typeparam>
+    /// <param name="services">The IServiceCollection to add the contributor to.</param>
+    /// <returns>The IServiceCollection.</returns>
+    public static IServiceCollection AddActionCacheKeyContributor<TContributor>(
+        this IServiceCollection services
+    ) where TContributor : class, IActionCacheKeyContributor =>
+        services.AddScoped<IActionCacheKeyContributor, TContributor>();
 }

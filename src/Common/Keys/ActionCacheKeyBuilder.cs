@@ -50,6 +50,19 @@ public class ActionCacheKeyBuilder
     }
 
     /// <summary>
+    /// Includes vary-by values in the cache key, separating responses that differ by
+    /// caller, header, query value, claim, or a registered key contributor.
+    /// </summary>
+    /// <param name="varyByValues">The resolved vary-by values, or <see langword="null"/>.</param>
+    /// <returns>Returns itself for chaining.</returns>
+    public ActionCacheKeyBuilder WithVaryByValues(SortedDictionary<string, string?>? varyByValues)
+    {
+        if (varyByValues is null or { Count: 0 }) return this;
+        KeyComponents.VaryByValues = varyByValues;
+        return this;
+    }
+
+    /// <summary>
     /// Builds the final cache key.
     /// </summary>
     /// <returns>The constructed cache key.</returns>

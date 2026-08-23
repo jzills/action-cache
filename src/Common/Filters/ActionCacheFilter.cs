@@ -1,5 +1,6 @@
 using ActionCache.Common.Concurrency;
 using ActionCache.Common.Enums;
+using ActionCache.Common.Keys.VaryBy;
 using ActionCache.Common.Extensions;
 using ActionCache.Common.Extensions.Internal;
 using Microsoft.AspNetCore.Mvc;
@@ -22,13 +23,17 @@ public class ActionCacheFilter : ActionCacheFilterBase, IAsyncActionFilter
     /// <param name="logger">The logger used to record filter-level conditions the cache layer cannot observe.</param>
     /// <param name="singleFlight">Coalesces concurrent misses for the same key.</param>
     /// <param name="singleFlightEnabled">Whether this endpoint opted into single-flight.</param>
+    /// <param name="varyByResolver">Resolves the request dimensions that form part of the cache key.</param>
+    /// <param name="varyByOptions">Which request dimensions this endpoint varies its cache key by.</param>
     public ActionCacheFilter(
         IActionCache cache,
         TemplateBinderFactory binderFactory,
         ILogger logger,
         IActionCacheSingleFlight singleFlight,
-        bool singleFlightEnabled
-    ) : base(cache, binderFactory, logger, singleFlight, singleFlightEnabled)
+        bool singleFlightEnabled,
+        ActionCacheVaryByResolver varyByResolver,
+        VaryByOptions varyByOptions
+    ) : base(cache, binderFactory, logger, singleFlight, singleFlightEnabled, varyByResolver, varyByOptions)
     {
     }
 
@@ -40,9 +45,13 @@ public class ActionCacheFilter : ActionCacheFilterBase, IAsyncActionFilter
     /// <returns>A task that represents the asynchronous operation.</returns>
     public async Task OnActionExecutionAsync(ActionExecutingContext context, ActionExecutionDelegate next)
     {
+        var cancellationToken = context.HttpContext.RequestAborted;
+
         AttachRouteValues(context.RouteData.Values);
 
-        if (!context.TryGetKey(out var key))
+        var varyByValues = await VaryByResolver.ResolveAsync(context.HttpContext, VaryByOptions, cancellationToken);
+
+        if (!context.TryGetKey(out var key, varyByValues))
         {
             context.AddCacheStatus(CacheStatus.Miss);
             LogCacheKeyUnavailable();
@@ -50,7 +59,7 @@ public class ActionCacheFilter : ActionCacheFilterBase, IAsyncActionFilter
             return;
         }
 
-        var cacheValue = await Cache.GetAsync<IActionResult?>(key);
+        var cacheValue = await Cache.GetAsync<IActionResult?>(key, cancellationToken);
         if (cacheValue is not null)
         {
             context.AddCacheStatus(CacheStatus.Hit);
@@ -60,17 +69,17 @@ public class ActionCacheFilter : ActionCacheFilterBase, IAsyncActionFilter
 
         if (!SingleFlightEnabled)
         {
-            await ExecuteAndCacheAsync(context, next, key);
+            await ExecuteAndCacheAsync(context, next, key, cancellationToken);
             return;
         }
 
         var result = await SingleFlight.GetOrCreateAsync<IActionResult?>(
             Cache.GetNamespace(),
             key,
-            cacheReader: () => Cache.GetAsync<IActionResult?>(key),
+            cacheReader: () => Cache.GetAsync<IActionResult?>(key, cancellationToken),
             valueFactory: async () =>
             {
-                await ExecuteAndCacheAsync(context, next, key);
+                await ExecuteAndCacheAsync(context, next, key, cancellationToken);
 
                 // The leader's result is already in the pipeline via next(); returning null
                 // keeps it from being mistaken for a coalesced value.
@@ -90,15 +99,20 @@ public class ActionCacheFilter : ActionCacheFilterBase, IAsyncActionFilter
     /// <param name="context">The action executing context.</param>
     /// <param name="next">The action execution delegate.</param>
     /// <param name="key">The cache key for this request.</param>
+    /// <param name="cancellationToken">A token to observe while waiting for the operation to complete.</param>
     /// <returns>A task that represents the asynchronous operation.</returns>
-    private async Task ExecuteAndCacheAsync(ActionExecutingContext context, ActionExecutionDelegate next, string key)
+    private async Task ExecuteAndCacheAsync(
+        ActionExecutingContext context,
+        ActionExecutionDelegate next,
+        string key,
+        CancellationToken cancellationToken)
     {
         var actionExecutedContext = await next();
         if (actionExecutedContext.Result is not null &&
             actionExecutedContext.Result.IsCacheableResult())
         {
             context.AddCacheStatus(CacheStatus.Add);
-            await Cache.SetAsync(key, actionExecutedContext.Result);
+            await Cache.SetAsync(key, actionExecutedContext.Result, cancellationToken);
         }
         else
         {

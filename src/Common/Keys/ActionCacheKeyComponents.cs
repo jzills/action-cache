@@ -22,6 +22,11 @@ public class ActionCacheKeyComponents
     public const string ActionArgumentsKey = nameof(ActionArgumentsKey);
 
     /// <summary>
+    /// The key used to reference vary-by values in the cache.
+    /// </summary>
+    public const string VaryByValuesKey = nameof(VaryByValuesKey);
+
+    /// <summary>
     /// Gets or sets the route values used to uniquely identify the route for caching purposes.
     /// </summary>
     public RouteValueDictionary? RouteValues { get; set; } = new();
@@ -30,6 +35,17 @@ public class ActionCacheKeyComponents
     /// Gets or sets the action arguments used as additional context for identifying and caching the action.
     /// </summary>
     public Dictionary<string, object?>? ActionArguments { get; set; } = new Dictionary<string, object?>();
+
+    /// <summary>
+    /// Gets or sets the request dimensions that must separate one cached response from
+    /// another — the authenticated user, named headers, query values or claims, and
+    /// anything added by an <c>IActionCacheKeyContributor</c>.
+    /// </summary>
+    /// <value>
+    /// Sorted, so that two requests contributing the same values in different orders
+    /// produce the same key.
+    /// </value>
+    public SortedDictionary<string, string?>? VaryByValues { get; set; }
     
     /// <summary>
     /// Serializes route values and action arguments as key value pairs.
@@ -39,7 +55,16 @@ public class ActionCacheKeyComponents
     {
         var routeValues = CacheJsonSerializer.Serialize(RouteValues);
         var actionArguments = CacheJsonSerializer.Serialize(ActionArguments);
-        return $"{RouteValuesKey}={routeValues}&{ActionArgumentsKey}={actionArguments}";
+        var serialized = $"{RouteValuesKey}={routeValues}&{ActionArgumentsKey}={actionArguments}";
+
+        // Only emitted when non-empty, so keys for endpoints that vary by nothing are
+        // byte-for-byte what they were before vary-by existed.
+        if (VaryByValues is { Count: > 0 })
+        {
+            serialized += $"&{VaryByValuesKey}={CacheJsonSerializer.Serialize(VaryByValues)}";
+        }
+
+        return serialized;
     }
 
     /// <summary>

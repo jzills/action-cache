@@ -42,11 +42,13 @@ public class SqlServerActionCache : ActionCacheBase<SqlServerCacheLock>
     /// </summary>
     /// <typeparam name="TValue">The type of the cached value.</typeparam>
     /// <param name="key">The key of the cache entry.</param>
+    /// <param name="cancellationToken">A token to observe while waiting for the operation to complete.</param>
     /// <returns>The cached value or the default value of the type if not found.</returns>
 #pragma warning disable CS8609
-    public override async Task<TValue> GetAsync<TValue>(string key)
+    public override async Task<TValue> GetAsync<TValue>(string key, CancellationToken cancellationToken = default)
     {
-        var json = await Cache.GetStringAsync(Namespace.Create(key));
+        cancellationToken.ThrowIfCancellationRequested();
+        var json = await Cache.GetStringAsync(Namespace.Create(key), cancellationToken);
         if (string.IsNullOrWhiteSpace(json))
         {
             return await Task.FromResult<TValue>(default!);
@@ -64,10 +66,12 @@ public class SqlServerActionCache : ActionCacheBase<SqlServerCacheLock>
     /// <typeparam name="TValue">The type of the value to set in the cache.</typeparam>
     /// <param name="key">The cache key to set the value for.</param>
     /// <param name="value">The value to set in the cache.</param>
-    public override async Task SetAsync<TValue>(string key, [AllowNull] TValue value)
+    /// <param name="cancellationToken">A token to observe while waiting for the operation to complete.</param>
+    public override async Task SetAsync<TValue>(string key, [AllowNull] TValue value, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         var entryOptions = CreateEntryOptions();
-        await Cache.SetStringAsync(Namespace.Create(key), CacheJsonSerializer.Serialize(value), entryOptions);
+        await Cache.SetStringAsync(Namespace.Create(key), CacheJsonSerializer.Serialize(value), entryOptions, cancellationToken);
         
         await CacheLocker.WaitForLockThenAsync(Namespace, 
             () => Cache.SetKeyAsync(Namespace, key, entryOptions));
@@ -77,9 +81,11 @@ public class SqlServerActionCache : ActionCacheBase<SqlServerCacheLock>
     /// Asynchronously removes a value from the cache.
     /// </summary>
     /// <param name="key">The key of the cache entry to remove.</param>
-    public override async Task RemoveAsync(string key)
+    /// <param name="cancellationToken">A token to observe while waiting for the operation to complete.</param>
+    public override async Task RemoveAsync(string key, CancellationToken cancellationToken = default)
     {
-        await Cache.RemoveAsync(Namespace.Create(key));
+        cancellationToken.ThrowIfCancellationRequested();
+        await Cache.RemoveAsync(Namespace.Create(key), cancellationToken);
 
         await CacheLocker.WaitForLockThenAsync(Namespace,
             () => Cache.RemoveKeyAsync(Namespace, key, CreateEntryOptions()));
@@ -88,18 +94,22 @@ public class SqlServerActionCache : ActionCacheBase<SqlServerCacheLock>
     /// <summary>
     /// Asynchronously removes all values from the cache.
     /// </summary>
-    public override async Task RemoveAsync()
+    /// <param name="cancellationToken">A token to observe while waiting for the operation to complete.</param>
+    public override async Task RemoveAsync(CancellationToken cancellationToken = default)
     {
-        var keys = await GetKeysAsync();
-        await Task.WhenAll(keys.Select(RemoveAsync));
+        cancellationToken.ThrowIfCancellationRequested();
+        var keys = await GetKeysAsync(cancellationToken);
+        await Task.WhenAll(keys.Select(key => RemoveAsync(key, cancellationToken)));
     }
 
     /// <summary>
     /// Retrieves all keys associated with this cache.
     /// </summary>
+    /// <param name="cancellationToken">A token to observe while waiting for the operation to complete.</param>
     /// <returns>An enumerable of strings representing current cache entry keys.</returns>
-    public override async Task<IEnumerable<string>> GetKeysAsync()
+    public override async Task<IEnumerable<string>> GetKeysAsync(CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         var keysWithAbsoluteExpiration = await CacheLocker.WaitForLockThenAsync(Namespace,
             () => Cache.GetKeysAsync(Namespace, CreateEntryOptions()));
 

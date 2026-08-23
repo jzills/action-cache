@@ -40,7 +40,7 @@ public class ActionCacheFilterLoggingTests
             .GetRequiredService<TemplateBinderFactory>();
 
         _logger = new CapturingLogger();
-        _sut = new ActionCacheFilter(_cacheMock.Object, binderFactory, _logger, SingleFlightBuilder.Build(), true);
+        _sut = new ActionCacheFilter(_cacheMock.Object, binderFactory, _logger, SingleFlightBuilder.Build(), true, VaryByBuilder.Resolver(), VaryByBuilder.Options());
     }
 
     [Test]
@@ -76,7 +76,7 @@ public class ActionCacheFilterLoggingTests
     [Test]
     public async Task OnActionExecutionAsync_WhenResultNotCacheable_LogsResultNotCacheable()
     {
-        _cacheMock.Setup(cache => cache.GetAsync<IActionResult?>(It.IsAny<string>()))
+        _cacheMock.Setup(cache => cache.GetAsync<IActionResult?>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((IActionResult?)null);
 
         var context = BuildActionExecutingContext();
@@ -100,7 +100,7 @@ public class ActionCacheFilterLoggingTests
     [Test]
     public async Task OnActionExecutionAsync_WhenCacheHit_LogsNothingAtFilterLevel()
     {
-        _cacheMock.Setup(cache => cache.GetAsync<IActionResult?>(It.IsAny<string>()))
+        _cacheMock.Setup(cache => cache.GetAsync<IActionResult?>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new OkObjectResult("cached"));
 
         var context = BuildActionExecutingContext();
@@ -115,7 +115,7 @@ public class ActionCacheFilterLoggingTests
     [Test]
     public async Task OnActionExecutionAsync_WhenResultIsCached_LogsNothingAtFilterLevel()
     {
-        _cacheMock.Setup(cache => cache.GetAsync<IActionResult?>(It.IsAny<string>()))
+        _cacheMock.Setup(cache => cache.GetAsync<IActionResult?>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((IActionResult?)null);
 
         var context = BuildActionExecutingContext();
