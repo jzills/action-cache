@@ -258,14 +258,36 @@ An `ActionCacheEvictionAttribute` can be applied to a controller action. A cache
 
 ## Cache Refresh
 
-An `ActionCacheRefreshAttribute` can be applied to a controller action. A cache refresh occurs at the namespace level. Any entries currently in the cache will be refetched by executing their corresponding controller action and repopulating the cache. This is done automatically because all of the route details are persisted into the cache key.
+`[ActionCacheRefresh]` re-populates a namespace's entries with current data. It works by
+**replaying the request that produced each entry**: the method, path and query are recorded
+alongside the cached response, and refresh re-issues them against the matching endpoint
+with a real `HttpContext`, so model binding, action filters, the action and result
+execution all run normally.
 
-    [HttpPut]
-    [Route("/")]
-    [ActionCacheRefresh(Namespace = "MyNamespace")]
-    public IActionResult Put()
-    {
-    }
+    [HttpGet("forecasts")]
+    [ActionCache(Namespace = "Forecasts")]
+    public IActionResult Get() => Ok(_repository.All());
+
+    [HttpPost("forecasts")]
+    [ActionCacheRefresh(Namespace = "Forecasts")]
+    public IActionResult Create(Forecast forecast) => Ok(_repository.Add(forecast));
+
+### What replay does and does not run
+
+It executes the **endpoint**. It does **not** run outer middleware — authentication, CORS,
+exception handling — because those belong to the request pipeline rather than the endpoint.
+Each replay runs in its own DI scope, so it cannot disturb the request that triggered it.
+
+Two kinds of entry are skipped, with a warning:
+
+- **Entries that vary by request context** (see [Vary-By](#vary-by-who-the-response-belongs-to)).
+  Replaying another caller's request would mean impersonating them. These are refreshed by
+  ordinary expiry instead.
+- **Entries with no recorded request**, which can only happen for entries written by an
+  older version of the library.
+
+Only the request line is recorded — never headers. Headers routinely carry credentials, and
+a cache entry is not a safe place to keep them.
 
 ## Route Templates for Namespaces
 

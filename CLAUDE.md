@@ -43,8 +43,7 @@ Each attribute triggers a corresponding filter (`ActionCacheFilter`, `ActionCach
 | `IActionCache` | Core cache contract: `GetAsync`, `SetAsync`, `RemoveAsync`, `RefreshAsync`, `GetKeysAsync` |
 | `IActionCacheFactory` | Creates an `IActionCache` instance per namespace |
 | `IActionCacheFilterAbstractFactory` | Selects MVC vs. Minimal APIs filter implementation |
-| `IActionCacheRefreshProvider` | Re-invokes a cached action to refresh the cache |
-| `IActionCacheDescriptorProvider` | Metadata about available controller/endpoint actions |
+| `IActionCacheRefreshProvider` | Replays a recorded request to refresh a cache entry |
 
 ### Cache Backends
 
@@ -84,11 +83,19 @@ A key has three components (`Common/Keys/ActionCacheKeyComponents`): route value
 
 `VaryByUserMode.Auto` is the default and varies by the authenticated user's identity — without it, two users on one `[Authorize]` endpoint share a cache entry and the second is served the first's response. The component is only serialized when non-empty, so keys for endpoints that vary by nothing are unchanged from before the feature existed.
 
-`ActionCacheRefreshProvider` **skips** keys carrying vary-by values: it re-invokes actions by reflection with no `HttpContext` and cannot reproduce per-request context.
+Refresh **skips** entries whose `CachedResponse.VariesByRequest` is set — replaying another caller's request would mean impersonating them.
 
 ### Cancellation
 
 Every `IActionCache` method takes a trailing `CancellationToken`; filters pass `HttpContext.RequestAborted`. `ResilientActionCache` rethrows `OperationCanceledException` when the *caller's* token is cancelled (even fail-open) but treats an elapsed `ActionCacheResilienceOptions.OperationTimeout` as a degradable backend failure. `IMemoryCache` is synchronous and StackExchange.Redis's `IDatabase` accepts no token, so those two check the token before dispatch; SQL Server and Cosmos forward it.
+
+### Cached Values
+
+Values are a `CachedResponse` (`Common/Responses/`): status code, content type, rendered body, plus the `CachedRequest` refresh replays. Non-polymorphic and serialized with System.Text.Json through a source-generated context — nothing in a payload names a type to construct. Bodies are rendered with the app's own `JsonSerializerOptions`.
+
+### Refresh
+
+`EndpointReplayRefreshProvider` re-issues a recorded request against the matching endpoint from `EndpointDataSource`, in its own DI scope, with a real `HttpContext`. `ActionCacheReplayMarker` marks that context so the cache filters bypass the cache — otherwise a replay would be served the stale entry it exists to replace and write it straight back, making refresh a silent no-op.
 
 ### Layered Backends
 

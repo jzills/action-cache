@@ -52,6 +52,7 @@ public class SqlServerActionCacheFactory : ActionCacheFactoryBase
             Namespace = @namespace,
             EntryOptions = EntryOptions,
             RefreshProvider = RefreshProvider,
+                Logger = Logger,
             CacheLocker = new SqlServerCacheLocker(
                 ConnectionString,
                 EntryOptions.LockTimeout)
@@ -73,6 +74,7 @@ public class SqlServerActionCacheFactory : ActionCacheFactoryBase
                 LockTimeout = EntryOptions.LockTimeout
             },
             RefreshProvider = RefreshProvider,
+                Logger = Logger,
             CacheLocker = new SqlServerCacheLocker(
                 ConnectionString,
                 EntryOptions.LockTimeout)

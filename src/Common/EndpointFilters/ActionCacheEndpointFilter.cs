@@ -1,3 +1,4 @@
+using ActionCache.Common.Caching;
 using ActionCache.Common.Concurrency;
 using ActionCache.Common.Enums;
 using ActionCache.Common.Keys.VaryBy;
@@ -51,6 +52,13 @@ public class ActionCacheEndpointFilter : ActionCacheFilterBase, IEndpointFilter
     public async ValueTask<object?> InvokeAsync(EndpointFilterInvocationContext context, EndpointFilterDelegate next)
     {
         var cancellationToken = context.HttpContext.RequestAborted;
+
+        // A refresh replay must reach the endpoint: serving it from cache would hand it the
+        // stale entry it exists to replace. The refresh loop stores what it produces.
+        if (ActionCacheReplayMarker.IsReplay(context.HttpContext))
+        {
+            return await next(context);
+        }
 
         AttachRouteValues(context.HttpContext.GetRouteData().Values);
 

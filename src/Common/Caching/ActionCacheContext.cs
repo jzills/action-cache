@@ -1,5 +1,6 @@
 using ActionCache.Common.Concurrency;
 using ActionCache.Utilities;
+using Microsoft.Extensions.Logging;
 
 namespace ActionCache.Common.Caching;
 
@@ -28,4 +29,9 @@ public class ActionCacheContext<TLock> where TLock : CacheLock
     /// Gets or sets the cache locker used for synchronizing access to cached items.
     /// </summary>
     public required ICacheLocker<TLock> CacheLocker { get; init; }
+
+    /// <summary>
+    /// Gets or sets the logger used to record refresh outcomes.
+    /// </summary>
+    public ILogger Logger { get; init; } = Microsoft.Extensions.Logging.Abstractions.NullLogger.Instance;
 }

@@ -62,6 +62,7 @@ public class MemoryActionCacheFactory : ActionCacheFactoryBase
                 Namespace = @namespace,
                 EntryOptions = EntryOptions,
                 RefreshProvider = RefreshProvider,
+                Logger = Logger,
                 CacheLocker = Locker
             };
 
@@ -89,6 +90,7 @@ public class MemoryActionCacheFactory : ActionCacheFactoryBase
                     LockTimeout = EntryOptions.LockTimeout
                 },
                 RefreshProvider = RefreshProvider,
+                Logger = Logger,
                 CacheLocker = Locker
             };
 

@@ -44,6 +44,7 @@ public class AzureCosmosActionCacheFactory : ActionCacheFactoryBase
             Namespace = @namespace,
             EntryOptions = EntryOptions,
             RefreshProvider = RefreshProvider,
+                Logger = Logger,
             CacheLocker = new NullCacheLocker()
         };
 
@@ -62,6 +63,7 @@ public class AzureCosmosActionCacheFactory : ActionCacheFactoryBase
                 SlidingExpiration = slidingExpiration
             },
             RefreshProvider = RefreshProvider,
+                Logger = Logger,
             CacheLocker = new NullCacheLocker()
         };
 

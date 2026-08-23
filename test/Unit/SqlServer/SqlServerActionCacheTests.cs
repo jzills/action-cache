@@ -1,5 +1,6 @@
 using ActionCache.Common;
 using ActionCache.Common.Caching;
+using Unit.TestUtilities;
 using ActionCache.Common.Concurrency;
 using ActionCache.SqlServer;
 using ActionCache.SqlServer.Concurrency.Locks;
@@ -41,7 +42,7 @@ public class SqlServerActionCacheTests
         {
             Namespace = new Namespace("TestNs"),
             EntryOptions = new ActionCacheEntryOptions(),
-            RefreshProvider = new ActionCacheRefreshProvider(new ActionCacheDescriptorProviderNull(), NullLogger<ActionCacheRefreshProvider>.Instance),
+            RefreshProvider = NullRefreshProvider.Instance,
             CacheLocker = _lockerMock.Object
         };
 

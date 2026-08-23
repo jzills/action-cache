@@ -1,6 +1,4 @@
-using ActionCache.Common.Extensions.Internal;
 using ActionCache.Common.Serialization;
-using ActionCache.Utilities;
 using Microsoft.AspNetCore.Routing;
 
 namespace ActionCache.Common.Keys;
@@ -53,32 +51,17 @@ public class ActionCacheKeyComponents
     /// <returns>A serialized string representing the key components.</returns>
     public string Serialize()
     {
-        var routeValues = KeyComponentSerializer.Serialize(RouteValues);
-        var actionArguments = KeyComponentSerializer.Serialize(ActionArguments);
+        var routeValues = CacheJsonSerializer.Serialize(RouteValues);
+        var actionArguments = CacheJsonSerializer.Serialize(ActionArguments);
         var serialized = $"{RouteValuesKey}={routeValues}&{ActionArgumentsKey}={actionArguments}";
 
         // Only emitted when non-empty, so keys for endpoints that vary by nothing are
         // byte-for-byte what they were before vary-by existed.
         if (VaryByValues is { Count: > 0 })
         {
-            serialized += $"&{VaryByValuesKey}={KeyComponentSerializer.Serialize(VaryByValues)}";
+            serialized += $"&{VaryByValuesKey}={CacheJsonSerializer.Serialize(VaryByValues)}";
         }
 
         return serialized;
-    }
-
-    /// <summary>
-    /// Deconstructs the route values into the area, controller, and action name components.
-    /// </summary>
-    /// <param name="area">The area name, or <see langword="null"/> if not present in the route values.</param>
-    /// <param name="controller">The controller name, or <see langword="null"/> if not present in the route values.</param>
-    /// <param name="action">The action name, or <see langword="null"/> if not present in the route values.</param>
-    public void Deconstruct(out string? area, out string? controller, out string? action)
-    {
-        ArgumentNullException.ThrowIfNull(RouteValues);
-
-        RouteValues.TryGetStringValue(RouteKeys.Area, out area);
-        RouteValues.TryGetStringValue(RouteKeys.Controller, out controller);
-        RouteValues.TryGetStringValue(RouteKeys.Action, out action);
     }
 }

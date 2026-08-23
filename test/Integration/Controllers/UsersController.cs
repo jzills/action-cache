@@ -47,6 +47,20 @@ public class UsersController : Controller
         return Ok(new { Value = "single-flight" });
     }
 
+    /// <summary>
+    /// Source data a refresh test mutates between requests, so a stale cache entry and a
+    /// refreshed one are distinguishable.
+    /// </summary>
+    public static string RefreshableValue = "original";
+
+    [HttpGet("refreshable")]
+    [ActionCache(Namespace = "Replay")]
+    public IActionResult GetRefreshable() => Ok(new { Value = RefreshableValue });
+
+    [HttpPost("refreshable")]
+    [ActionCacheRefresh(Namespace = "Replay")]
+    public IActionResult RefreshRefreshable() => Ok();
+
     [HttpGet("me")]
     [ActionCache(Namespace = "VaryByUser")]
     public IActionResult GetMe() =>

@@ -54,8 +54,16 @@
     <PackageReference Include="Microsoft.Azure.Cosmos" Version="3.46.1" />
     <PackageReference Include="Microsoft.Data.SqlClient" Version="5.2.2" />
     <PackageReference Include="Microsoft.Extensions.Caching.StackExchangeRedis" Version="$(_TargetVersion)" />
-    <PackageReference Include="Microsoft.Extensions.Caching.SqlServer" Version="$(_TargetVersion)" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+    <PackageReference Include="Microsoft.Extensions.Caching.SqlServer" Version="$(_TargetVersion)" />
+    <!--
+      ActionCache's own code no longer uses Newtonsoft: cache values are System.Text.Json
+      and the key-reversal path that needed TypeNameHandling is gone. The reference stays
+      only because Microsoft.Azure.Cosmos hard-fails the build without an explicit one
+      (AzureCosmosDisableNewtonsoftJsonCheck notwithstanding) and serializes its own
+      documents with it. Splitting Cosmos into its own package removes Newtonsoft from
+      every other consumer's dependency graph.
+    -->
   </ItemGroup>
 
 </Project>
