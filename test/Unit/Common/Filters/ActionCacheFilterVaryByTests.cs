@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using ActionCache;
 using ActionCache.Common.Keys.VaryBy;
+using ActionCache.Common.Responses;
 using ActionCache.Filters;
 using ActionCache.Utilities;
 using Microsoft.AspNetCore.Http;
@@ -53,7 +54,7 @@ public class ActionCacheFilterVaryByTests
 
     private ActionCacheFilter CreateFilter(IActionCache cache, VaryByOptions options) =>
         new(cache, _binderFactory, NullLogger.Instance,
-            SingleFlightBuilder.Build(), false, VaryByBuilder.Resolver(), options);
+            SingleFlightBuilder.Build(), false, VaryByBuilder.Resolver(), options, ResponseFactoryBuilder.Build());
 
     private static ActionExecutingContext ContextFor(string? userId)
     {
@@ -130,7 +131,7 @@ public class ActionCacheFilterVaryByTests
         });
 
         executed.Should().BeFalse("the same user must hit their own cached entry");
-        (secondContext.Result as ObjectResult)!.Value.Should().Be("first-response");
+        (secondContext.Result as ContentResult)!.Content.Should().Be("\"first-response\"");
     }
 
     [Test]
@@ -150,7 +151,7 @@ public class ActionCacheFilterVaryByTests
         });
 
         executed.Should().BeFalse("Never opts back in to one shared entry");
-        (secondContext.Result as ObjectResult)!.Value.Should().Be("shared-response");
+        (secondContext.Result as ContentResult)!.Content.Should().Be("\"shared-response\"");
     }
 
     [Test]
@@ -170,6 +171,6 @@ public class ActionCacheFilterVaryByTests
         });
 
         executed.Should().BeFalse("anonymous callers have no identity to separate");
-        (secondContext.Result as ObjectResult)!.Value.Should().Be("anonymous-response");
+        (secondContext.Result as ContentResult)!.Content.Should().Be("\"anonymous-response\"");
     }
 }

@@ -53,15 +53,15 @@ public class ActionCacheKeyComponents
     /// <returns>A serialized string representing the key components.</returns>
     public string Serialize()
     {
-        var routeValues = CacheJsonSerializer.Serialize(RouteValues);
-        var actionArguments = CacheJsonSerializer.Serialize(ActionArguments);
+        var routeValues = KeyComponentSerializer.Serialize(RouteValues);
+        var actionArguments = KeyComponentSerializer.Serialize(ActionArguments);
         var serialized = $"{RouteValuesKey}={routeValues}&{ActionArgumentsKey}={actionArguments}";
 
         // Only emitted when non-empty, so keys for endpoints that vary by nothing are
         // byte-for-byte what they were before vary-by existed.
         if (VaryByValues is { Count: > 0 })
         {
-            serialized += $"&{VaryByValuesKey}={CacheJsonSerializer.Serialize(VaryByValues)}";
+            serialized += $"&{VaryByValuesKey}={KeyComponentSerializer.Serialize(VaryByValues)}";
         }
 
         return serialized;

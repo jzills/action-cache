@@ -1,6 +1,8 @@
 using ActionCache.Common;
 using ActionCache.Common.Concurrency;
 using ActionCache.Common.Keys.VaryBy;
+using ActionCache.Common.Responses;
+using System.Text.Json;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Unit.TestUtilities.Builders;
@@ -20,4 +22,10 @@ internal static class VaryByBuilder
         new([], NullLogger<ActionCacheVaryByResolver>.Instance);
 
     internal static VaryByOptions Options() => new();
+}
+
+internal static class ResponseFactoryBuilder
+{
+    internal static CachedResponseFactory Build() =>
+        new(new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
 }

@@ -1,6 +1,7 @@
 using ActionCache.Common.Concurrency;
 using ActionCache.Common.Enums;
 using ActionCache.Common.Keys.VaryBy;
+using ActionCache.Common.Responses;
 using ActionCache.Common.Extensions;
 using ActionCache.Common.Extensions.Internal;
 using Microsoft.AspNetCore.Http;
@@ -26,6 +27,7 @@ public class ActionCacheEndpointFilter : ActionCacheFilterBase, IEndpointFilter
     /// <param name="singleFlightEnabled">Whether this endpoint opted into single-flight.</param>
     /// <param name="varyByResolver">Resolves the request dimensions that form part of the cache key.</param>
     /// <param name="varyByOptions">Which request dimensions this endpoint varies its cache key by.</param>
+    /// <param name="responseFactory">Converts between endpoint results and stored responses.</param>
     public ActionCacheEndpointFilter(
         IActionCache cache,
         TemplateBinderFactory binderFactory,
@@ -33,8 +35,9 @@ public class ActionCacheEndpointFilter : ActionCacheFilterBase, IEndpointFilter
         IActionCacheSingleFlight singleFlight,
         bool singleFlightEnabled,
         ActionCacheVaryByResolver varyByResolver,
-        VaryByOptions varyByOptions
-    ) : base(cache, binderFactory, logger, singleFlight, singleFlightEnabled, varyByResolver, varyByOptions)
+        VaryByOptions varyByOptions,
+        CachedResponseFactory responseFactory
+    ) : base(cache, binderFactory, logger, singleFlight, singleFlightEnabled, varyByResolver, varyByOptions, responseFactory)
     {
     }
 
@@ -60,23 +63,27 @@ public class ActionCacheEndpointFilter : ActionCacheFilterBase, IEndpointFilter
             return await next(context);
         }
 
-        var cacheValue = await Cache.GetAsync<object?>(key, cancellationToken);
+        var cacheValue = await Cache.GetAsync<CachedResponse>(key, cancellationToken);
         if (cacheValue is not null)
         {
             context.AddCacheStatus(CacheStatus.Hit);
-            return cacheValue;
+            return CachedResponseFactory.ToEndpointResult(cacheValue);
         }
 
         if (!SingleFlightEnabled)
         {
-            return await ExecuteAndCacheAsync(context, next, key, cancellationToken);
+            return await ExecuteAndCacheAsync(context, next, key, varyByValues.Count > 0, cancellationToken);
         }
 
         var outcome = await SingleFlight.GetOrCreateAsync<object?>(
             Cache.GetNamespace(),
             key,
-            cacheReader: () => Cache.GetAsync<object?>(key, cancellationToken),
-            valueFactory: () => ExecuteAndCacheAsync(context, next, key, cancellationToken));
+            cacheReader: async () =>
+            {
+                var cached = await Cache.GetAsync<CachedResponse>(key, cancellationToken);
+                return cached is null ? null : CachedResponseFactory.ToEndpointResult(cached);
+            },
+            valueFactory: () => ExecuteAndCacheAsync(context, next, key, varyByValues.Count > 0, cancellationToken));
 
         if (outcome.WasCoalesced)
         {
@@ -92,19 +99,26 @@ public class ActionCacheEndpointFilter : ActionCacheFilterBase, IEndpointFilter
     /// <param name="context">The endpoint filter invocation context.</param>
     /// <param name="next">The endpoint filter delegate.</param>
     /// <param name="key">The cache key for this request.</param>
+    /// <param name="variesByRequest">Whether the cache key varies by request context.</param>
     /// <param name="cancellationToken">A token to observe while waiting for the operation to complete.</param>
     /// <returns>The endpoint's result.</returns>
     private async Task<object?> ExecuteAndCacheAsync(
         EndpointFilterInvocationContext context,
         EndpointFilterDelegate next,
         string key,
+        bool variesByRequest,
         CancellationToken cancellationToken)
     {
         var result = await next(context);
-        if (result.IsSuccessfulEndpointResult())
+        if (result.IsSuccessfulEndpointResult() &&
+            ResponseFactory.TryCreateFromEndpointResult(
+                result,
+                CachedResponseFactory.CreateRequest(context.HttpContext),
+                variesByRequest,
+                out var cachedResponse))
         {
             context.AddCacheStatus(CacheStatus.Add);
-            await Cache.SetAsync(key, result, cancellationToken);
+            await Cache.SetAsync(key, cachedResponse, cancellationToken);
         }
         else
         {

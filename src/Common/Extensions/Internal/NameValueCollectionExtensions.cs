@@ -27,7 +27,7 @@ internal static class NameValueCollectionExtensions
 
         try
         {
-            return CacheJsonSerializer.Deserialize<T>(json);
+            return KeyComponentSerializer.Deserialize<T>(json);
         }
         catch (Exception)
         {

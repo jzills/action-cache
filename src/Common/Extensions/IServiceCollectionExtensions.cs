@@ -2,6 +2,7 @@ using ActionCache.AzureCosmos.Extensions;
 using ActionCache.Common.Caching;
 using ActionCache.Common.Concurrency;
 using ActionCache.Common.Keys.VaryBy;
+using ActionCache.Common.Responses;
 using ActionCache.Redis.Concurrency;
 using ActionCache.SqlServer.Concurrency;
 using Microsoft.Extensions.Caching.SqlServer;
@@ -17,6 +18,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using System.Text.Json;
 
 namespace ActionCache.Common.Extensions;
 
@@ -100,6 +102,19 @@ public static class IServiceCollectionExtensions
             new InProcessSingleFlight(
                 serviceProvider.GetRequiredService<ActionCacheSingleFlightOptions>(),
                 serviceProvider.GetRequiredService<ILogger<InProcessSingleFlight>>()));
+
+        // Bodies are rendered with the application's own JSON options so a cached body is
+        // byte-identical to what the action would have written. MVC's options win when the
+        // app uses MVC; Minimal-API-only apps fall back to the Http.Json options.
+        services.TryAddSingleton(serviceProvider =>
+        {
+            var mvcOptions = serviceProvider
+                .GetService<IOptions<Microsoft.AspNetCore.Mvc.JsonOptions>>()?.Value.JsonSerializerOptions;
+            var httpOptions = serviceProvider
+                .GetService<IOptions<Microsoft.AspNetCore.Http.Json.JsonOptions>>()?.Value.SerializerOptions;
+
+            return new CachedResponseFactory(mvcOptions ?? httpOptions ?? JsonSerializerOptions.Default);
+        });
 
         return services
             .AddControllerInfo()

@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc.Abstractions;
 using ActionCache.Attributes;
 using ActionCache.Filters;
 using ActionCache;
+using ActionCache.Common.Responses;
 using ActionCache.Common.Keys;
 using Microsoft.AspNetCore.Routing.Template;
 using Unit.TestUtilities.Builders;
@@ -67,16 +68,18 @@ public class ActionCacheFilterTests
         };
 
         _cache = _factory.Create(@namespace)!;
-        var filter = new ActionCacheFilter(_cache, _binderFactory, NullLogger.Instance, SingleFlightBuilder.Build(), true, VaryByBuilder.Resolver(), VaryByBuilder.Options());
+        var filter = new ActionCacheFilter(_cache, _binderFactory, NullLogger.Instance, SingleFlightBuilder.Build(), true, VaryByBuilder.Resolver(), VaryByBuilder.Options(), ResponseFactoryBuilder.Build());
 
         await filter.OnActionExecutionAsync(actionExecutingContext, next);
 
         var key = new ActionCacheKeyBuilder()
             .WithRouteValues(routeData.Values)
             .Build();
-        var cacheResult = await _cache.GetAsync<IActionResult>(key);
+        var cacheResult = await _cache.GetAsync<CachedResponse>(key);
 
-        cacheResult.Should().BeAssignableTo<OkObjectResult>();
-        cacheResult.As<OkObjectResult>().Value.Should().Be("Foo");
+        // The entry is now a rendered response rather than a serialized result graph.
+        cacheResult.Should().NotBeNull();
+        cacheResult!.StatusCode.Should().Be(StatusCodes.Status200OK);
+        cacheResult.Body.Should().Be("\"Foo\"");
     }
 }

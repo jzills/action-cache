@@ -2,6 +2,7 @@ using ActionCache.Common.Caching;
 using ActionCache.Common.Concurrency;
 using ActionCache.Common.Enums;
 using ActionCache.Common.Keys.VaryBy;
+using ActionCache.Common.Responses;
 using ActionCache.Common.Extensions.Internal;
 using ActionCache.Exceptions;
 using ActionCache.Utilities;
@@ -50,6 +51,11 @@ public abstract class ActionCacheFilterAbstractFactoryBase<TFilter> : IActionCac
     protected readonly ActionCacheVaryByResolver VaryByResolver;
 
     /// <summary>
+    /// Converts between endpoint results and the responses stored in a backend.
+    /// </summary>
+    protected readonly CachedResponseFactory ResponseFactory;
+
+    /// <summary>
     /// Initializes a new instance of the <see cref="ActionCacheFilterAbstractFactoryBase{TFilter}"/> class.
     /// </summary>
     /// <param name="cacheFactories">The cache factories used to create caches.</param>
@@ -58,13 +64,15 @@ public abstract class ActionCacheFilterAbstractFactoryBase<TFilter> : IActionCac
     /// <param name="loggerFactory">The factory used to create loggers for the filters this factory produces.</param>
     /// <param name="singleFlight">Coalesces concurrent misses for the same key.</param>
     /// <param name="varyByResolver">Resolves the request dimensions that form part of the cache key.</param>
+    /// <param name="responseFactory">Converts between endpoint results and stored responses.</param>
     protected ActionCacheFilterAbstractFactoryBase(
         IEnumerable<IActionCacheFactory> cacheFactories,
         TemplateBinderFactory binderFactory,
         ResilientCacheDecorator resilientDecorator,
         ILoggerFactory loggerFactory,
         IActionCacheSingleFlight singleFlight,
-        ActionCacheVaryByResolver varyByResolver
+        ActionCacheVaryByResolver varyByResolver,
+        CachedResponseFactory responseFactory
     )
     {
         CacheFactories = cacheFactories;
@@ -73,6 +81,7 @@ public abstract class ActionCacheFilterAbstractFactoryBase<TFilter> : IActionCac
         LoggerFactory = loggerFactory;
         SingleFlight = singleFlight;
         VaryByResolver = varyByResolver;
+        ResponseFactory = responseFactory;
     }
 
     /// <inheritdoc/>
