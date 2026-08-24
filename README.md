@@ -10,6 +10,7 @@
 [![Downloads](https://img.shields.io/nuget/dt/ActionCache?style=flat-square&label=downloads&color=a371f7&labelColor=21262d)](https://www.nuget.org/packages/ActionCache/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-a371f7?style=flat-square&labelColor=21262d)](LICENSE)
 [![.NET](https://img.shields.io/badge/.NET-8.0%20%7C%2010.0-a371f7?style=flat-square&labelColor=21262d)](https://dotnet.microsoft.com/)
+[![Docs](https://img.shields.io/badge/docs-jzills.github.io-a371f7?style=flat-square&labelColor=21262d)](https://jzills.github.io/action-cache/)
 
 </div>
 
@@ -17,7 +18,7 @@
 - [Features](#features)
 - [Installation](#installation)
 - [Quickstart](#quickstart)
-- [Documentation](./src/README.md)
+- [Documentation](https://jzills.github.io/action-cache/)
 - [Resources](#resources)
 
 ## Summary
@@ -61,7 +62,7 @@ ask for.
   **Azure Cosmos DB**, used individually or layered together.
 - **Namespaced eviction** — group entries under a namespace (with route-parameter
   templates like `Account:{id}`) and evict a whole namespace in one call.
-- **Cache refresh** — re-invoke cached actions to warm entries ahead of expiry.
+- **Cache refresh** — replay the request recorded on each entry to warm it ahead of expiry.
 - **Fail-open by default** — a backend outage degrades to a cache miss and logs a
   warning so requests still succeed; opt into fail-closed to propagate errors instead.
 
@@ -117,10 +118,11 @@ public IActionResult Get() => Ok(_forecasts);
 public IActionResult Create(Forecast forecast) => Ok(_repository.Add(forecast));
 ```
 
-See the [full documentation](./src/README.md) for expiration, route-templated
-namespaces, multiple backends, cache refresh, and resilience options.
+See the [documentation site](https://jzills.github.io/action-cache/) for expiration,
+route-templated namespaces, layered backends, refresh, vary-by, resilience and
+observability.
 
 ## Resources
 
-- [Documentation](./src/README.md)
+- [Documentation](https://jzills.github.io/action-cache/)
 - [Samples](./samples/)

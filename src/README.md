@@ -3,347 +3,68 @@
 
 [![NuGet Version](https://img.shields.io/nuget/v/ActionCache.svg)](https://www.nuget.org/packages/ActionCache/) [![NuGet Downloads](https://img.shields.io/nuget/dt/ActionCache.svg)](https://www.nuget.org/packages/ActionCache/)
 
-- [Quickstart](#quickstart)
-    * [Register with MemoryCache](#register-with-imemorycache)
-    * [Register with Redis](#register-with-redis)
-    * [Register with SqlServer](#register-with-sqlserver)
-    * [Register with Azure Cosmos](#register-with-azure-cosmos)
-    * [Register Multiple Cache Stores](#register-multiple-cache-stores)
-    * [Resilience](#resilience-fail-open-by-default)
-    * [Basic Usage](#basic-usage)
-    * [Cache Key Creation](#cache-key-creation)
-    * [Cache Eviction](#cache-eviction)
-    * [Cache Refresh](#cache-refresh)
-    * [Route Templates for Namespaces](#route-templates-for-namespaces)
+Namespaced response caching for ASP.NET Core — Memory, Redis, SQL Server, and Azure Cosmos DB.
 
-## Register with MemoryCache
+**📖 Full documentation: <https://jzills.github.io/action-cache/>**
 
-Use the `AddActionCache` extension method to register `IMemoryCache` as a cache store. The configuration for `MemoryCacheOptions` is exposed as a parameter to `UseMemoryCache`.
+## Install
 
-    builder.Services.AddActionCache(options => 
-    {
-        options.UseMemoryCache(...);
-    });
+```bash
+dotnet add package ActionCache                 # core + in-memory caching
+dotnet add package ActionCache.Redis           # add for Redis
+dotnet add package ActionCache.SqlServer       # add for SQL Server
+dotnet add package ActionCache.AzureCosmos     # add for Azure Cosmos DB
+```
 
-## Register with Redis
+Targets **.NET 8** and **.NET 10**.
 
-Use the `AddActionCache` extension method to register `RedisCache` as a cache store. The configuration for `RedisCacheOptions` is exposed as a parameter to `UseRedisCache`.
+## Quickstart
 
-    builder.Services.AddActionCache(options => 
-    {
-        options.UseRedisCache(...);
-    });
+Register a backend:
 
-> **Keyspace notifications:** ActionCache's Redis backend cleans up its sliding-
-> expiration index from Redis key-expired events. For that cleanup to run, the Redis
-> server must have keyspace event notifications enabled with the `Ex` flags:
->
->     redis-cli config set notify-keyspace-events Ex
->
-> (or `notify-keyspace-events Ex` in `redis.conf`). The expiry listener targets the
-> database configured in your connection string. Without `Ex` the index self-heals
-> lazily on access instead — nothing breaks, cleanup is just deferred.
+```csharp
+using ActionCache.Common.Extensions;
 
-## Register with SqlServer
-
-Use the `AddActionCache` extension method to register `SqlServerCache` as a cache store. The configuration for `SqlServerCacheOptions` is exposed as a parameter to `UseSqlServerCache`.
-
-    builder.Services.AddActionCache(options => 
-    {
-        options.UseSqlServerCache(...);
-    });
-
-## Register with Azure Cosmos
-
-Use the `AddActionCache` extension method to register `CosmosClient` as a cache store. The configuration for `AzureCosmosCacheOptions` is exposed as a parameter to `UseAzureCosmosCache`.
-
-    builder.Services.AddActionCache(options => 
-    {
-        options.UseAzureCosmosCache(options =>
-        {
-            options.DatabaseId = "MyDatabase";
-            options.ConnectionString =
-                configuration.GetValue<string>("CosmosDb:ConnectionString");
-        });
-    });
-
-> [!NOTE]
-> Both a *DatabaseId* and *ConnectionString* are required. The only requirement within Azure is to create an Azure Cosmos DB account and use that primary connection string in the above configuration. A database and container will be created automatically if they don't already exist.
-
-## Register Multiple Cache Stores
-
-Two or more cache stores can be combined. 
-
-    builder.Services.AddActionCache(options => 
-    {
-        options.UseMemoryCache(...);
-        options.UseRedisCache(...);
-        options.UseSqlServerCache(...);
-    });
-
-## Resilience (Fail-Open by Default)
-
-By default ActionCache **fails open**: if a cache backend (Redis, SQL Server, Cosmos)
-throws while serving a request, the error is logged at `Warning` and the operation
-degrades to a cache miss (reads) or a no-op (writes/eviction/refresh) so the request
-still succeeds without caching. Caching is an enhancement, not a hard dependency.
-
-To make backend failures propagate to the caller instead, opt in to **fail-closed**:
-
-    builder.Services.AddActionCache(options =>
-    {
-        options.UseRedisCache(...);
-        options.FailClosed();
-    });
-
-## Vary-By (Who the Response Belongs To)
-
-A cache key is built from the route values and action arguments. On an endpoint that
-returns data belonging to the caller, that is not enough on its own — two authenticated
-users would produce the same key, and the second would be served the first one's response.
-
-**ActionCache varies by the authenticated user automatically.** If a request is
-authenticated, the caller's identity joins the cache key without you having to ask:
-
-    [HttpGet("me")]
-    [Authorize]
-    [ActionCache(Namespace = "Me")]          // already per-user
-    public IActionResult GetMe() => Ok(_repository.ForUser(User));
-
-Anonymous requests are unaffected — there is no identity to separate, so they continue to
-share one entry.
-
-If a response genuinely does not depend on who asked for it, opt back out to recover the
-shared entry:
-
-    [ActionCache(Namespace = "Rates", VaryByUser = VaryByUserMode.Never)]
-
-Other dimensions are declared the same way, each a comma-separated list:
-
-    [ActionCache(
-        Namespace = "Catalog",
-        VaryByHeader = "Accept-Language",
-        VaryByQuery = "page,sort",
-        VaryByClaim = "tenant_id")]
-
-A named-but-absent header or query value is recorded as empty rather than skipped, so
-`Accept-Language: en` and no `Accept-Language` at all cannot collide on one entry.
-
-For anything the attributes cannot express — a tenant read from a subdomain, a
-feature-flag cohort, a negotiated API version — implement a contributor:
-
-    public class TenantKeyContributor : IActionCacheKeyContributor
-    {
-        public ValueTask ContributeAsync(
-            HttpContext httpContext,
-            IDictionary<string, string?> varyByValues,
-            CancellationToken cancellationToken)
-        {
-            varyByValues["tenant"] = httpContext.Request.Host.Host.Split('.')[0];
-            return ValueTask.CompletedTask;
-        }
-    }
-
-    builder.Services.AddActionCacheKeyContributor<TenantKeyContributor>();
-
-Every registered contributor runs for every cached request. Values are stored sorted, so
-the order contributors run in cannot change the key.
-
-### Two caveats worth knowing
-
-**Cardinality.** Per-user keys mean one entry per user per endpoint. On the memory backend
-set a `SizeLimit` so the cache cannot grow without bound:
-
+builder.Services.AddActionCache(options =>
+{
     options.UseMemoryCache(memory => memory.SizeLimit = 10_000);
+});
+```
 
-**Refresh skips varied entries.** `[ActionCacheRefresh]` re-invokes actions by reflection
-with no `HttpContext`, so it cannot reproduce the request a varied entry was built from.
-Rather than warm every variant with one identical value, it skips them and logs a warning.
-Varied entries are refreshed by ordinary expiry instead.
+Cache a read, evict on write:
 
-## Cache Stampede Protection
+```csharp
+using ActionCache.Attributes;
 
-When a hot entry expires, every concurrent request misses at once and they all execute the
-action. ActionCache coalesces them: the first request executes while the rest wait, then
-re-read the cache and reuse what it stored. A test issuing 20 concurrent requests to one
-uncached endpoint invokes the action **once**.
+[HttpGet("forecasts")]
+[ActionCache(Namespace = "Forecasts")]
+public IActionResult Get() => Ok(_repository.All());
 
-This is **on by default**. Opt out per endpoint when the action has per-request side
-effects that must not be skipped:
+[HttpPost("forecasts")]
+[ActionCacheEviction(Namespace = "Forecasts")]
+public IActionResult Create(Forecast forecast) => Ok(_repository.Add(forecast));
+```
 
-    [HttpGet("forecasts")]
-    [ActionCache(Namespace = "Forecasts", SingleFlight = false)]
-    public IActionResult Get() => Ok(_forecasts);
+Entries are grouped under a **namespace**, which is what makes eviction and refresh
+possible without tracking keys. A namespace can embed route tokens — `Account:{id}` gives
+every account its own group.
 
-A waiter blocks for at most `ActionCacheEntryOptions.LockTimeout` (default 10 seconds); if
-the lock cannot be acquired in that time the request executes uncoalesced rather than
-failing, consistent with the fail-open stance above.
+## What you get without asking
 
-By default coalescing is **per process**, matching .NET's `HybridCache`. With several
-instances running, each one executes the action once. To coalesce across every instance,
-opt in to the distributed lock:
+- **Per-user keys** on authenticated endpoints, so one caller is never served another's response.
+- **Stampede protection** — concurrent misses for one key are coalesced and the action runs once.
+- **Fail-open** — a backend outage degrades to a cache miss and the request still succeeds.
+- **Hashed keys** — SHA-256, so nothing readable is left in the store.
 
-    builder.Services.AddActionCache(options =>
-    {
-        options.UseRedisCache(...);
-        options.UseDistributedSingleFlight();
-    });
+## Documentation
 
-This requires Redis or SQL Server (Redis is preferred when both are configured) and throws
-at startup if neither is present. Note that every cache miss then costs a lock round-trip
-to the backend, which is why it is not the default.
-
-## Cancellation and Timeouts
-
-Every `IActionCache` operation takes a `CancellationToken`, and the filters pass
-`HttpContext.RequestAborted`, so a client that disconnects stops backend work in flight.
-A cancelled request always propagates its `OperationCanceledException` — it is never
-degraded into a cache miss, since nobody is waiting for the answer.
-
-Fail-open catches exceptions, but it cannot bound a backend that *hangs* rather than
-throws. Set a timeout for that:
-
-    builder.Services.AddActionCache(options =>
-    {
-        options.UseRedisCache(...);
-        options.UseOperationTimeout(TimeSpan.FromMilliseconds(250));
-    });
-
-An elapsed timeout is treated as a backend failure: degraded under fail-open, propagated
-under fail-closed. No timeout is configured by default.
-
-## Layered Backends
-
-When several backends are registered they form a chain. A read is served by the first
-layer that has the entry, and a hit in a deeper layer is **promoted into the faster one**,
-so a Memory + Redis stack stops paying the Redis round-trip after the first request. Key
-enumeration — which drives namespace eviction and refresh — unions every layer, so nothing
-is missed.
-
-## Basic Usage
-
-Add an `ActionCacheAttribute` to any controller actions that should be cached. There is a mandatory parameter for the cache namespace which will prefix all entries with whatever is specified.
-
-    [HttpPost]
-    [Route("/")]
-    [ActionCache(Namespace = "MyNamespace")]
-    public IActionResult Post() 
-    {
-    }
-
-## Observability
-
-ActionCache publishes a `Meter` and an `ActivitySource`, both named `ActionCache`. Neither
-does anything until something subscribes, so there is no flag to turn them on:
-
-    builder.Services.AddOpenTelemetry()
-        .WithMetrics(metrics => metrics.AddMeter(ActionCacheDiagnostics.MeterName))
-        .WithTracing(tracing => tracing.AddSource(ActionCacheDiagnostics.ActivitySourceName));
-
-| Instrument | Meaning |
-|-----------|---------|
-| `actioncache.requests` | Lookups, tagged `namespace` and `status` (`hit` / `miss`) |
-| `actioncache.operation.duration` | How long one backend operation took, in ms, tagged `namespace`, `operation` and `outcome` (`ok` / `error` / `cancelled`) |
-| `actioncache.evictions` | Namespace evictions, tagged `namespace` |
-| `actioncache.single_flight.coalesced` | Requests served by another request's in-flight execution, tagged `namespace` |
-
-Every `namespace` tag carries the **unresolved** template — `Account:{id}`, not
-`Account:42`. The resolved form is per-resource, which as a metric dimension is unbounded
-cardinality.
-
-`actioncache.requests` and `actioncache.evictions` are recorded once per request. The
-others are per backend operation, so a layered chain or a single-flight re-check
-contributes more than one.
-
-Spans cover each backend operation and each refresh replay, and a degraded operation marks
-its span as an error.
-
-## Cache Keys
-
-Keys are **hashed** (SHA-256 over the route values, action arguments and vary-by values).
-Nothing needs to reverse a key — refresh replays the request recorded on the entry itself —
-so hashing costs nothing but inspectability.
-
-If you want to read keys while debugging:
-
-    builder.Services.AddActionCache(options =>
-    {
-        options.UseMemoryCache(memory => { });
-        options.UsePlaintextKeys();
-    });
-
-Plaintext keys embed every route value and action argument that produced an entry — ids,
-filters, search terms — in a form anyone with read access to the cache can recover. Look at
-what yours would contain before leaving that on outside development.
-
-## Cache Key Creation
-
-Both the route values and the action arguments are serialized then encoded to generate the cache key suffix. This suffix is appended to the string "ActionCache:{Namespace}".
-
-> [!NOTE]
-> Any route data from the request, i.e. the area, controller and action names as well as parameters are also added to the key. This is to support automatic cache refreshing.
-
-> [!NOTE]
-> Cache keys are a reversible **encoding** (hex) of the request's route values and
-> action arguments — they are **not encrypted** and are not confidential. Anyone
-> with read access to the cache store can decode them. Secure the cache store as
-> you would any datastore holding request metadata, and avoid placing secrets in
-> route values or action arguments.
-
-## Cache Eviction
-
-An `ActionCacheEvictionAttribute` can be applied to a controller action. A cache eviction occurs at the namespace level. One or more namespaces can be used separated by a comma. In the example below, both *MyNamespace* and *MyOtherNamespace* would have their entries evicted on a successful execution of the action.
-
-    [HttpDelete]
-    [Route("/")]
-    [ActionCacheEviction(Namespace = "MyNamespace, MyOtherNamespace")]
-    public IActionResult Delete()
-    {
-    }
-
-## Cache Refresh
-
-`[ActionCacheRefresh]` re-populates a namespace's entries with current data. It works by
-**replaying the request that produced each entry**: the method, path and query are recorded
-alongside the cached response, and refresh re-issues them against the matching endpoint
-with a real `HttpContext`, so model binding, action filters, the action and result
-execution all run normally.
-
-    [HttpGet("forecasts")]
-    [ActionCache(Namespace = "Forecasts")]
-    public IActionResult Get() => Ok(_repository.All());
-
-    [HttpPost("forecasts")]
-    [ActionCacheRefresh(Namespace = "Forecasts")]
-    public IActionResult Create(Forecast forecast) => Ok(_repository.Add(forecast));
-
-### What replay does and does not run
-
-It executes the **endpoint**. It does **not** run outer middleware — authentication, CORS,
-exception handling — because those belong to the request pipeline rather than the endpoint.
-Each replay runs in its own DI scope, so it cannot disturb the request that triggered it.
-
-Two kinds of entry are skipped, with a warning:
-
-- **Entries that vary by request context** (see [Vary-By](#vary-by-who-the-response-belongs-to)).
-  Replaying another caller's request would mean impersonating them. These are refreshed by
-  ordinary expiry instead.
-- **Entries with no recorded request**, which can only happen for entries written by an
-  older version of the library.
-
-Only the request line is recorded — never headers. Headers routinely carry credentials, and
-a cache entry is not a safe place to keep them.
-
-## Route Templates for Namespaces
-
-A namespace, i.e. a cache key, can contain route template parameters. In the case below, cache namespaces will vary on the route parameter of *id*. This means that each unique *Account* will have it's own namespace where differing values of *offset* will be stored in their corresponding cache namespace. 
-
-    [HttpGet]
-    [Route("{id}")]
-    [ActionCache(Namespace = "Account:{id}")]
-    public async Task<IActionResult> Get(Guid id, DateTime offset)
-    {
-    }
-
-> [!NOTE]
-> This is beneficial because actions like evicting or refreshing cache entries can be done at the namespace level.
+| | |
+|---|---|
+| [Getting started](https://jzills.github.io/action-cache/docs/getting-started/installation/) | Packages and registration |
+| [Backends](https://jzills.github.io/action-cache/docs/backends/) | Memory, Redis, SQL Server, Cosmos |
+| [Attributes](https://jzills.github.io/action-cache/docs/caching/attributes/) | Every option on the three attributes |
+| [Vary-by](https://jzills.github.io/action-cache/docs/caching/vary-by/) | Who a cached response belongs to |
+| [Eviction](https://jzills.github.io/action-cache/docs/operations/eviction/) · [Refresh](https://jzills.github.io/action-cache/docs/operations/refresh/) · [Layering](https://jzills.github.io/action-cache/docs/operations/layering/) | Operations |
+| [Resilience](https://jzills.github.io/action-cache/docs/reliability/resilience/) · [Stampede](https://jzills.github.io/action-cache/docs/reliability/stampede/) | Reliability |
+| [Observability](https://jzills.github.io/action-cache/docs/observability/) | Metrics and traces |
+| [Configuration reference](https://jzills.github.io/action-cache/docs/reference/configuration/) | Every option in one table |

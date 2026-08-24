@@ -1,0 +1,332 @@
+/* Landing-page styling for the ActionCache site.
+ *
+ * Hextra's own hero shortcodes lay out left-aligned (hx:items-start) and expect
+ * Tailwind utility classes from the theme's own build, which a content file
+ * cannot reliably reach. The landing page is therefore plain markup against the
+ * classes below, so alignment and rhythm are defined in one place rather than
+ * scattered through _index.md as utilities that may or may not resolve.
+ *
+ * Colours come from Hextra's CSS custom properties so both themes follow the
+ * light/dark toggle without a second palette to maintain.
+ */
+
+:root {
+  --ac-border: var(--color-gray-200, #e5e7eb);
+  --ac-surface: rgba(0, 0, 0, 0.015);
+  --ac-muted: var(--color-gray-600, #4b5563);
+  --ac-code-bg: rgba(0, 0, 0, 0.035);
+  --ac-code-fg: var(--color-gray-700, #374151);
+  --ac-brand: #8b5cf6;
+}
+
+.dark {
+  --ac-border: var(--color-neutral-800, #262626);
+  --ac-surface: rgba(255, 255, 255, 0.03);
+  --ac-muted: var(--color-gray-400, #9ca3af);
+  --ac-code-bg: rgba(0, 0, 0, 0.28);
+  --ac-code-fg: var(--color-gray-300, #d1d5db);
+  --ac-brand: #a371f7;
+}
+
+/* ---------------------------------------------------------------- hero --- */
+
+.ac-hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.25rem;
+  padding: 4rem 1rem 1.5rem;
+  text-align: center;
+}
+
+/* The wordmark stands in for the headline, so it carries the h1. Its intrinsic
+ * size is the character grid it was cut from; width is what scales it, and the
+ * viewBox keeps the ratio. */
+.ac-hero__logo {
+  margin: 0;
+  width: min(30rem, 82vw);
+  color: var(--ac-brand);
+  line-height: 0;
+}
+
+.ac-hero__logo svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+/* The headline text the wordmark replaced. It still has to be said — the mark
+ * spells the name, not what the thing does. */
+.ac-hero__tagline {
+  margin: 0;
+  font-size: clamp(1.15rem, 2.6vw, 1.6rem);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+}
+
+.ac-hero__blurb {
+  max-width: 44rem;
+  margin: 0;
+  font-size: clamp(1rem, 2vw, 1.2rem);
+  line-height: 1.6;
+  color: var(--ac-muted);
+}
+
+.ac-hero__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.75rem;
+  margin-top: 0.25rem;
+}
+
+.ac-button {
+  display: inline-block;
+  padding: 0.7rem 1.5rem;
+  border-radius: 9999px;
+  font-weight: 500;
+  text-decoration: none !important;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.ac-button--primary {
+  background: var(--color-primary-600, #5b21b6);
+  color: #fff;
+}
+
+.ac-button--primary:hover {
+  background: var(--color-primary-700, #4c1d95);
+}
+
+.ac-button--ghost {
+  border: 1px solid var(--ac-border);
+  color: inherit;
+}
+
+.ac-button--ghost:hover {
+  border-color: var(--color-primary-500, #6d28d9);
+}
+
+/* ------------------------------------------------------------ nav mark --- */
+
+.ac-navbar-mark {
+  color: var(--ac-brand);
+}
+
+.ac-navbar-mark svg {
+  /* Six rows of a character grid, so it needs the height a wordmark would not.
+     Below about 30px the outline strokes fall under a pixel and the letters
+     silt up. */
+  height: 2rem;
+  width: auto;
+}
+
+/* ------------------------------------------------------------ showcase --- */
+
+/* The claim on this page is "one attribute", so the hero shows the attribute
+ * rather than describing it. This is the only decoration on the landing page
+ * that is also the product. */
+
+.ac-showcase {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.9rem;
+  padding: 0 1rem 1rem;
+}
+
+.ac-showcase__frame {
+  width: 100%;
+  max-width: 46rem;
+  border: 1px solid var(--ac-border);
+  border-radius: 0.75rem;
+  overflow: hidden;
+  background: var(--ac-surface);
+  /* A frame that reads as a window rather than a block of page. */
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 12px 32px -12px rgba(0, 0, 0, 0.12);
+}
+
+.dark .ac-showcase__frame {
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 12px 32px -12px rgba(0, 0, 0, 0.6);
+}
+
+/* The theme gives a code block its own margin, border and radius. Inside the
+ * frame that doubles every edge, so the block gives them all up and the frame
+ * keeps them. */
+.ac-showcase__frame pre {
+  margin: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  padding: 1.15rem 1.35rem !important;
+  font-size: 0.83rem;
+  line-height: 1.65;
+  overflow-x: auto;
+}
+
+.ac-showcase__frame div.highlight,
+.ac-showcase__frame .highlight {
+  margin: 0 !important;
+  border-radius: 0 !important;
+}
+
+/* The theme styles <code> for inline use — its own padding, background and
+ * border. Inside a block that paints a chip edge down the left of the listing. */
+.ac-showcase__frame code {
+  padding: 0 !important;
+  background: transparent !important;
+  border: 0 !important;
+  font-size: inherit;
+}
+
+.ac-showcase__caption {
+  max-width: 34rem;
+  margin: 0;
+  text-align: center;
+  font-size: 0.9rem;
+  line-height: 1.6;
+  color: var(--ac-muted);
+}
+
+/* ------------------------------------------------------------ sections --- */
+
+.ac-section {
+  padding: 2.75rem 0 0.5rem;
+  /* The navbar is sticky, so a section jumped to from the menu would otherwise
+     start underneath it with its heading hidden. */
+  scroll-margin-top: 5rem;
+}
+
+.ac-section__title {
+  margin: 0 0 0.4rem;
+  text-align: center;
+  font-size: 1.6rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  /* The theme underlines every h2 in .content with a full-width rule. Centred
+     over a centred heading it reads as a divider belonging to nothing. */
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+.ac-section__title::after {
+  content: "";
+  display: block;
+  width: 2.25rem;
+  height: 2px;
+  margin: 0.7rem auto 0;
+  border-radius: 2px;
+  background: var(--color-primary-500, #6d28d9);
+  opacity: 0.55;
+}
+
+.ac-section__lede {
+  max-width: 42rem;
+  margin: 0 auto 1.75rem;
+  text-align: center;
+  color: var(--ac-muted);
+  line-height: 1.6;
+}
+
+/* --------------------------------------------------------------- cards --- */
+
+.ac-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+}
+
+.ac-grid--wide {
+  grid-template-columns: repeat(auto-fit, minmax(19rem, 1fr));
+}
+
+.ac-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding: 1.1rem 1.2rem;
+  border: 1px solid var(--ac-border);
+  border-radius: 0.6rem;
+  background: var(--ac-surface);
+  color: inherit;
+  text-decoration: none !important;
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+
+a.ac-card:hover {
+  border-color: var(--color-primary-500, #6d28d9);
+  transform: translateY(-2px);
+}
+
+.ac-card__title {
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+
+.ac-card__title code {
+  font-size: 0.95em;
+}
+
+.ac-card__body {
+  font-size: 0.9rem;
+  line-height: 1.55;
+  color: var(--ac-muted);
+}
+
+/* The install command, as a terminal line rather than a run of monospace text.
+ *
+ * The prompt is a ::before rather than part of the text, so selecting the line
+ * and copying it yields a command that runs — a literal "> " in the markup is
+ * the classic way to hand someone a paste that fails.
+ *
+ * The commands are longer than a quarter of the content width, so they wrap.
+ * The left padding is what the wrapped line hangs against, keeping the prompt
+ * on its own and the command aligned with itself. */
+.ac-card__command {
+  position: relative;
+  padding: 0.45rem 0.6rem 0.45rem 1.5rem;
+  border: 1px solid var(--ac-border);
+  border-radius: 0.375rem;
+  background: var(--ac-code-bg);
+  font-family: var(--font-mono, ui-monospace, SFMono-Regular, monospace);
+  font-size: 0.75rem;
+  line-height: 1.55;
+  color: var(--ac-code-fg);
+  overflow-wrap: anywhere;
+}
+
+.ac-card__command::before {
+  content: ">";
+  position: absolute;
+  left: 0.62rem;
+  top: 0.45rem;
+  color: var(--color-primary-500, #6d28d9);
+  font-weight: 600;
+  user-select: none;
+}
+
+/* --------------------------------------------------------------- table --- */
+
+.ac-table-wrap {
+  /* The comparison table has five columns; below roughly 60rem it has to
+     scroll inside its own box rather than widening the page. */
+  overflow-x: auto;
+  margin-top: 0.5rem;
+}
+
+.ac-table-wrap table {
+  /* The theme renders tables as blocks so they can scroll, and a block fills its
+     container — so auto margins only centre it once it is sized to its content. */
+  width: fit-content;
+  max-width: 100%;
+  margin-inline: auto;
+}
+
+/* ------------------------------------------------------------- closing --- */
+
+.ac-closing {
+  margin: 3rem 0 1rem;
+  text-align: center;
+  color: var(--ac-muted);
+}

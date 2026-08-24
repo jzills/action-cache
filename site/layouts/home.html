@@ -1,0 +1,36 @@
+{{ define "main" }}
+  {{- /*
+    Hextra's home layout with the sidebar's desktop placeholder, the table of
+    contents and the <h1> removed.
+
+    The theme reserves space for all three on every page. On a landing page
+    whose headings are "Install", "Features" and so on, the table of contents
+    lists nothing worth navigating to, and the two reserved columns left the
+    content at roughly 670px of a 1440px viewport — too narrow for the backend
+    comparison table, which then scrolled sideways on a desktop.
+
+    hextra-max-content-width is kept. Without it the page runs the full width of
+    the browser, which is too wide to read and puts four feature cards on one
+    row and two on the next.
+
+    The <h1> goes because it rendered "ActionCache" immediately above a hero
+    carrying the same name and the tagline. The title stays in <head>, which is
+    what browser tabs and search results use.
+  */ -}}
+  <div class="hx:mx-auto hx:flex hextra-max-page-width">
+    {{- /*
+      displayPlaceholder false is what stops this reserving the desktop width
+      described above — but the element still has to exist: the theme's menu
+      script reads .hextra-sidebar-container on every page load. On mobile this
+      is what the hamburger opens.
+    */ -}}
+    {{ partial "sidebar.html" (dict "context" . "disableSidebar" true "displayPlaceholder" false) }}
+    <article class="hx:w-full hx:break-words hx:flex hx:min-h-[calc(100vh-var(--navbar-height))] hx:min-w-0 hx:justify-center hx:pb-8">
+      <main id="content" class="hx:w-full hx:min-w-0 hextra-max-content-width hx:px-6 hx:pt-4 hx:md:px-12">
+        <div class="content">
+          {{ .Content }}
+        </div>
+      </main>
+    </article>
+  </div>
+{{ end }}
