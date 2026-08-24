@@ -14,12 +14,16 @@
   --ac-border: var(--color-gray-200, #e5e7eb);
   --ac-surface: rgba(0, 0, 0, 0.015);
   --ac-muted: var(--color-gray-600, #4b5563);
+  --ac-code-bg: rgba(0, 0, 0, 0.035);
+  --ac-code-fg: var(--color-gray-700, #374151);
 }
 
 .dark {
   --ac-border: var(--color-neutral-800, #262626);
   --ac-surface: rgba(255, 255, 255, 0.03);
   --ac-muted: var(--color-gray-400, #9ca3af);
+  --ac-code-bg: rgba(0, 0, 0, 0.28);
+  --ac-code-fg: var(--color-gray-300, #d1d5db);
 }
 
 /* ---------------------------------------------------------------- hero --- */
@@ -236,11 +240,36 @@ a.ac-card:hover {
   color: var(--ac-muted);
 }
 
+/* The install command, as a terminal line rather than a run of monospace text.
+ *
+ * The prompt is a ::before rather than part of the text, so selecting the line
+ * and copying it yields a command that runs — a literal "> " in the markup is
+ * the classic way to hand someone a paste that fails.
+ *
+ * The commands are longer than a quarter of the content width, so they wrap.
+ * The left padding is what the wrapped line hangs against, keeping the prompt
+ * on its own and the command aligned with itself. */
 .ac-card__command {
+  position: relative;
+  padding: 0.45rem 0.6rem 0.45rem 1.5rem;
+  border: 1px solid var(--ac-border);
+  border-radius: 0.375rem;
+  background: var(--ac-code-bg);
   font-family: var(--font-mono, ui-monospace, SFMono-Regular, monospace);
-  font-size: 0.8rem;
-  color: var(--ac-muted);
+  font-size: 0.75rem;
+  line-height: 1.55;
+  color: var(--ac-code-fg);
   overflow-wrap: anywhere;
+}
+
+.ac-card__command::before {
+  content: ">";
+  position: absolute;
+  left: 0.62rem;
+  top: 0.45rem;
+  color: var(--color-primary-500, #6d28d9);
+  font-weight: 600;
+  user-select: none;
 }
 
 /* --------------------------------------------------------------- table --- */
