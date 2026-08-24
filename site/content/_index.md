@@ -5,7 +5,8 @@ toc: false
 ---
 
 <div class="ac-hero">
-  <h1 class="ac-hero__title">Namespaced response caching<br />for ASP.NET Core</h1>
+  <h1 class="ac-hero__logo">{{< ac-wordmark >}}</h1>
+  <p class="ac-hero__tagline">Namespaced response caching for ASP.NET Core</p>
   <p class="ac-hero__blurb">
     Cache a controller action or a Minimal API endpoint with one attribute.
     Evict and refresh whole namespaces without knowing a single key.

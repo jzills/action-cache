@@ -49,8 +49,10 @@ title = "ActionCache"
 [params]
   description = "Namespaced response caching for ASP.NET Core — Memory, Redis, SQL Server, and Azure Cosmos DB."
 
+  # Both off: layouts/_partials/navbar-title.html draws the mark itself, inlined
+  # so it takes its colour from the page rather than being two fixed images.
   [params.navbar]
-    displayTitle = true
+    displayTitle = false
     displayLogo = false
 
   [params.footer]
@@ -68,7 +70,12 @@ title = "ActionCache"
       # published page is self-hosted either way — but the *build* then needs
       # the network, and a jsDelivr blip would fail a deploy that has nothing
       # to do with jsDelivr.
-      index = "content"
+      #
+      # The vendored copy must stay on the major the theme's index code is
+      # written against. Its Document config uses the 0.8 tag syntax
+      # (tag: [{ field }]), which 0.7 does not understand — pairing it with a
+      # 0.7 bundle builds and publishes cleanly and then returns no results for
+      # any query. .github/workflows/pages.yml pins the expected version.
       js = "vendor/flexsearch/flexsearch.bundle.min.js"
 
   # Hextra's stock light/dark switch.

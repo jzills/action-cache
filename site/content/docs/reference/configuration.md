@@ -42,7 +42,7 @@ builder.Services.AddActionCache(options =>
 
 Registration order is chain order — see [Layered backends](../../operations/layering).
 
-## `ActionCacheEntryOptions`
+## ActionCacheEntryOptions
 
 Defaults for every entry, overridable per action on `[ActionCache]`.
 
@@ -58,7 +58,7 @@ the single-flight wait — that is `ActionCacheSingleFlightOptions.WaitTimeout`,
 across the origin action and sized differently on purpose.
 {{< /callout >}}
 
-## `ActionCacheSingleFlightOptions`
+## ActionCacheSingleFlightOptions
 
 | Property | Type | Default | Meaning |
 |---|---|---|---|
@@ -70,7 +70,7 @@ Validated at startup: both must be positive, and `LeaseDuration` must exceed `Wa
 Only locks with a time-to-live enforce the lease — that is Redis. See
 [Stampede protection](../../reliability/stampede).
 
-## `ActionCacheResilienceOptions`
+## ActionCacheResilienceOptions
 
 Set through `FailClosed()` and `UseOperationTimeout()`.
 
@@ -81,7 +81,7 @@ Set through `FailClosed()` and `UseOperationTimeout()`.
 
 See [Resilience](../../reliability/resilience).
 
-## `[ActionCache]` properties
+## ActionCache attribute properties
 
 | Property | Type | Default |
 |---|---|---|

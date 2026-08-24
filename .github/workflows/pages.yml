@@ -29,6 +29,11 @@ concurrency:
 env:
   # Hextra requires the extended build; see site/hugo.toml.
   HUGO_VERSION: 0.165.0
+  # The FlexSearch major the theme's index code is written against. The vendored
+  # bundle must match: the theme configures its Document with the 0.8 tag syntax,
+  # which a 0.7 bundle does not understand — it builds, publishes, and then
+  # returns no results for any query. See site/hugo.toml.
+  FLEXSEARCH_VERSION: 0.8.143
 
 jobs:
   build:
@@ -78,7 +83,9 @@ jobs:
 
       # The search bundle is vendored under site/assets rather than fetched from a CDN at
       # build time. If it goes missing the build still succeeds and publishes a site whose
-      # search box does nothing, so the index and the bundle are both asserted.
+      # search box does nothing, so the index and the bundle are both asserted — and so is
+      # the bundle's version, because a major that the theme's index code does not match
+      # fails in exactly the same silent way.
       - name: Check search was built
         working-directory: site
         run: |
@@ -86,6 +93,25 @@ jobs:
             echo "::error::the search index is missing or empty"; exit 1; }
           test -n "$(ls public/vendor/flexsearch/*.js 2>/dev/null)" || {
             echo "::error::the vendored flexsearch bundle was not published"; exit 1; }
+
+          bundle=assets/vendor/flexsearch/flexsearch.bundle.min.js
+          if ! grep -q "FlexSearch.js v${FLEXSEARCH_VERSION}" "$bundle"; then
+            echo "::error::$bundle is not FlexSearch ${FLEXSEARCH_VERSION} — search will return no results"
+            head -3 "$bundle"
+            exit 1
+          fi
+
+      # The marks are generated from the banner art; a change to the generator that is not
+      # regenerated ships the old geometry. Same contract as any other committed artefact.
+      - name: Check the generated marks are current
+        working-directory: site
+        run: |
+          python3 tools/gen-marks.py
+          if ! git diff --quiet -- assets/ac-wordmark.svg assets/ac-mark.svg; then
+            echo "::error::the marks are stale — run 'python3 site/tools/gen-marks.py' and commit the result"
+            git diff --stat -- assets/ac-wordmark.svg assets/ac-mark.svg
+            exit 1
+          fi
 
       # Every card, callout and cross-reference on the site is hand-written, so a renamed
       # page silently becomes a 404. This resolves every internal link against the built

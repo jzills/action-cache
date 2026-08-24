@@ -1,0 +1,12 @@
+{{- /*
+  The ActionCache wordmark, inlined so it takes its colour from the page.
+
+      {{< ac-wordmark >}}
+
+  Markdown cannot reach resources.Get, and an <img> cannot inherit
+  currentColor — which is why this is a shortcode rather than an image tag in
+  content/_index.md. The file is generated; see site/tools/gen-marks.py.
+*/ -}}
+{{- with resources.Get "ac-wordmark.svg" -}}
+  {{- .Content | safeHTML -}}
+{{- end -}}

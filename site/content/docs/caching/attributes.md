@@ -6,7 +6,7 @@ weight: 1
 Three attributes drive everything. Each takes a required `Namespace`; only `[ActionCache]`
 takes anything else.
 
-## `[ActionCache]`
+## ActionCache
 
 Caches the action's response.
 
@@ -37,7 +37,7 @@ Only responses that represent success are stored. An action that returns a `4xx`
 result leaves the cache untouched, so an outage cannot be cached and then served back after
 it has passed.
 
-## `[ActionCacheEviction]`
+## ActionCacheEviction
 
 Drops every entry in the namespace, after a successful response.
 
@@ -55,7 +55,7 @@ Several namespaces can be evicted at once, comma-separated:
 
 See [Eviction](../../operations/eviction).
 
-## `[ActionCacheRefresh]`
+## ActionCacheRefresh
 
 Re-populates the namespace instead of emptying it, by replaying the request recorded on
 each entry.

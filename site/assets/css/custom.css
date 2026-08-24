@@ -16,6 +16,7 @@
   --ac-muted: var(--color-gray-600, #4b5563);
   --ac-code-bg: rgba(0, 0, 0, 0.035);
   --ac-code-fg: var(--color-gray-700, #374151);
+  --ac-brand: #8b5cf6;
 }
 
 .dark {
@@ -24,6 +25,7 @@
   --ac-muted: var(--color-gray-400, #9ca3af);
   --ac-code-bg: rgba(0, 0, 0, 0.28);
   --ac-code-fg: var(--color-gray-300, #d1d5db);
+  --ac-brand: #a371f7;
 }
 
 /* ---------------------------------------------------------------- hero --- */
@@ -37,12 +39,30 @@
   text-align: center;
 }
 
-.ac-hero__title {
+/* The wordmark stands in for the headline, so it carries the h1. Its intrinsic
+ * size is the character grid it was cut from; width is what scales it, and the
+ * viewBox keeps the ratio. */
+.ac-hero__logo {
   margin: 0;
-  font-size: clamp(2rem, 5vw, 3.25rem);
-  font-weight: 800;
-  line-height: 1.05;
-  letter-spacing: -0.03em;
+  width: min(30rem, 82vw);
+  color: var(--ac-brand);
+  line-height: 0;
+}
+
+.ac-hero__logo svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+/* The headline text the wordmark replaced. It still has to be said — the mark
+ * spells the name, not what the thing does. */
+.ac-hero__tagline {
+  margin: 0;
+  font-size: clamp(1.15rem, 2.6vw, 1.6rem);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
 }
 
 .ac-hero__blurb {
@@ -86,6 +106,20 @@
 
 .ac-button--ghost:hover {
   border-color: var(--color-primary-500, #6d28d9);
+}
+
+/* ------------------------------------------------------------ nav mark --- */
+
+.ac-navbar-mark {
+  color: var(--ac-brand);
+}
+
+.ac-navbar-mark svg {
+  /* Six rows of a character grid, so it needs the height a wordmark would not.
+     Below about 30px the outline strokes fall under a pixel and the letters
+     silt up. */
+  height: 2rem;
+  width: auto;
 }
 
 /* ------------------------------------------------------------ showcase --- */
