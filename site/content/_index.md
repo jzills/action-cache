@@ -5,7 +5,6 @@ toc: false
 ---
 
 <div class="ac-hero">
-  <span class="ac-hero__badge"><span class="ac-hero__dot"></span>Memory · Redis · SQL Server · Azure Cosmos DB</span>
   <h1 class="ac-hero__title">Namespaced response caching<br />for ASP.NET Core</h1>
   <p class="ac-hero__blurb">
     Cache a controller action or a Minimal API endpoint with one attribute.
@@ -13,8 +12,27 @@ toc: false
   </p>
   <div class="ac-hero__actions">
     <a class="ac-button ac-button--primary" href="docs/getting-started/installation/">Get started</a>
-    <a class="ac-button ac-button--ghost" href="https://github.com/jzills/action-cache">GitHub</a>
   </div>
+</div>
+
+<div class="ac-showcase">
+<div class="ac-showcase__frame">
+
+{{< highlight csharp "" >}}
+[HttpGet("forecasts")]
+[ActionCache(Namespace = "Forecasts")]
+public IActionResult Get() => Ok(_repository.All());
+
+[HttpPost("forecasts")]
+[ActionCacheEviction(Namespace = "Forecasts")]
+public IActionResult Create(Forecast forecast) => Ok(_repository.Add(forecast));
+{{< /highlight >}}
+
+</div>
+<p class="ac-showcase__caption">
+  Cache a read. Drop the whole namespace on write. No keys to track, and nothing
+  else to wire up.
+</p>
 </div>
 
 <div class="ac-section" id="install">

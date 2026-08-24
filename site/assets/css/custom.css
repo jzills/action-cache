@@ -29,26 +29,8 @@
   flex-direction: column;
   align-items: center;
   gap: 1.25rem;
-  padding: 3.5rem 1rem 2rem;
+  padding: 4rem 1rem 1.5rem;
   text-align: center;
-}
-
-.ac-hero__badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.3rem 0.85rem;
-  border: 1px solid var(--ac-border);
-  border-radius: 9999px;
-  font-size: 0.78rem;
-  color: var(--ac-muted);
-}
-
-.ac-hero__dot {
-  width: 0.45rem;
-  height: 0.45rem;
-  border-radius: 9999px;
-  background: var(--color-primary-500, #6d28d9);
 }
 
 .ac-hero__title {
@@ -102,6 +84,73 @@
   border-color: var(--color-primary-500, #6d28d9);
 }
 
+/* ------------------------------------------------------------ showcase --- */
+
+/* The claim on this page is "one attribute", so the hero shows the attribute
+ * rather than describing it. This is the only decoration on the landing page
+ * that is also the product. */
+
+.ac-showcase {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.9rem;
+  padding: 0 1rem 1rem;
+}
+
+.ac-showcase__frame {
+  width: 100%;
+  max-width: 46rem;
+  border: 1px solid var(--ac-border);
+  border-radius: 0.75rem;
+  overflow: hidden;
+  background: var(--ac-surface);
+  /* A frame that reads as a window rather than a block of page. */
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 12px 32px -12px rgba(0, 0, 0, 0.12);
+}
+
+.dark .ac-showcase__frame {
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 12px 32px -12px rgba(0, 0, 0, 0.6);
+}
+
+/* The theme gives a code block its own margin, border and radius. Inside the
+ * frame that doubles every edge, so the block gives them all up and the frame
+ * keeps them. */
+.ac-showcase__frame pre {
+  margin: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  padding: 1.15rem 1.35rem !important;
+  font-size: 0.83rem;
+  line-height: 1.65;
+  overflow-x: auto;
+}
+
+.ac-showcase__frame div.highlight,
+.ac-showcase__frame .highlight {
+  margin: 0 !important;
+  border-radius: 0 !important;
+}
+
+/* The theme styles <code> for inline use — its own padding, background and
+ * border. Inside a block that paints a chip edge down the left of the listing. */
+.ac-showcase__frame code {
+  padding: 0 !important;
+  background: transparent !important;
+  border: 0 !important;
+  font-size: inherit;
+}
+
+.ac-showcase__caption {
+  max-width: 34rem;
+  margin: 0;
+  text-align: center;
+  font-size: 0.9rem;
+  line-height: 1.6;
+  color: var(--ac-muted);
+}
+
 /* ------------------------------------------------------------ sections --- */
 
 .ac-section {
@@ -121,6 +170,17 @@
      over a centred heading it reads as a divider belonging to nothing. */
   border-bottom: 0;
   padding-bottom: 0;
+}
+
+.ac-section__title::after {
+  content: "";
+  display: block;
+  width: 2.25rem;
+  height: 2px;
+  margin: 0.7rem auto 0;
+  border-radius: 2px;
+  background: var(--color-primary-500, #6d28d9);
+  opacity: 0.55;
 }
 
 .ac-section__lede {
