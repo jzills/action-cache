@@ -1,105 +1,138 @@
 ---
 title: ActionCache
-layout: hextra-home
+layout: home
+toc: false
 ---
 
-{{< hextra/hero-badge >}}
-  <div class="hx-w-2 hx-h-2 hx-rounded-full hx-bg-primary-400"></div>
-  <span>Memory · Redis · SQL Server · Azure Cosmos DB</span>
-{{< /hextra/hero-badge >}}
-
-<div class="hx-mt-6 hx-mb-6">
-{{< hextra/hero-headline >}}
-  Namespaced response caching&nbsp;<br class="sm:hx-block hx-hidden" />for ASP.NET Core
-{{< /hextra/hero-headline >}}
+<div class="ac-hero">
+  <span class="ac-hero__badge"><span class="ac-hero__dot"></span>Memory · Redis · SQL Server · Azure Cosmos DB</span>
+  <h1 class="ac-hero__title">Namespaced response caching<br />for ASP.NET Core</h1>
+  <p class="ac-hero__blurb">
+    Cache a controller action or a Minimal API endpoint with one attribute.
+    Evict and refresh whole namespaces without knowing a single key.
+  </p>
+  <div class="ac-hero__actions">
+    <a class="ac-button ac-button--primary" href="docs/getting-started/installation/">Get started</a>
+    <a class="ac-button ac-button--ghost" href="https://github.com/jzills/action-cache">GitHub</a>
+  </div>
 </div>
 
-<div class="hx-mb-12">
-{{< hextra/hero-subtitle >}}
-  Cache a controller action or a Minimal API endpoint with one attribute.&nbsp;<br class="sm:hx-block hx-hidden" />Evict and refresh whole namespaces without knowing a single key.
-{{< /hextra/hero-subtitle >}}
+<div class="ac-section" id="install">
+  <h2 class="ac-section__title">Install</h2>
+  <p class="ac-section__lede">
+    One package per backend, so you only take the dependencies you use. Every
+    backend package brings the core with it.
+  </p>
+  <div class="ac-grid">
+    <a class="ac-card" href="docs/backends/memory/">
+      <span class="ac-card__title">Memory</span>
+      <span class="ac-card__command">dotnet add package ActionCache</span>
+      <span class="ac-card__body">In-process. No infrastructure, and the natural first layer of a chain.</span>
+    </a>
+    <a class="ac-card" href="docs/backends/redis/">
+      <span class="ac-card__title">Redis</span>
+      <span class="ac-card__command">dotnet add package ActionCache.Redis</span>
+      <span class="ac-card__body">The default distributed choice. Atomic through Lua, and the preferred distributed lock.</span>
+    </a>
+    <a class="ac-card" href="docs/backends/sql-server/">
+      <span class="ac-card__title">SQL Server</span>
+      <span class="ac-card__command">dotnet add package ActionCache.SqlServer</span>
+      <span class="ac-card__body">For a stack that already runs one. Locks with <code>sp_getapplock</code>.</span>
+    </a>
+    <a class="ac-card" href="docs/backends/cosmos/">
+      <span class="ac-card__title">Azure Cosmos DB</span>
+      <span class="ac-card__command">dotnet add package ActionCache.AzureCosmos</span>
+      <span class="ac-card__body">TTL-backed documents, with the database and container created on first use.</span>
+    </a>
+  </div>
 </div>
 
-<div class="hx-mb-6">
-{{< hextra/hero-button text="Get Started" link="docs/getting-started/installation" >}}
+<div class="ac-section" id="attributes">
+  <h2 class="ac-section__title">Three attributes</h2>
+  <p class="ac-section__lede">
+    Everything the library does is reached through one of these. Each takes a
+    namespace, which is the group an entry belongs to.
+  </p>
+  <div class="ac-grid">
+    <a class="ac-card" href="docs/caching/attributes/">
+      <span class="ac-card__title"><code>[ActionCache]</code></span>
+      <span class="ac-card__body">Cache the response. Varies by the authenticated user automatically, so one caller is never served another's data.</span>
+    </a>
+    <a class="ac-card" href="docs/operations/eviction/">
+      <span class="ac-card__title"><code>[ActionCacheEviction]</code></span>
+      <span class="ac-card__body">Drop every entry in a namespace after a successful write. You never name a key.</span>
+    </a>
+    <a class="ac-card" href="docs/operations/refresh/">
+      <span class="ac-card__title"><code>[ActionCacheRefresh]</code></span>
+      <span class="ac-card__body">Replay the request recorded on each entry, so the cache is left warm rather than empty.</span>
+    </a>
+  </div>
 </div>
 
-## Install
+<div class="ac-section" id="features">
+  <h2 class="ac-section__title">What you get</h2>
+  <p class="ac-section__lede">
+    Each of these has a page in <a href="docs/">the documentation</a>.
+  </p>
+  <div class="ac-grid ac-grid--wide">
+    <a class="ac-card" href="docs/caching/attributes/">
+      <span class="ac-card__title">Namespace eviction</span>
+      <span class="ac-card__body">Entries are grouped under a namespace you name, and a namespace can embed route tokens — <code>Account:{id}</code> gives every account its own group to evict or refresh.</span>
+    </a>
+    <a class="ac-card" href="docs/caching/vary-by/">
+      <span class="ac-card__title">Per-user by default</span>
+      <span class="ac-card__body">On an authenticated endpoint the caller's identity joins the key without being asked for. Two users on one <code>[Authorize]</code> action cannot collide.</span>
+    </a>
+    <a class="ac-card" href="docs/operations/refresh/">
+      <span class="ac-card__title">Refresh by replay</span>
+      <span class="ac-card__body">Refresh re-issues the recorded request against the real endpoint, in its own DI scope — model binding, filters and result execution all run normally.</span>
+    </a>
+    <a class="ac-card" href="docs/reliability/resilience/">
+      <span class="ac-card__title">Fails open</span>
+      <span class="ac-card__body">A backend that throws degrades to a miss and the request still succeeds. Opt in to fail-closed, and set a timeout to bound one that hangs instead.</span>
+    </a>
+    <a class="ac-card" href="docs/reliability/stampede/">
+      <span class="ac-card__title">Stampede protection</span>
+      <span class="ac-card__body">Concurrent misses for one key are coalesced so the action runs once. In-process by default; opt in to a lock over Redis or SQL Server.</span>
+    </a>
+    <a class="ac-card" href="docs/operations/layering/">
+      <span class="ac-card__title">Layered backends</span>
+      <span class="ac-card__body">Register several and they chain. A hit in a deeper layer is promoted into the faster one, so Memory + Redis pays the round-trip once.</span>
+    </a>
+    <a class="ac-card" href="docs/caching/cache-keys/">
+      <span class="ac-card__title">Hashed keys</span>
+      <span class="ac-card__body">SHA-256 over route values, arguments and vary-by values. Nothing needs to reverse a key, so nothing readable is left in the store.</span>
+    </a>
+    <a class="ac-card" href="docs/observability/">
+      <span class="ac-card__title">OpenTelemetry</span>
+      <span class="ac-card__body">A meter and an activity source, inert until something subscribes. Hit ratio, backend latency by outcome, evictions and coalesced requests.</span>
+    </a>
+    <a class="ac-card" href="docs/getting-started/quickstart/">
+      <span class="ac-card__title">MVC and Minimal APIs</span>
+      <span class="ac-card__body">The same model covers controller actions and endpoints alike, with the right filter chosen at runtime from how the app is built.</span>
+    </a>
+  </div>
+</div>
 
-{{< cards >}}
-  {{< card link="docs/backends/memory" title="Memory" icon="chip" subtitle="dotnet add package ActionCache — in-process, no infrastructure." >}}
-  {{< card link="docs/backends/redis" title="Redis" icon="lightning-bolt" subtitle="dotnet add package ActionCache.Redis — atomic Lua operations." >}}
-  {{< card link="docs/backends/sql-server" title="SQL Server" icon="database" subtitle="dotnet add package ActionCache.SqlServer — sp_getapplock." >}}
-  {{< card link="docs/backends/cosmos" title="Azure Cosmos DB" icon="cloud" subtitle="dotnet add package ActionCache.AzureCosmos — TTL-backed." >}}
-{{< /cards >}}
+<div class="ac-section" id="backends">
+  <h2 class="ac-section__title">Choosing a backend</h2>
+  <p class="ac-section__lede">
+    They are interchangeable, and they compose — see
+    <a href="docs/operations/layering/">layered backends</a>.
+  </p>
+  <div class="ac-table-wrap">
 
-## Three attributes
-
-{{< cards >}}
-  {{< card link="docs/caching/attributes" title="[ActionCache]" icon="save" subtitle="Cache the response. Varies by the authenticated user automatically." >}}
-  {{< card link="docs/operations/eviction" title="[ActionCacheEviction]" icon="trash" subtitle="Drop every entry in a namespace after a successful write." >}}
-  {{< card link="docs/operations/refresh" title="[ActionCacheRefresh]" icon="refresh" subtitle="Replay the recorded requests so the cache is warm, not empty." >}}
-{{< /cards >}}
-
-## Features
-
-{{< hextra/feature-grid >}}
-  {{< hextra/feature-card
-    title="Namespace eviction"
-    subtitle="Entries are grouped under a namespace you name, and a namespace can embed route tokens — `Account:{id}` gives every account its own. Evict or refresh the group without enumerating keys."
-    link="docs/caching/attributes"
-  >}}
-  {{< hextra/feature-card
-    title="Per-user by default"
-    subtitle="On an authenticated endpoint the caller's identity joins the key without being asked for. Two users on one `[Authorize]` action cannot be served each other's response."
-    link="docs/caching/vary-by"
-  >}}
-  {{< hextra/feature-card
-    title="Refresh by replay"
-    subtitle="Refresh re-issues the request recorded on each entry against the real endpoint, in its own DI scope — model binding, filters and result execution all run normally."
-    link="docs/operations/refresh"
-  >}}
-  {{< hextra/feature-card
-    title="Fails open"
-    subtitle="A backend that throws degrades to a miss and the request still succeeds. Opt in to fail-closed, and set an operation timeout to bound a backend that hangs rather than throws."
-    link="docs/reliability/resilience"
-  >}}
-  {{< hextra/feature-card
-    title="Stampede protection"
-    subtitle="Concurrent misses for one key are coalesced so the action runs once. In-process by default; opt in to a distributed lock over Redis or SQL Server."
-    link="docs/reliability/stampede"
-  >}}
-  {{< hextra/feature-card
-    title="Layered backends"
-    subtitle="Register several and they chain. A hit in a deeper layer is promoted into the faster one, so Memory + Redis stops paying the round-trip after the first request."
-    link="docs/operations/layering"
-  >}}
-  {{< hextra/feature-card
-    title="Hashed keys"
-    subtitle="Keys are SHA-256 over route values, arguments and vary-by values. Nothing needs to reverse one, so nothing in a key is readable by whoever can read the store."
-    link="docs/caching/cache-keys"
-  >}}
-  {{< hextra/feature-card
-    title="OpenTelemetry"
-    subtitle="A Meter and an ActivitySource, both named ActionCache, inert until something subscribes. Hit ratio, backend latency by outcome, evictions and coalesced requests."
-    link="docs/observability"
-  >}}
-  {{< hextra/feature-card
-    title="MVC and Minimal APIs"
-    subtitle="The same three attributes drive controller actions and endpoint filters alike. Which filter runs is chosen at runtime from how the app is built."
-    link="docs/getting-started/quickstart"
-  >}}
-{{< /hextra/feature-grid >}}
-
-## Choosing a backend
-
-| | Memory | Redis | SQL Server | Azure Cosmos DB |
+| | Memory | Redis | SQL Server | Cosmos DB |
 |---|---|---|---|---|
-| **Package** | `ActionCache` | `ActionCache.Redis` | `ActionCache.SqlServer` | `ActionCache.AzureCosmos` |
+| **Package** | `ActionCache` | `.Redis` | `.SqlServer` | `.AzureCosmos` |
 | **Shared across instances** | No | Yes | Yes | Yes |
-| **Locking** | `SemaphoreSlim` | none needed — atomic Lua | `sp_getapplock` | none needed — atomic |
+| **Locking** | `SemaphoreSlim` | atomic Lua | `sp_getapplock` | atomic |
 | **Distributed single flight** | — | Yes | Yes | — |
-| **Expiry** | `IMemoryCache` | key TTL + keyspace events | `SqlServerCache` | container TTL |
-| **Use it for** | one instance, or as the first layer of a chain | the default distributed choice | a stack that already runs SQL Server | a stack already on Cosmos |
+| **Expiry** | `IMemoryCache` | TTL + keyspace events | `SqlServerCache` | container TTL |
 
-Backends compose — see [Layered backends](docs/operations/layering).
+  </div>
+</div>
+
+<p class="ac-closing">
+  Targets .NET 8 and .NET 10 · <a href="docs/">Read the documentation</a>
+</p>

@@ -1,0 +1,209 @@
+/* Landing-page styling for the ActionCache site.
+ *
+ * Hextra's own hero shortcodes lay out left-aligned (hx:items-start) and expect
+ * Tailwind utility classes from the theme's own build, which a content file
+ * cannot reliably reach. The landing page is therefore plain markup against the
+ * classes below, so alignment and rhythm are defined in one place rather than
+ * scattered through _index.md as utilities that may or may not resolve.
+ *
+ * Colours come from Hextra's CSS custom properties so both themes follow the
+ * light/dark toggle without a second palette to maintain.
+ */
+
+:root {
+  --ac-border: var(--color-gray-200, #e5e7eb);
+  --ac-surface: rgba(0, 0, 0, 0.015);
+  --ac-muted: var(--color-gray-600, #4b5563);
+}
+
+.dark {
+  --ac-border: var(--color-neutral-800, #262626);
+  --ac-surface: rgba(255, 255, 255, 0.03);
+  --ac-muted: var(--color-gray-400, #9ca3af);
+}
+
+/* ---------------------------------------------------------------- hero --- */
+
+.ac-hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.25rem;
+  padding: 3.5rem 1rem 2rem;
+  text-align: center;
+}
+
+.ac-hero__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.3rem 0.85rem;
+  border: 1px solid var(--ac-border);
+  border-radius: 9999px;
+  font-size: 0.78rem;
+  color: var(--ac-muted);
+}
+
+.ac-hero__dot {
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 9999px;
+  background: var(--color-primary-500, #6d28d9);
+}
+
+.ac-hero__title {
+  margin: 0;
+  font-size: clamp(2rem, 5vw, 3.25rem);
+  font-weight: 800;
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+}
+
+.ac-hero__blurb {
+  max-width: 44rem;
+  margin: 0;
+  font-size: clamp(1rem, 2vw, 1.2rem);
+  line-height: 1.6;
+  color: var(--ac-muted);
+}
+
+.ac-hero__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.75rem;
+  margin-top: 0.25rem;
+}
+
+.ac-button {
+  display: inline-block;
+  padding: 0.7rem 1.5rem;
+  border-radius: 9999px;
+  font-weight: 500;
+  text-decoration: none !important;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.ac-button--primary {
+  background: var(--color-primary-600, #5b21b6);
+  color: #fff;
+}
+
+.ac-button--primary:hover {
+  background: var(--color-primary-700, #4c1d95);
+}
+
+.ac-button--ghost {
+  border: 1px solid var(--ac-border);
+  color: inherit;
+}
+
+.ac-button--ghost:hover {
+  border-color: var(--color-primary-500, #6d28d9);
+}
+
+/* ------------------------------------------------------------ sections --- */
+
+.ac-section {
+  padding: 2.75rem 0 0.5rem;
+  /* The navbar is sticky, so a section jumped to from the menu would otherwise
+     start underneath it with its heading hidden. */
+  scroll-margin-top: 5rem;
+}
+
+.ac-section__title {
+  margin: 0 0 0.4rem;
+  text-align: center;
+  font-size: 1.6rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  /* The theme underlines every h2 in .content with a full-width rule. Centred
+     over a centred heading it reads as a divider belonging to nothing. */
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+.ac-section__lede {
+  max-width: 42rem;
+  margin: 0 auto 1.75rem;
+  text-align: center;
+  color: var(--ac-muted);
+  line-height: 1.6;
+}
+
+/* --------------------------------------------------------------- cards --- */
+
+.ac-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+}
+
+.ac-grid--wide {
+  grid-template-columns: repeat(auto-fit, minmax(19rem, 1fr));
+}
+
+.ac-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding: 1.1rem 1.2rem;
+  border: 1px solid var(--ac-border);
+  border-radius: 0.6rem;
+  background: var(--ac-surface);
+  color: inherit;
+  text-decoration: none !important;
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+
+a.ac-card:hover {
+  border-color: var(--color-primary-500, #6d28d9);
+  transform: translateY(-2px);
+}
+
+.ac-card__title {
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+
+.ac-card__title code {
+  font-size: 0.95em;
+}
+
+.ac-card__body {
+  font-size: 0.9rem;
+  line-height: 1.55;
+  color: var(--ac-muted);
+}
+
+.ac-card__command {
+  font-family: var(--font-mono, ui-monospace, SFMono-Regular, monospace);
+  font-size: 0.8rem;
+  color: var(--ac-muted);
+  overflow-wrap: anywhere;
+}
+
+/* --------------------------------------------------------------- table --- */
+
+.ac-table-wrap {
+  /* The comparison table has five columns; below roughly 60rem it has to
+     scroll inside its own box rather than widening the page. */
+  overflow-x: auto;
+  margin-top: 0.5rem;
+}
+
+.ac-table-wrap table {
+  /* The theme renders tables as blocks so they can scroll, and a block fills its
+     container — so auto margins only centre it once it is sized to its content. */
+  width: fit-content;
+  max-width: 100%;
+  margin-inline: auto;
+}
+
+/* ------------------------------------------------------------- closing --- */
+
+.ac-closing {
+  margin: 3rem 0 1rem;
+  text-align: center;
+  color: var(--ac-muted);
+}

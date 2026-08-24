@@ -5,9 +5,11 @@
 # right-hand table of contents and the search below.
 baseURL = "https://jzills.github.io/action-cache/"
 
-# The tagline rather than the name: this is the browser tab's text, and Hextra
-# titles the home page with it alone and every other page as "Page – this".
-title = "Namespaced response caching for ASP.NET Core"
+# The name, not the tagline. This is both the navbar text and the browser tab's,
+# and the tagline set here rendered in the navbar directly above a hero saying the
+# same thing. Hextra titles the home page with this alone and every other page as
+# "Page – this", so the name is what distinguishes a tab among many.
+title = "ActionCache"
 
 [languages.en]
   label = "English"
