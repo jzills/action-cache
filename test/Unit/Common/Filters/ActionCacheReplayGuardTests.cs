@@ -1,4 +1,5 @@
 using ActionCache;
+using ActionCache.EndpointFilters;
 using ActionCache.Filters;
 using ActionCache.Utilities;
 using Microsoft.AspNetCore.Http;
@@ -75,6 +76,96 @@ public class ActionCacheReplayGuardTests
         // The replay exists to produce a response for the refresh loop to store. Skipping the
         // refresh must not also skip executing the result.
         nextCalled.Should().BeTrue();
+    }
+
+    [Test]
+    public async Task OnActionExecutionAsync_WhenReplay_DoesNotCallRemoveAsync()
+    {
+        var sut = new ActionCacheEvictionFilter(_cacheMock.Object, _binderFactory, NullLogger.Instance);
+        var context = BuildActionExecutingContext();
+        ActionCacheReplayMarkerAccessor.Mark(context.HttpContext);
+
+        await sut.OnActionExecutionAsync(context, () => Task.FromResult(BuildActionExecutedContext(context)));
+
+        _cacheMock.Verify(cache => cache.RemoveAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Test]
+    public async Task OnActionExecutionAsync_WhenNotReplay_CallsRemoveAsync()
+    {
+        var sut = new ActionCacheEvictionFilter(_cacheMock.Object, _binderFactory, NullLogger.Instance);
+        var context = BuildActionExecutingContext();
+
+        await sut.OnActionExecutionAsync(context, () => Task.FromResult(BuildActionExecutedContext(context)));
+
+        // The guard must be the marker and nothing else: an ordinary request still evicts.
+        _cacheMock.Verify(cache => cache.RemoveAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Test]
+    public async Task InvokeAsync_WhenReplay_DoesNotCallRemoveAsync()
+    {
+        var sut = new ActionCacheEndpointEvictionFilter(_cacheMock.Object, _binderFactory, NullLogger.Instance);
+        var context = BuildEndpointContext();
+        ActionCacheReplayMarkerAccessor.Mark(context.HttpContext);
+
+        await sut.InvokeAsync(context, _ => ValueTask.FromResult<object?>(Results.Ok()));
+
+        _cacheMock.Verify(cache => cache.RemoveAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Test]
+    public async Task InvokeAsync_WhenNotReplay_CallsRemoveAsync()
+    {
+        var sut = new ActionCacheEndpointEvictionFilter(_cacheMock.Object, _binderFactory, NullLogger.Instance);
+        var context = BuildEndpointContext();
+
+        await sut.InvokeAsync(context, _ => ValueTask.FromResult<object?>(Results.Ok()));
+
+        _cacheMock.Verify(cache => cache.RemoveAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Test]
+    public async Task InvokeAsync_WhenReplay_StillInvokesTheEndpoint()
+    {
+        var sut = new ActionCacheEndpointEvictionFilter(_cacheMock.Object, _binderFactory, NullLogger.Instance);
+        var context = BuildEndpointContext();
+        ActionCacheReplayMarkerAccessor.Mark(context.HttpContext);
+
+        var nextCalled = false;
+        await sut.InvokeAsync(context, _ =>
+        {
+            nextCalled = true;
+            return ValueTask.FromResult<object?>(Results.Ok());
+        });
+
+        nextCalled.Should().BeTrue();
+    }
+
+    private static ActionExecutingContext BuildActionExecutingContext()
+    {
+        var httpContext = new DefaultHttpContext();
+        httpContext.Response.StatusCode = StatusCodes.Status200OK;
+        return new ActionExecutingContext(
+            new ActionContext(httpContext, new RouteData(), new ActionDescriptor()),
+            [],
+            new Dictionary<string, object?>(),
+            new object());
+    }
+
+    private static ActionExecutedContext BuildActionExecutedContext(ActionExecutingContext context) =>
+        new(new ActionContext(context.HttpContext, context.RouteData, context.ActionDescriptor),
+            [],
+            new object());
+
+    private static DefaultEndpointFilterInvocationContext BuildEndpointContext()
+    {
+        var httpContext = new DefaultHttpContext();
+        httpContext.Response.StatusCode = StatusCodes.Status200OK;
+        // GetRouteData() reads the routing feature, which nothing has populated on a bare
+        // DefaultHttpContext; the eviction filter calls it before deciding anything.
+        httpContext.Features.Set<IRoutingFeature>(new RoutingFeature { RouteData = new RouteData() });
+        return new DefaultEndpointFilterInvocationContext(httpContext);
     }
 
     private static ResultExecutingContext BuildResultExecutingContext(IActionResult result) =>
