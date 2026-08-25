@@ -49,6 +49,13 @@ app.MapDelete("/forecasts", () => repository.Clear())
    .WithActionCacheEviction("Forecasts");
 ```
 
+## Eviction during a refresh replay
+
+Eviction is skipped on a [refresh](../refresh) replay. An endpoint that carries both
+eviction and caching is replayed like any other, and evicting there would clear the very
+namespace the refresh pass is in the middle of warming — refresh would leave the cache
+emptier than it found it. Ordinary requests to that endpoint evict as normal.
+
 ## Eviction or refresh?
 
 Eviction is cheap and leaves the next reader to repopulate. [Refresh](../refresh) costs more

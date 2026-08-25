@@ -53,7 +53,11 @@ public class ActionCacheEndpointRefreshFilter : ActionCacheFilterBase, IEndpoint
         {
             AttachRouteValues(context.HttpContext.GetRouteData().Values);
 
-            await Cache.RefreshAsync(context.HttpContext.RequestAborted);
+            // Deliberately not RequestAborted, matching the MVC refresh filter and both
+            // eviction filters. RefreshAsync checks the token between keys, so a client that
+            // hangs up mid-pass would leave the namespace half-refreshed -- and the write
+            // this is attached to has already succeeded.
+            await Cache.RefreshAsync();
             context.AddCacheStatus(CacheStatus.Refresh);
         }
 

@@ -75,14 +75,15 @@ app.MapGet("/forecasts", () => repository.All())
 
 app.MapDelete("/forecasts/{id}", (int id) => repository.Remove(id))
    .WithActionCacheEviction("Forecasts");
+
+app.MapPost("/forecasts", (Forecast forecast) => repository.Add(forecast))
+   .WithActionCacheRefresh("Forecasts");
 ```
 
 {{< callout type="warning" >}}
-The Minimal API surface is narrower than the MVC one. `WithActionCache` takes a namespace
-and nothing else, so expiration, vary-by and `SingleFlight` cannot be set per endpoint —
-they fall back to the defaults and to whatever `UseEntryOptions` configures globally. There
-is **no** `WithActionCacheRefresh`: refresh is currently available on controller actions
-only.
+The Minimal API surface is narrower than the MVC one. Each extension takes a namespace and
+nothing else, so expiration, vary-by and `SingleFlight` cannot be set per endpoint — they
+fall back to the defaults and to whatever `UseEntryOptions` configures globally.
 {{< /callout >}}
 
 ## What you get without asking
