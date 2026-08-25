@@ -62,6 +62,34 @@ public static class RouteHandlerBuilderExtensions
             });
 
     /// <summary>
+    /// Adds action cache refresh behavior to the specified route handler using the provided namespace.
+    /// </summary>
+    /// <remarks>
+    /// Refresh replays the request recorded on each entry in the namespace, so the cache is
+    /// left warm rather than empty. Entries whose key varied by the request -- by user, header,
+    /// query or claim -- are skipped, since replaying another caller's request would mean
+    /// impersonating them.
+    /// </remarks>
+    /// <param name="builder">The <see cref="RouteHandlerBuilder"/> to extend.</param>
+    /// <param name="namespace">The route namespace whose entries are refreshed.</param>
+    /// <returns>The modified <see cref="RouteHandlerBuilder"/> with cache refresh enabled.</returns>
+    public static RouteHandlerBuilder WithActionCacheRefresh(this RouteHandlerBuilder builder, [StringSyntax("Route")] Namespace @namespace) =>
+        builder.WithMetadata(new ActionCacheRefreshAttribute { Namespace = @namespace })
+            .AddEndpointFilter((context, next) =>
+            {
+                if (Source.TryGetValue<ActionCacheRefreshAttribute>(context, out var attribute))
+                {
+                    var endpointFilterFactory = new ActionCacheEndpointRefreshFilterFactory { Namespace = attribute.Namespace };
+                    var endpointFilter = endpointFilterFactory.CreateInstance(context.HttpContext.RequestServices);
+                    return endpointFilter.InvokeAsync(context, next);
+                }
+                else
+                {
+                    return next(context);
+                }
+            });
+
+    /// <summary>
     /// Helper class to extract metadata attributes from <see cref="EndpointFilterInvocationContext"/>.
     /// </summary>
     private class EndpointFilterInvocationContextSource

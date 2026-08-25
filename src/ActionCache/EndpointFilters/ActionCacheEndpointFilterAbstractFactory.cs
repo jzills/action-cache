@@ -48,6 +48,7 @@ public class ActionCacheEndpointFilterAbstractFactory : ActionCacheFilterAbstrac
         {
             FilterType.Add      => new ActionCacheEndpointFilter(cache, BinderFactory, LoggerFactory.CreateLogger<ActionCacheEndpointFilter>(), SingleFlight, singleFlight, VaryByResolver, varyByOptions, ResponseFactory, KeyOptions),
             FilterType.Evict    => new ActionCacheEndpointEvictionFilter(cache, BinderFactory, LoggerFactory.CreateLogger<ActionCacheEndpointEvictionFilter>()),
+            FilterType.Refresh  => new ActionCacheEndpointRefreshFilter(cache, BinderFactory, LoggerFactory.CreateLogger<ActionCacheEndpointRefreshFilter>()),
             _                   => throw new FilterTypeNotSupportedException(type)
         };
 }
