@@ -10,13 +10,15 @@ namespace ActionCache.EndpointFilters.Extensions;
 /// <summary>
 /// Extension methods for adding action cache and eviction behavior to <see cref="RouteHandlerBuilder"/>.
 /// </summary>
+/// <remarks>
+/// Each extension captures its namespace in the filter's closure rather than reading it back
+/// from endpoint metadata. <c>GetMetadata&lt;T&gt;()</c> returns the *last* match, so two
+/// chained calls would both resolve to the second namespace -- evicting one namespace twice
+/// and the other never. The attributes are still written as metadata, but only so the startup
+/// validator can see every declaration on an endpoint.
+/// </remarks>
 public static class RouteHandlerBuilderExtensions
 {
-    /// <summary>
-    /// An instance of <see cref="EndpointFilterInvocationContextSource"/> used to extract metadata attributes. 
-    /// </summary>
-    private static readonly EndpointFilterInvocationContextSource Source = new();
-
     /// <summary>
     /// Adds action cache behavior to the specified route handler using the provided namespace.
     /// </summary>
@@ -27,16 +29,9 @@ public static class RouteHandlerBuilderExtensions
         builder.WithMetadata(new ActionCacheAttribute { Namespace = @namespace })
             .AddEndpointFilter((context, next) =>
             {
-                if (Source.TryGetValue<ActionCacheAttribute>(context, out var attribute))
-                {
-                    var endpointFilterFactory = new ActionCacheEndpointFilterFactory { Namespace = attribute.Namespace };
-                    var endpointFilter = endpointFilterFactory.CreateInstance(context.HttpContext.RequestServices);
-                    return endpointFilter.InvokeAsync(context, next);
-                }
-                else
-                {
-                    return next(context);
-                }
+                var endpointFilterFactory = new ActionCacheEndpointFilterFactory { Namespace = @namespace };
+                var endpointFilter = endpointFilterFactory.CreateInstance(context.HttpContext.RequestServices);
+                return endpointFilter.InvokeAsync(context, next);
             });
 
     /// <summary>
@@ -49,16 +44,9 @@ public static class RouteHandlerBuilderExtensions
         builder.WithMetadata(new ActionCacheEvictionAttribute { Namespace = @namespace })
             .AddEndpointFilter((context, next) =>
             {
-                if (Source.TryGetValue<ActionCacheEvictionAttribute>(context, out var attribute))
-                {
-                    var endpointFilterFactory = new ActionCacheEndpointEvictionFilterFactory { Namespace = attribute.Namespace };
-                    var endpointFilter = endpointFilterFactory.CreateInstance(context.HttpContext.RequestServices);
-                    return endpointFilter.InvokeAsync(context, next);
-                }
-                else
-                {
-                    return next(context);
-                }
+                var endpointFilterFactory = new ActionCacheEndpointEvictionFilterFactory { Namespace = @namespace };
+                var endpointFilter = endpointFilterFactory.CreateInstance(context.HttpContext.RequestServices);
+                return endpointFilter.InvokeAsync(context, next);
             });
 
     /// <summary>
@@ -77,43 +65,8 @@ public static class RouteHandlerBuilderExtensions
         builder.WithMetadata(new ActionCacheRefreshAttribute { Namespace = @namespace })
             .AddEndpointFilter((context, next) =>
             {
-                if (Source.TryGetValue<ActionCacheRefreshAttribute>(context, out var attribute))
-                {
-                    var endpointFilterFactory = new ActionCacheEndpointRefreshFilterFactory { Namespace = attribute.Namespace };
-                    var endpointFilter = endpointFilterFactory.CreateInstance(context.HttpContext.RequestServices);
-                    return endpointFilter.InvokeAsync(context, next);
-                }
-                else
-                {
-                    return next(context);
-                }
+                var endpointFilterFactory = new ActionCacheEndpointRefreshFilterFactory { Namespace = @namespace };
+                var endpointFilter = endpointFilterFactory.CreateInstance(context.HttpContext.RequestServices);
+                return endpointFilter.InvokeAsync(context, next);
             });
-
-    /// <summary>
-    /// Helper class to extract metadata attributes from <see cref="EndpointFilterInvocationContext"/>.
-    /// </summary>
-    private class EndpointFilterInvocationContextSource
-    {
-        /// <summary>
-        /// Tries to retrieve a metadata attribute of the specified type from the endpoint context.
-        /// </summary>
-        /// <typeparam name="T">The type of attribute to retrieve.</typeparam>
-        /// <param name="context">The filter invocation context.</param>
-        /// <param name="attribute">When this method returns, contains the attribute if found; otherwise, <c>null</c>.</param>
-        /// <returns><c>true</c> if the attribute was found; otherwise, <c>false</c>.</returns>
-        internal bool TryGetValue<T>(EndpointFilterInvocationContext context, [NotNullWhen(true)] out T? attribute) where T : Attribute
-        {
-            var endpoint = context.HttpContext.GetEndpoint();
-            if (endpoint is null)
-            {
-                attribute = null;
-                return false;
-            }
-            else
-            {
-                attribute = endpoint.Metadata.GetMetadata<T>();
-                return attribute is not null;
-            }
-        }
-    }
 }
