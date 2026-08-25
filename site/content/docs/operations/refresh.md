@@ -60,11 +60,16 @@ carry credentials, and a cache entry is not a safe place to keep them.
 A body is recorded only for entries refresh could actually replay, so an entry that varies
 by request stores no payload at all.
 
+The recorded body is re-serialized as JSON, so the content type it is replayed with has to be
+one the endpoint accepts JSON for. The request's own content type is preserved when it is
+JSON-compatible — `application/json`, `text/json`, and any type with a `+json` suffix, which
+covers versioned APIs declaring something like `application/vnd.example.v1+json`.
+
 {{< callout type="warning" >}}
-The recorded body is re-serialized as JSON and replayed with `application/json`. An endpoint
-that consumes a different media type — `application/xml`, or a vendor type such as
-`application/vnd.example.v1+json` — will be answered `415` on replay, and refresh for that
-namespace becomes a no-op that logs each pass. Use [eviction](../eviction) for those
+A request whose body was **not** JSON — `application/xml`, a form post — cannot be replayed,
+because no content type makes re-serialized JSON bind to it. Those entries are cached but not
+refreshable: refresh skips them and logs the skip once per pass, rather than replaying into a
+`415` that would replace a working entry with an error. Use [eviction](../eviction) for those
 endpoints.
 {{< /callout >}}
 

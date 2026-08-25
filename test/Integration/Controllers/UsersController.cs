@@ -81,6 +81,24 @@ public class UsersController : Controller
     [ActionCacheRefresh(Namespace = "BodyReplay")]
     public IActionResult RefreshBodyReplay() => Ok();
 
+    /// <summary>
+    /// The same arrangement as above but declaring a vendor JSON media type, the shape a
+    /// versioned API takes. Refresh replays the recorded body as JSON; [Consumes] rejects
+    /// anything but this exact type, so the replay only binds if the recorded content type
+    /// was preserved rather than flattened to "application/json".
+    /// </summary>
+    public static string RefreshableVendorValue = "original";
+
+    [HttpPost("query-vendor")]
+    [Consumes("application/vnd.example.v1+json")]
+    [ActionCache(Namespace = "VendorReplay")]
+    public IActionResult GetRefreshableWithVendorBody([FromBody] Query query) =>
+        Ok(new { Value = RefreshableVendorValue, ShowAll = query.ShowAll });
+
+    [HttpPost("query-vendor/refresh")]
+    [ActionCacheRefresh(Namespace = "VendorReplay")]
+    public IActionResult RefreshVendorReplay() => Ok();
+
     [HttpPost("")]
     [ActionCacheRefresh(Namespace = "Users")]
     public IActionResult Post() => Ok();
