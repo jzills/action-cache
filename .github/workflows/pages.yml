@@ -106,12 +106,19 @@ jobs:
       - name: Check the generated marks are current
         working-directory: site
         run: |
+          python3 -m pip install --quiet cairosvg
           python3 tools/gen-marks.py
-          if ! git diff --quiet -- assets/ac-wordmark.svg assets/ac-mark.svg; then
-            echo "::error::the marks are stale — run 'python3 site/tools/gen-marks.py' and commit the result"
-            git diff --stat -- assets/ac-wordmark.svg assets/ac-mark.svg
+          # Only the vector output is compared. The PNGs and the .ico are rasterised by
+          # cairosvg, whose bytes are not stable across versions, so diffing them would
+          # fail on a runner image bump rather than on a stale artefact. They are derived
+          # from the same geometry as favicon.svg, so a change that matters shows up there.
+          generated="assets/ac-wordmark.svg assets/ac-mark.svg static/favicon.svg"
+          if ! git diff --quiet -- $generated; then
+            echo "::error::the marks or icons are stale — run 'python3 site/tools/gen-marks.py' and commit the result"
+            git diff --stat -- $generated
             exit 1
           fi
+          git checkout -- static/ 2>/dev/null || true
 
       # Every card, callout and cross-reference on the site is hand-written, so a renamed
       # page silently becomes a 404. This resolves every internal link against the built
