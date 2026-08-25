@@ -77,7 +77,7 @@ public class ActionCacheFilterBodyCaptureTests
 
         var request = factory.CreateRequest(httpContext);
 
-        request.Body.Should().BeNull();
+        request!.Body.Should().BeNull();
         request.ContentType.Should().BeNull();
     }
 }

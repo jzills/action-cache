@@ -148,7 +148,7 @@ public class CachedResponseFactoryTests
 
         var request = Create().CreateRequest(httpContext);
 
-        request.Method.Should().Be("GET");
+        request!.Method.Should().Be("GET");
         request.Path.Should().Be("/users/me");
         request.QueryString.Should().Be("?page=2");
     }
@@ -164,8 +164,89 @@ public class CachedResponseFactoryTests
 
         var request = Create().CreateRequest(httpContext, new Forecast("Sunny", 21));
 
-        request.Body.Should().Be("""{"summary":"Sunny","temperatureC":21}""");
+        request!.Body.Should().Be("""{"summary":"Sunny","temperatureC":21}""");
         request.ContentType.Should().Be("application/json");
+    }
+
+    [Test]
+    public void CreateRequest_WithAVendorJsonContentType_PreservesIt()
+    {
+        // The body is serialized as JSON, which is exactly what a "+json" vendor type expects,
+        // so the only thing that ever made the replay fail was the header. Recording
+        // "application/json" instead had the endpoint answer 415 on every pass, making refresh
+        // a permanent no-op for versioned APIs.
+        var httpContext = new DefaultHttpContext();
+        httpContext.Request.Method = "POST";
+        httpContext.Request.Path = "/users/query";
+        httpContext.Request.ContentType = "application/vnd.example.v1+json";
+
+        var request = Create().CreateRequest(httpContext, new Forecast("Sunny", 21));
+
+        request!.ContentType.Should().Be("application/vnd.example.v1+json");
+        request.Body.Should().Be("""{"summary":"Sunny","temperatureC":21}""");
+    }
+
+    [TestCase("application/json; charset=utf-8")]
+    [TestCase("text/json")]
+    [TestCase("application/problem+json")]
+    public void CreateRequest_WithAJsonCompatibleContentType_PreservesIt(string contentType)
+    {
+        var httpContext = new DefaultHttpContext();
+        httpContext.Request.Method = "POST";
+        httpContext.Request.Path = "/users/query";
+        httpContext.Request.ContentType = contentType;
+
+        var request = Create().CreateRequest(httpContext, new Forecast("Sunny", 21));
+
+        request!.ContentType.Should().Be(contentType);
+    }
+
+    [Test]
+    public void CreateRequest_WithNoContentTypeButABody_FallsBackToJson()
+    {
+        var httpContext = new DefaultHttpContext();
+        httpContext.Request.Method = "POST";
+        httpContext.Request.Path = "/users/query";
+
+        var request = Create().CreateRequest(httpContext, new Forecast("Sunny", 21));
+
+        request!.ContentType.Should().Be("application/json");
+    }
+
+    [TestCase("application/xml")]
+    [TestCase("application/x-www-form-urlencoded")]
+    [TestCase("multipart/form-data; boundary=abc")]
+    [TestCase("text/plain")]
+    public void CreateRequest_WithANonJsonBody_RecordsNothingSoRefreshSkipsTheEntry(string contentType)
+    {
+        // The recorded body is re-serialized JSON, and no header makes that bind to an endpoint
+        // expecting XML or a form. Recording nothing marks the entry unreplayable, so refresh
+        // skips it and says so once per pass — instead of replaying, being answered 415, and
+        // leaving the author with a refresh that silently never worked.
+        var httpContext = new DefaultHttpContext();
+        httpContext.Request.Method = "POST";
+        httpContext.Request.Path = "/users/query";
+        httpContext.Request.ContentType = contentType;
+
+        var request = Create().CreateRequest(httpContext, new Forecast("Sunny", 21));
+
+        request.Should().BeNull();
+    }
+
+    [Test]
+    public void CreateRequest_WithANonJsonContentTypeButNoBody_IsStillReplayable()
+    {
+        // Nothing is re-serialized when there is no bound body, so the request content type
+        // cannot make the replay fail. A GET declaring a stray content type still replays.
+        var httpContext = new DefaultHttpContext();
+        httpContext.Request.Method = "GET";
+        httpContext.Request.Path = "/users";
+        httpContext.Request.ContentType = "application/xml";
+
+        var request = Create().CreateRequest(httpContext);
+
+        request.Should().NotBeNull();
+        request!.ContentType.Should().BeNull();
     }
 
     [Test]
@@ -177,7 +258,7 @@ public class CachedResponseFactoryTests
 
         var request = Create().CreateRequest(httpContext);
 
-        request.Body.Should().BeNull();
+        request!.Body.Should().BeNull();
         request.ContentType.Should().BeNull();
     }
 }

@@ -3,6 +3,7 @@ using ActionCache.Common.Serialization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Infrastructure;
+using Microsoft.Net.Http.Headers;
 
 namespace ActionCache.Common.Responses;
 
@@ -168,23 +169,81 @@ public class CachedResponseFactory
     /// </summary>
     /// <param name="httpContext">The current request.</param>
     /// <param name="body">The bound body model, or <see langword="null"/> when the request had none.</param>
-    /// <returns>The recorded request.</returns>
+    /// <returns>
+    /// The recorded request, or <see langword="null"/> when the request cannot be faithfully
+    /// replayed and the entry should therefore not be refreshed.
+    /// </returns>
     /// <remarks>
+    /// <para>
     /// The body is re-serialized from the bound model rather than read from the request
     /// stream, which model binding has already consumed by the time a cache filter runs.
     /// Reading the raw bytes instead would mean enabling buffering before binding, and so
     /// inserting middleware into the host's pipeline.
+    /// </para>
+    /// <para>
+    /// Because the recorded body is JSON, the content type it is replayed with has to be one
+    /// the endpoint will accept JSON for. The request's own content type is preserved when it
+    /// is JSON-compatible, which covers versioned APIs declaring a vendor type such as
+    /// <c>application/vnd.example.v1+json</c>: the payload always suited them and only the
+    /// header did not, so replaying as <c>application/json</c> had them answer <c>415</c> on
+    /// every pass.
+    /// </para>
+    /// <para>
+    /// A body sent as something JSON cannot stand in for -- XML, a form post -- has no such
+    /// rescue: no header makes re-serialized JSON bind to it. Rather than record a request that
+    /// is certain to be rejected, none is recorded at all, which leaves the entry cached and
+    /// unreplayable so refresh skips it and logs the skip once per pass.
+    /// </para>
     /// </remarks>
-    public CachedRequest CreateRequest(HttpContext httpContext, object? body = null) => new()
+    public CachedRequest? CreateRequest(HttpContext httpContext, object? body = null)
     {
-        Method = httpContext.Request.Method,
-        Path = httpContext.Request.Path.Value ?? "/",
-        QueryString = httpContext.Request.QueryString.HasValue
-            ? httpContext.Request.QueryString.Value
-            : null,
-        Body = body is null ? null : Serialize(body),
-        ContentType = body is null ? null : DefaultContentType
-    };
+        var contentType = httpContext.Request.ContentType;
+
+        // Only a re-serialized body has to match a content type. Without one there is nothing
+        // for the endpoint to reject, whatever the original request happened to declare.
+        if (body is not null && !IsJsonCompatible(contentType))
+        {
+            return null;
+        }
+
+        return new CachedRequest
+        {
+            Method = httpContext.Request.Method,
+            Path = httpContext.Request.Path.Value ?? "/",
+            QueryString = httpContext.Request.QueryString.HasValue
+                ? httpContext.Request.QueryString.Value
+                : null,
+            Body = body is null ? null : Serialize(body),
+            ContentType = body is null ? null : contentType ?? DefaultContentType
+        };
+    }
+
+    /// <summary>
+    /// Whether a JSON payload can be sent under the given content type.
+    /// </summary>
+    /// <param name="contentType">The request's content type, or <see langword="null"/> when it declared none.</param>
+    /// <returns><see langword="true"/> when a JSON body is acceptable under it.</returns>
+    /// <remarks>
+    /// True for <c>application/json</c> and <c>text/json</c>, for any type with a <c>+json</c>
+    /// structured suffix, and for a request that declared no content type at all -- which is
+    /// what the recorded request has always assumed and what the default covers.
+    /// </remarks>
+    private static bool IsJsonCompatible(string? contentType)
+    {
+        if (string.IsNullOrWhiteSpace(contentType))
+        {
+            return true;
+        }
+
+        if (!MediaTypeHeaderValue.TryParse(contentType, out var mediaType))
+        {
+            return false;
+        }
+
+        return mediaType.Suffix.Equals("json", StringComparison.OrdinalIgnoreCase) ||
+               mediaType.MatchesMediaType("application/json") ||
+               mediaType.MatchesMediaType("text/json");
+    }
 
     private string? Serialize(object? value) =>
         value is null ? null : JsonSerializer.Serialize(value, value.GetType(), _jsonOptions);
