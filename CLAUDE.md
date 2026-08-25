@@ -120,6 +120,25 @@ Values are a `CachedResponse` (`Common/Responses/`): status code, content type, 
 
 Refresh works on Minimal API endpoints as well as controller actions (`WithActionCacheRefresh`); nothing in the replay is specific to either, since both dispatch through the endpoint's `RequestDelegate`.
 
+### Attribute Validation
+
+An endpoint either caches or has cache side effects, never both. `ActionCacheEndpointValidator`
+walks `EndpointDataSource` at startup and throws `ConflictingCacheAttributesException` listing
+every offending route. The rule itself is `ActionCacheDeclarationConflict.Detect`, a pure
+function over `ActionCacheDeclaration` values so every combination is unit-testable without a
+pipeline.
+
+It is an `IStartupFilter`, not an `IHostedService`: endpoints do not exist until the request
+pipeline is built, and a hosted service registered from `AddActionCache` starts *before* the
+web host's own, seeing an empty endpoint collection. Validation runs after `next(app)`.
+
+Two details that look like bugs but are not:
+- MVC adds each action attribute to endpoint metadata **twice**, as the same instance.
+  Declarations are de-duplicated by reference; counting naively fails every controller app.
+- The Minimal API extensions capture their namespace in the filter closure rather than reading
+  it back via `GetMetadata<T>()`, which returns the *last* match and made two chained calls
+  both target the second namespace.
+
 ### Layered Backends
 
 `ActionCacheHandler` chains one cache per backend. `GetAsync` promotes a deeper-layer hit into the first layer; `GetKeysAsync` unions every layer (eviction and refresh depend on seeing all keys).
