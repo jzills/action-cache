@@ -69,12 +69,16 @@ public class ActionCacheEndpointFilterAbstractFactoryTests
         result.Should().BeOfType<ActionCacheEndpointEvictionFilter>();
     }
 
+    // This asserted a throw until refresh was wired up on the endpoint side. Nothing about
+    // the replay was ever MVC-specific -- EndpointReplayRefreshProvider resolves against
+    // EndpointDataSource and invokes the endpoint's RequestDelegate, which is how a
+    // controller action is dispatched too. Only the filter and this arm were missing.
     [Test]
-    public void CreateInstance_WithRefreshType_ThrowsFilterTypeNotSupportedException()
+    public void CreateInstance_WithRefreshType_ReturnsTheRefreshFilter()
     {
-        Action act = () => _sut.CreateInstance((Namespace)"Test", FilterType.Refresh);
+        var result = _sut.CreateInstance((Namespace)"Test", FilterType.Refresh);
 
-        act.Should().Throw<FilterTypeNotSupportedException>();
+        result.Should().BeOfType<ActionCacheEndpointRefreshFilter>();
     }
 
     [Test]

@@ -1,3 +1,4 @@
+using ActionCache.Common.Caching;
 using ActionCache.Common.Enums;
 using ActionCache.Common.Extensions;
 using Microsoft.AspNetCore.Http;
@@ -36,8 +37,10 @@ public class ActionCacheEvictionFilter : ActionCacheFilterBase, IAsyncActionFilt
     {
         var actionExecutedContext = await next();
         
-        // Cache eviction logic after a successful response.
-        if (actionExecutedContext.HttpContext.Response.IsSuccessStatusCode())
+        // A refresh replay must not evict: the pass is warming this very namespace, and
+        // clearing it mid-pass would leave the cache emptier than before the refresh ran.
+        if (!ActionCacheReplayMarker.IsReplay(context.HttpContext) &&
+            actionExecutedContext.HttpContext.Response.IsSuccessStatusCode())
         {
             AttachRouteValues(context.RouteData.Values);
 

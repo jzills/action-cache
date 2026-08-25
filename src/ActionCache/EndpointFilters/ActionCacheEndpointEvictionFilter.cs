@@ -1,3 +1,4 @@
+using ActionCache.Common.Caching;
 using ActionCache.Common.Enums;
 using ActionCache.Common.Extensions;
 using ActionCache.Common.Extensions.Internal;
@@ -38,7 +39,10 @@ public class ActionCacheEndpointEvictionFilter : ActionCacheFilterBase, IEndpoin
     {
         var result = await next(context);
         
-        if (context.HttpContext.Response.IsSuccessStatusCode())
+        // A refresh replay must not evict: the pass is warming this very namespace, and
+        // clearing it mid-pass would leave the cache emptier than before the refresh ran.
+        if (!ActionCacheReplayMarker.IsReplay(context.HttpContext) &&
+            context.HttpContext.Response.IsSuccessStatusCode())
         {
             AttachRouteValues(context.HttpContext.GetRouteData().Values);
             context.HttpContext.Response.Headers.AddCacheStatus(CacheStatus.Evict);

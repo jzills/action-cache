@@ -116,7 +116,9 @@ Values are a `CachedResponse` (`Common/Responses/`): status code, content type, 
 
 ### Refresh
 
-`EndpointReplayRefreshProvider` re-issues a recorded request against the matching endpoint from `EndpointDataSource`, in its own DI scope, with a real `HttpContext`. `ActionCacheReplayMarker` marks that context so the cache filters bypass the cache — otherwise a replay would be served the stale entry it exists to replace and write it straight back, making refresh a silent no-op.
+`EndpointReplayRefreshProvider` re-issues a recorded request against the matching endpoint from `EndpointDataSource`, in its own DI scope, with a real `HttpContext`. `ActionCacheReplayMarker` marks that context and **every** cache filter checks it: the cache filters read through — otherwise a replay would be served the stale entry it exists to replace and write it straight back, making refresh a silent no-op — while the refresh and eviction filters skip. A refresh filter that re-entered would refresh from inside its own pass and never terminate; an eviction filter would clear the namespace the pass is warming.
+
+Refresh works on Minimal API endpoints as well as controller actions (`WithActionCacheRefresh`); nothing in the replay is specific to either, since both dispatch through the endpoint's `RequestDelegate`.
 
 ### Layered Backends
 

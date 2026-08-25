@@ -70,5 +70,23 @@ endpoints.
 
 ## Minimal APIs
 
-Refresh is currently **MVC-only**. There is no `WithActionCacheRefresh` extension for
-endpoints; use [eviction](../eviction) there instead.
+Endpoints refresh through a builder extension, and behave identically:
+
+```csharp
+using ActionCache.EndpointFilters.Extensions;
+
+app.MapGet("/forecasts", () => repository.All())
+   .WithActionCache("Forecasts");
+
+app.MapPost("/forecasts", (Forecast forecast) => repository.Add(forecast))
+   .WithActionCacheRefresh("Forecasts");
+```
+
+Nothing about the replay is specific to either hosting model: the recorded request is
+resolved against `EndpointDataSource` and dispatched through the endpoint's own
+`RequestDelegate`, which is how a controller action is invoked too. The
+`VariesByRequest` skip, the media-type limitation above, and the `Cache-Status: Refresh`
+header all apply unchanged.
+
+`WithActionCacheRefresh` takes a namespace and nothing else, in common with the rest of the
+Minimal API surface — see [the attributes reference](../../caching/attributes#minimal-apis).

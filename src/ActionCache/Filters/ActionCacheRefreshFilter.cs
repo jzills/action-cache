@@ -1,3 +1,4 @@
+using ActionCache.Common.Caching;
 using ActionCache.Common.Enums;
 using ActionCache.Common.Extensions;
 using ActionCache.Common.Extensions.Internal;
@@ -37,7 +38,10 @@ internal class ActionCacheRefreshFilter : ActionCacheFilterBase, IAsyncResultFil
         ResultExecutionDelegate next
     )
     {
-        if (context.Result.IsSuccessfulResult())
+        // A refresh replay must not start a refresh of its own. The pass replays an entry,
+        // the replay lands here, and refreshing again replays the same entry -- it does not
+        // terminate. The replay still executes its result; the refresh loop stores it.
+        if (!ActionCacheReplayMarker.IsReplay(context.HttpContext) && context.Result.IsSuccessfulResult())
         {
             AttachRouteValues(context.RouteData.Values);
             

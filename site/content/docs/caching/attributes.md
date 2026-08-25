@@ -102,7 +102,8 @@ using ActionCache.EndpointFilters.Extensions;
 
 app.MapGet("/forecasts", () => repository.All()).WithActionCache("Forecasts");
 app.MapDelete("/forecasts", () => repository.Clear()).WithActionCacheEviction("Forecasts");
+app.MapPost("/forecasts", (Forecast f) => repository.Add(f)).WithActionCacheRefresh("Forecasts");
 ```
 
-Both take a namespace and nothing else — the per-endpoint options in the table above are
-MVC-only, and there is no refresh extension for endpoints.
+Each takes a namespace and nothing else — the per-endpoint options in the table above are
+MVC-only.
