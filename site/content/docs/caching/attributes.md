@@ -107,3 +107,35 @@ app.MapPost("/forecasts", (Forecast f) => repository.Add(f)).WithActionCacheRefr
 
 Each takes a namespace and nothing else — the per-endpoint options in the table above are
 MVC-only.
+
+## Combining attributes on one endpoint
+
+An endpoint either **caches**, or has **cache side effects** — never both. The rules are
+checked when the host starts, and a violation throws
+`ConflictingCacheAttributesException` naming every offending route.
+
+| Combination | Allowed |
+|---|---|
+| `[ActionCache]` alone | Yes |
+| Several evictions or refreshes, **different** namespaces | Yes |
+| Eviction and refresh together, **different** namespaces | Yes |
+| `[ActionCache]` with eviction or refresh, any namespace | **No** |
+| Two `[ActionCache]` | **No** |
+| Two side effects naming the **same** namespace | **No** |
+
+Caching alongside a side effect is rejected even when the namespaces differ, and the reason is
+not tidiness. The eviction and refresh filters run *inside* the cache filter, so a cached
+response never reaches the endpoint and the side effect never runs:
+
+```
+miss → cached, evicted    ✓
+hit  → served from cache, nothing evicted
+```
+
+It behaves correctly against a cold cache and silently stops as soon as the cache warms up —
+which is to say, correctly in development and wrongly in production. Put the side effect on the
+endpoint that performs the write instead.
+
+Two side effects on one namespace are rejected because they contradict each other: refresh
+warms the namespace, eviction empties it, and which one wins depends on the order the
+attributes happen to be written in.

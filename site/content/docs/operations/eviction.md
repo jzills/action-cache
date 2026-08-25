@@ -49,6 +49,18 @@ app.MapDelete("/forecasts", () => repository.Clear())
    .WithActionCacheEviction("Forecasts");
 ```
 
+Chain the extension to invalidate more than one namespace from a single write:
+
+```csharp
+app.MapDelete("/accounts/{id}", (int id) => repository.Remove(id))
+   .WithActionCacheEviction("Accounts")
+   .WithActionCacheEviction("Invoices");
+```
+
+The attribute form cannot express this — `[ActionCacheEviction]` is single-use per action.
+Every namespace named must be distinct, and none of them may be a namespace the same endpoint
+caches into; see [combining attributes](../../caching/attributes#combining-attributes-on-one-endpoint).
+
 ## Eviction during a refresh replay
 
 Eviction is skipped on a [refresh](../refresh) replay. An endpoint that carries both

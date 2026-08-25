@@ -5,7 +5,9 @@ using ActionCache.Common.Keys.VaryBy;
 using ActionCache.Common.Responses;
 using ActionCache.Common.Extensions.Internal;
 using ActionCache.Common.Filters;
+using ActionCache.Common.Validation;
 using ActionCache.Memory.Extensions;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.Extensions.DependencyInjection;
@@ -107,7 +109,8 @@ public static class IServiceCollectionExtensions
             .AddSingleton<ResilientCacheDecorator>()
             .AddScoped<IActionCacheFilterAbstractFactory<IFilterMetadata>, ActionCacheFilterAbstractFactory>()
             .AddScoped<IActionCacheFilterAbstractFactory<IEndpointFilter>, ActionCacheEndpointFilterAbstractFactory>()
-            .AddScoped<IActionCacheRefreshProvider, EndpointReplayRefreshProvider>();
+            .AddScoped<IActionCacheRefreshProvider, EndpointReplayRefreshProvider>()
+            .AddTransient<IStartupFilter, ActionCacheEndpointValidator>();
     }
 
     /// <summary>
