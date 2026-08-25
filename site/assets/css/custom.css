@@ -10,6 +10,20 @@
  * light/dark toggle without a second palette to maintain.
  */
 
+html {
+  /* Most of the navbar is fragments on the landing page -- Install, Usage,
+     Features, Backends -- and the docs pages have a table of contents that is
+     nothing but fragments. Without this the browser teleports, and a reader who
+     clicks "Backends" arrives with no idea whether the page moved a screen or
+     ten; the animation is what says how far. .ac-section's scroll-margin-top is
+     the other half, keeping the landing point clear of the sticky navbar.
+
+     No reduced-motion guard here: Hextra's reset already forces
+     scroll-behavior: auto under that query, so a reader who asks for less
+     motion gets the jump back. */
+  scroll-behavior: smooth;
+}
+
 :root {
   --ac-border: var(--color-gray-200, #e5e7eb);
   --ac-surface: rgba(0, 0, 0, 0.015);
