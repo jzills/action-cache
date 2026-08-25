@@ -66,7 +66,7 @@ public IActionResult Create(Forecast forecast) => Ok(_repository.Add(forecast));
   </div>
 </div>
 
-<div class="ac-section" id="attributes">
+<div class="ac-section" id="usage">
   <h2 class="ac-section__title">Three attributes</h2>
   <p class="ac-section__lede">
     Everything the library does is reached through one of these. Each takes a
@@ -143,7 +143,7 @@ public IActionResult Create(Forecast forecast) => Ok(_repository.Add(forecast));
 
 | | Memory | Redis | SQL Server | Cosmos DB |
 |---|---|---|---|---|
-| **Package** | `ActionCache` | `.Redis` | `.SqlServer` | `.AzureCosmos` |
+| **Package** | `ActionCache` | `ActionCache.Redis` | `ActionCache.SqlServer` | `ActionCache.AzureCosmos` |
 | **Shared across instances** | No | Yes | Yes | Yes |
 | **Locking** | `SemaphoreSlim` | atomic Lua | `sp_getapplock` | atomic |
 | **Distributed single flight** | — | Yes | Yes | — |
