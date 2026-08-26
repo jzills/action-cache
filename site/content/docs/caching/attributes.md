@@ -105,8 +105,27 @@ app.MapDelete("/forecasts", () => repository.Clear()).WithActionCacheEviction("F
 app.MapPost("/forecasts", (Forecast f) => repository.Add(f)).WithActionCacheRefresh("Forecasts");
 ```
 
-Each takes a namespace and nothing else — the per-endpoint options in the table above are
-MVC-only.
+`WithActionCache` takes the same per-endpoint options as the attribute, through a configure
+delegate:
+
+```csharp
+app.MapGet("/forecasts", () => repository.All())
+   .WithActionCache("Forecasts", options =>
+   {
+       options.AbsoluteExpiration = TimeSpan.FromMinutes(5);
+       options.VaryByQuery = "page,size";
+       options.SingleFlight = false;
+   });
+```
+
+Expirations are a `TimeSpan` rather than the milliseconds the attribute takes. That difference
+is not gratuitous: an attribute argument has to be a compile-time constant, so `[ActionCache]`
+cannot hold a `TimeSpan` and states its expirations as `long` instead. A builder has no such
+constraint.
+
+`WithActionCacheEviction` and `WithActionCacheRefresh` still take a namespace and nothing else,
+matching their attributes — neither writes a cache entry, so there is no entry for expiration
+or vary-by to describe.
 
 ## Combining attributes on one endpoint
 

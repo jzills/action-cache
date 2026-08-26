@@ -145,6 +145,18 @@ Two details that look like bugs but are not:
   it back via `GetMetadata<T>()`, which returns the *last* match and made two chained calls
   both target the second namespace.
 
+### Minimal API Endpoint Options
+
+`WithActionCache(ns, options => ...)` configures expiration, vary-by and `SingleFlight` per
+endpoint, matching `[ActionCache]`. `ActionCacheEndpointOptions` states expirations as
+`TimeSpan` rather than the attribute's `long` milliseconds — an attribute argument must be a
+compile-time constant, a builder argument need not be. The delegate runs **once at
+registration**, not per request: the options describe the endpoint, so re-running caller code
+on every request would only make an expensive lambda an expensive endpoint.
+
+Eviction and refresh stay namespace-only, matching their attributes: neither writes an entry
+the options would describe.
+
 ### Layered Backends
 
 `ActionCacheHandler` chains one cache per backend. `GetAsync` promotes a deeper-layer hit into the first layer; `GetKeysAsync` unions every layer (eviction and refresh depend on seeing all keys).
