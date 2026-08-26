@@ -93,5 +93,7 @@ resolved against `EndpointDataSource` and dispatched through the endpoint's own
 `VariesByRequest` skip, the media-type limitation above, and the `Cache-Status: Refresh`
 header all apply unchanged.
 
-`WithActionCacheRefresh` takes a namespace and nothing else, in common with the rest of the
-Minimal API surface — see [the attributes reference](../../caching/attributes#minimal-apis).
+`WithActionCacheRefresh` takes a namespace and nothing else, matching `[ActionCacheRefresh]`:
+refresh writes entries the cached endpoint already described, so there is nothing here for
+expiration or vary-by to say. The endpoint doing the caching is where those are configured —
+see [the attributes reference](../../caching/attributes#minimal-apis).

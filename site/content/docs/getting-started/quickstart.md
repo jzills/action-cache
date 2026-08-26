@@ -80,11 +80,20 @@ app.MapPost("/forecasts", (Forecast forecast) => repository.Add(forecast))
    .WithActionCacheRefresh("Forecasts");
 ```
 
-{{< callout type="warning" >}}
-The Minimal API surface is narrower than the MVC one. Each extension takes a namespace and
-nothing else, so expiration, vary-by and `SingleFlight` cannot be set per endpoint — they
-fall back to the defaults and to whatever `UseEntryOptions` configures globally.
-{{< /callout >}}
+`WithActionCache` accepts the same per-endpoint settings as `[ActionCache]` — expiration,
+vary-by and `SingleFlight` — through a configure delegate:
+
+```csharp
+app.MapGet("/forecasts", () => repository.All())
+   .WithActionCache("Forecasts", options =>
+   {
+       options.AbsoluteExpiration = TimeSpan.FromMinutes(5);
+       options.VaryByQuery = "page,size";
+   });
+```
+
+Omit the delegate and the endpoint takes the defaults, plus whatever `UseEntryOptions`
+configures globally. See [the attributes reference](../caching/attributes#minimal-apis).
 
 ## What you get without asking
 
