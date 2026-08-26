@@ -1,3 +1,4 @@
+using ActionCache.Common;
 using ActionCache;
 using ActionCache.Common.Caching;
 using ActionCache.Utilities;
@@ -91,7 +92,7 @@ public class ResilientActionCacheTests
     [Test]
     public async Task SetAsync_WhenInnerThrows_FailOpen_SwallowsAndLogs()
     {
-        _inner.Setup(cache => cache.SetAsync(It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+        _inner.Setup(cache => cache.SetAsync(It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<ActionCacheEntryOptions?>(), It.IsAny<CancellationToken>()))
               .ThrowsAsync(new InvalidOperationException());
 
         var act = async () => await CreateSut().SetAsync("key", "value");
@@ -103,7 +104,7 @@ public class ResilientActionCacheTests
     [Test]
     public async Task SetAsync_WhenInnerThrows_FailClosed_Rethrows()
     {
-        _inner.Setup(cache => cache.SetAsync(It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+        _inner.Setup(cache => cache.SetAsync(It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<ActionCacheEntryOptions?>(), It.IsAny<CancellationToken>()))
               .ThrowsAsync(new InvalidOperationException());
 
         var act = async () => await CreateSut(failClosed: true).SetAsync("key", "value");
@@ -192,7 +193,7 @@ public class ResilientActionCacheTests
         await sut.SetAsync("key", "value");
         sut.GetNamespace().Should().Be(new Namespace("Test"));
 
-        _inner.Verify(cache => cache.SetAsync("key", "value", It.IsAny<CancellationToken>()), Times.Once);
+        _inner.Verify(cache => cache.SetAsync("key", "value", It.IsAny<ActionCacheEntryOptions?>(), It.IsAny<CancellationToken>()), Times.Once);
         VerifyWarningLogged(Times.Never());
     }
 }

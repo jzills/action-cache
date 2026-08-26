@@ -163,7 +163,7 @@ public class ActionCacheHandlerTests
     {
         await _sut.SetAsync("key", "value");
 
-        _cacheMock.Verify(cache => cache.SetAsync("key", "value", It.IsAny<CancellationToken>()), Times.Once);
+        _cacheMock.Verify(cache => cache.SetAsync("key", "value", null, It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Test]
@@ -173,7 +173,7 @@ public class ActionCacheHandlerTests
 
         await _sut.SetAsync("key", "value");
 
-        _nextCacheMock.Verify(cache => cache.SetAsync("key", "value", It.IsAny<CancellationToken>()), Times.Once);
+        _nextCacheMock.Verify(cache => cache.SetAsync("key", "value", null, It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Test]

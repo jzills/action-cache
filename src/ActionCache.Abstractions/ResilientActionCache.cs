@@ -123,9 +123,13 @@ public class ResilientActionCache : IActionCache
 
     /// <inheritdoc/>
     public Task SetAsync<TValue>(string key, TValue? value, CancellationToken cancellationToken = default) =>
+        SetAsync(key, value, entryOptions: null, cancellationToken);
+
+    /// <inheritdoc/>
+    public Task SetAsync<TValue>(string key, TValue? value, ActionCacheEntryOptions? entryOptions, CancellationToken cancellationToken = default) =>
         GuardAsync(
             nameof(SetAsync),
-            token => _inner.SetAsync(key, value, token),
+            token => _inner.SetAsync(key, value, entryOptions, token),
             cancellationToken,
             onCompleted: _ =>
             {

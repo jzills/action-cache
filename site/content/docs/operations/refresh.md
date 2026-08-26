@@ -73,6 +73,19 @@ refreshable: refresh skips them and logs the skip once per pass, rather than rep
 endpoints.
 {{< /callout >}}
 
+## Expiration
+
+A refreshed entry keeps the expiration its own endpoint declared. The expirations are read from
+that endpoint when the request is replayed, so `[ActionCache(AbsoluteExpiration = 300000)]`
+still expires five minutes after each refresh rewrites it.
+
+This matters because a refresh filter declares no expirations of its own. Writing through them
+would take the global `UseEntryOptions` defaults instead — with none configured, no expiration
+at all — and a namespace refreshed on every write would never expire anything.
+
+Expirations are per endpoint rather than per namespace, so one namespace can hold entries with
+different lifetimes and each keeps its own across a refresh.
+
 ## Minimal APIs
 
 Endpoints refresh through a builder extension, and behave identically:

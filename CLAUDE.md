@@ -157,6 +157,23 @@ on every request would only make an expensive lambda an expensive endpoint.
 Eviction and refresh stay namespace-only, matching their attributes: neither writes an entry
 the options would describe.
 
+### Refresh and Expiration
+
+`IActionCacheRefreshProvider.ReplayAsync` returns an `ActionCacheReplayResult`: the replayed
+response plus the expirations the entry should be rewritten with, read from the endpoint the
+recorded request resolved to. `IActionCache.SetAsync` has an overload taking
+`ActionCacheEntryOptions?` so the refresh loop can write one entry with those.
+
+Without this a refresh filter — which is created with no expirations — wrote replayed entries
+through the *global* `UseEntryOptions`, discarding whatever the endpoint declared. One refresh
+turned a bounded entry permanent. The value has to be per entry, not per cache: one namespace
+can hold entries from several endpoints with different expirations.
+
+The expirations are read from endpoint metadata rather than stored on `CachedResponse`, so the
+serialized payload is unchanged for entries already in a backend and the attribute stays the
+single source of truth. `WithActionCache` records its options on the metadata attribute for
+exactly this reason.
+
 ### Layered Backends
 
 `ActionCacheHandler` chains one cache per backend. `GetAsync` promotes a deeper-layer hit into the first layer; `GetKeysAsync` unions every layer (eviction and refresh depend on seeing all keys).

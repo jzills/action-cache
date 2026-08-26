@@ -133,7 +133,10 @@ public abstract class ActionCacheBase<TLock> : IActionCache where TLock : CacheL
             return false;
         }
 
-        await SetAsync(key, replayed, cancellationToken);
+        // Written with the expirations the cached endpoint declared rather than this filter's.
+        // A refresh filter is created without any, so using them would replace a declared
+        // expiration with the global default -- one refresh made a bounded entry permanent.
+        await SetAsync(key, replayed.Response, replayed.EntryOptions, cancellationToken);
         return true;
     }
 
@@ -144,5 +147,30 @@ public abstract class ActionCacheBase<TLock> : IActionCache where TLock : CacheL
     public abstract Task RemoveAsync(CancellationToken cancellationToken = default);
 
     /// <inheritdoc/>
-    public abstract Task SetAsync<TValue>(string key, TValue? value, CancellationToken cancellationToken = default);
+    public Task SetAsync<TValue>(string key, TValue? value, CancellationToken cancellationToken = default) =>
+        SetAsync(key, value, entryOptions: null, cancellationToken);
+
+    /// <inheritdoc/>
+    public abstract Task SetAsync<TValue>(string key, TValue? value, ActionCacheEntryOptions? entryOptions, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// The options one write should use: the caller's expirations when given, this cache's own
+    /// otherwise.
+    /// </summary>
+    /// <param name="entryOptions">The caller's expirations, or <see langword="null"/>.</param>
+    /// <returns>The options to write the entry with.</returns>
+    /// <remarks>
+    /// Only the expirations are taken from the caller. <see cref="ActionCacheEntryOptions.LockTimeout"/>
+    /// describes how long this cache waits on its key index, which is a property of the cache
+    /// rather than of any entry written to it.
+    /// </remarks>
+    protected ActionCacheEntryOptions EffectiveEntryOptions(ActionCacheEntryOptions? entryOptions) =>
+        entryOptions is null
+            ? EntryOptions
+            : new ActionCacheEntryOptions
+            {
+                AbsoluteExpiration = entryOptions.AbsoluteExpiration,
+                SlidingExpiration = entryOptions.SlidingExpiration,
+                LockTimeout = EntryOptions.LockTimeout
+            };
 }

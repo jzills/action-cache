@@ -1,5 +1,7 @@
 using System.Globalization;
 using System.Text;
+using ActionCache.Attributes;
+using ActionCache.Common;
 using ActionCache.Common.Diagnostics;
 using ActionCache.Common.Responses;
 using Microsoft.AspNetCore.Http;
@@ -52,7 +54,7 @@ public class EndpointReplayRefreshProvider : IActionCacheRefreshProvider
     }
 
     /// <inheritdoc/>
-    public async Task<CachedResponse?> ReplayAsync(
+    public async Task<ActionCacheReplayResult?> ReplayAsync(
         CachedRequest request,
         CancellationToken cancellationToken = default)
     {
@@ -87,14 +89,56 @@ public class EndpointReplayRefreshProvider : IActionCacheRefreshProvider
             return null;
         }
 
-        return new CachedResponse
+        var response = new CachedResponse
         {
             StatusCode = statusCode,
             ContentType = httpContext.Response.ContentType,
             Body = ReadBody(body),
             Request = request
         };
+
+        return new ActionCacheReplayResult(response, GetDeclaredEntryOptions(endpoint!));
     }
+
+    /// <summary>
+    /// Reads the expirations declared by the endpoint that produced the entry.
+    /// </summary>
+    /// <param name="endpoint">The endpoint the recorded request resolved to.</param>
+    /// <returns>
+    /// The declared expirations, or <see langword="null"/> when the endpoint declared none.
+    /// </returns>
+    /// <remarks>
+    /// Taken from the endpoint rather than from the refresh filter, which is created without
+    /// expirations: writing through its options replaced whatever the cached endpoint declared
+    /// with the global defaults, and one refresh was enough to make a bounded entry permanent.
+    /// One namespace can hold entries from several endpoints with different expirations, so
+    /// the value has to be resolved per entry, and the entry's own endpoint is where it is
+    /// written down.
+    /// </remarks>
+    private static ActionCacheEntryOptions? GetDeclaredEntryOptions(Endpoint endpoint)
+    {
+        if (endpoint.Metadata.GetMetadata<ActionCacheAttribute>() is not { } attribute)
+        {
+            return null;
+        }
+
+        var absolute = ToTimeSpan(attribute.AbsoluteExpiration);
+        var sliding = ToTimeSpan(attribute.SlidingExpiration);
+
+        return absolute is null && sliding is null
+            ? null
+            : new ActionCacheEntryOptions { AbsoluteExpiration = absolute, SlidingExpiration = sliding };
+    }
+
+    /// <summary>
+    /// Converts the milliseconds an attribute states an expiration in to a duration.
+    /// </summary>
+    /// <param name="milliseconds">The declared expiration.</param>
+    /// <returns>The duration, or <see langword="null"/> when none was declared.</returns>
+    private static TimeSpan? ToTimeSpan(long milliseconds) =>
+        milliseconds == ActionCacheEntryOptions.NoExpiration
+            ? null
+            : TimeSpan.FromMilliseconds(milliseconds);
 
     private bool TryMatchEndpoint(
         CachedRequest request,

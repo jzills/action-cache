@@ -1,3 +1,4 @@
+using ActionCache.Common;
 using ActionCache.Utilities;
 
 namespace ActionCache.Common.Caching;
@@ -110,9 +111,21 @@ public class ActionCacheHandler : ActionCacheHandlerBase, IActionCache
     /// <param name="value">The value to cache.</param>
     /// <param name="cancellationToken">A token to observe while waiting for the operation to complete.</param>
     /// <returns>A task that represents the asynchronous set operation.</returns>
-    public async Task SetAsync<TValue>(string key, TValue? value, CancellationToken cancellationToken = default)
+    public Task SetAsync<TValue>(string key, TValue? value, CancellationToken cancellationToken = default) =>
+        SetAsync(key, value, entryOptions: null, cancellationToken);
+
+    /// <summary>
+    /// Stores a value in every cache in the chain, expiring it by the given options.
+    /// </summary>
+    /// <typeparam name="TValue">The type of the value to store.</typeparam>
+    /// <param name="key">The key of the value to store.</param>
+    /// <param name="value">The value to store. Can be null.</param>
+    /// <param name="entryOptions">The expirations to write with, or <see langword="null"/> for each cache's own.</param>
+    /// <param name="cancellationToken">A token to observe while waiting for the operation to complete.</param>
+    /// <returns>A task that represents the asynchronous set operation.</returns>
+    public async Task SetAsync<TValue>(string key, TValue? value, ActionCacheEntryOptions? entryOptions, CancellationToken cancellationToken = default)
     {
-        await Cache.SetAsync(key, value, cancellationToken);
-        await NextIfExists(next => next.SetAsync(key, value, cancellationToken));
+        await Cache.SetAsync(key, value, entryOptions, cancellationToken);
+        await NextIfExists(next => next.SetAsync(key, value, entryOptions, cancellationToken));
     }
 }

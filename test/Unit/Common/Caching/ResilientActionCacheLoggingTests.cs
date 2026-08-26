@@ -1,3 +1,4 @@
+using ActionCache.Common;
 using ActionCache;
 using ActionCache.Common.Caching;
 using ActionCache.Utilities;
@@ -65,7 +66,7 @@ public class ResilientActionCacheLoggingTests
     [Test]
     public async Task SetAsync_WhenInnerThrows_LogsDegradationInsteadOfCacheSet()
     {
-        _inner.Setup(cache => cache.SetAsync(It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+        _inner.Setup(cache => cache.SetAsync(It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<ActionCacheEntryOptions?>(), It.IsAny<CancellationToken>()))
               .ThrowsAsync(new InvalidOperationException("backend down"));
 
         await _sut.SetAsync("key", "value");

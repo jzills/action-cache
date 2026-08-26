@@ -1,3 +1,4 @@
+using ActionCache.Common;
 using ActionCache;
 using ActionCache.Common.Caching;
 using ActionCache.Utilities;
@@ -24,6 +25,10 @@ public class ActionCacheHandlerChainTests
             GetCalls++;
             return Task.FromResult(_entries.TryGetValue(key, out var value) ? (TValue?)value : default);
         }
+
+        // Stubs delegate: only the real backends need to honour per-entry expirations.
+        public Task SetAsync<TValue>(string key, TValue? value, ActionCacheEntryOptions? entryOptions, CancellationToken cancellationToken = default) =>
+            SetAsync(key, value, cancellationToken);
 
         public Task SetAsync<TValue>(string key, TValue? value, CancellationToken cancellationToken = default)
         {
