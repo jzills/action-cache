@@ -1,5 +1,4 @@
 using ActionCache.Utilities;
-using ActionCache.Common;
 
 namespace ActionCache;
 
@@ -39,27 +38,6 @@ public interface IActionCache
     /// <param name="cancellationToken">A token to observe while waiting for the operation to complete.</param>
     /// <returns>A task that represents the asynchronous set operation.</returns>
     Task SetAsync<TValue>(string key, TValue? value, CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// Stores a value under the specified key, expiring it by the given options rather than
-    /// the ones this cache was created with.
-    /// </summary>
-    /// <typeparam name="TValue">The type of the value to store.</typeparam>
-    /// <param name="key">The key of the value to store.</param>
-    /// <param name="value">The value to store. Can be null.</param>
-    /// <param name="entryOptions">
-    /// The expirations to write this entry with, or <see langword="null"/> to use the cache's own.
-    /// </param>
-    /// <param name="cancellationToken">A token to observe while waiting for the operation to complete.</param>
-    /// <returns>A task that represents the asynchronous set operation.</returns>
-    /// <remarks>
-    /// Exists for refresh. A refresh filter is created without expirations, so writing a
-    /// replayed response through the cache's own options replaced whatever the cached endpoint
-    /// declared with the global defaults — one refresh was enough to make a time-limited entry
-    /// permanent. A namespace can hold entries from several endpoints with different
-    /// expirations, so the correct value is per entry rather than per cache.
-    /// </remarks>
-    Task SetAsync<TValue>(string key, TValue? value, ActionCacheEntryOptions? entryOptions, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Removes the value associated with the specified key.

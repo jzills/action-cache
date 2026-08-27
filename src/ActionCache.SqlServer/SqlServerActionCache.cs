@@ -76,7 +76,7 @@ public class SqlServerActionCache : ActionCacheBase<SqlServerCacheLock>
     /// <param name="value">The value to set in the cache.</param>
     /// <param name="entryOptions">The expirations to write with, or <see langword="null"/> for this cache's own.</param>
     /// <param name="cancellationToken">A token to observe while waiting for the operation to complete.</param>
-    public override async Task SetAsync<TValue>(string key, [AllowNull] TValue value, ActionCacheEntryOptions? entryOptions, CancellationToken cancellationToken = default)
+    protected override async Task SetAsync<TValue>(string key, [AllowNull] TValue value, ActionCacheEntryOptions? entryOptions, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
 

@@ -150,8 +150,35 @@ public abstract class ActionCacheBase<TLock> : IActionCache where TLock : CacheL
     public Task SetAsync<TValue>(string key, TValue? value, CancellationToken cancellationToken = default) =>
         SetAsync(key, value, entryOptions: null, cancellationToken);
 
-    /// <inheritdoc/>
-    public abstract Task SetAsync<TValue>(string key, TValue? value, ActionCacheEntryOptions? entryOptions, CancellationToken cancellationToken = default);
+    /// <summary>
+    /// Stores a value under the specified key, expiring it by the given options rather than
+    /// the ones this cache was created with.
+    /// </summary>
+    /// <typeparam name="TValue">The type of the value to store.</typeparam>
+    /// <param name="key">The key of the value to store.</param>
+    /// <param name="value">The value to store. Can be null.</param>
+    /// <param name="entryOptions">
+    /// The expirations to write this entry with, or <see langword="null"/> to use this cache's own.
+    /// </param>
+    /// <param name="cancellationToken">A token to observe while waiting for the operation to complete.</param>
+    /// <returns>A task that represents the asynchronous set operation.</returns>
+    /// <remarks>
+    /// <para>
+    /// Deliberately not on <see cref="IActionCache"/>. Refresh is its only caller: a refresh
+    /// filter is created without expirations, so writing a replayed response through this
+    /// cache's own options would replace whatever the cached endpoint declared with the global
+    /// defaults. A namespace can hold entries from several endpoints with different
+    /// expirations, so the value has to be chosen per write rather than per cache — which is
+    /// also why this is a parameter and not a constructor argument.
+    /// </para>
+    /// <para>
+    /// It stays protected because the refresh loop calls it on <c>this</c>: a refresh never
+    /// travels back out through <c>ActionCacheHandler</c> or <c>ResilientActionCache</c>, so
+    /// neither needs to carry it, and no caller outside this hierarchy has any use for it.
+    /// A caller wanting a cache with particular expirations asks the factory for one.
+    /// </para>
+    /// </remarks>
+    protected abstract Task SetAsync<TValue>(string key, TValue? value, ActionCacheEntryOptions? entryOptions, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// The options one write should use: the caller's expirations when given, this cache's own

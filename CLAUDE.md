@@ -161,8 +161,15 @@ the options would describe.
 
 `IActionCacheRefreshProvider.ReplayAsync` returns an `ActionCacheReplayResult`: the replayed
 response plus the expirations the entry should be rewritten with, read from the endpoint the
-recorded request resolved to. `IActionCache.SetAsync` has an overload taking
-`ActionCacheEntryOptions?` so the refresh loop can write one entry with those.
+recorded request resolved to. `ActionCacheBase` declares a **`protected abstract`** `SetAsync`
+overload taking `ActionCacheEntryOptions?` so the refresh loop can write one entry with those.
+
+That overload is deliberately not on `IActionCache`. The refresh loop calls it on `this`, and a
+refresh never travels back out through `ActionCacheHandler` or `ResilientActionCache` — the
+handler calls each link's `RefreshAsync` and the write happens inside that backend — so neither
+wrapper needs to carry it and the public contract is unchanged. A caller wanting a cache with
+particular expirations asks `IActionCacheFactory.Create(ns, absolute, sliding)` for one; only
+refresh needs the value to vary per write.
 
 Without this a refresh filter — which is created with no expirations — wrote replayed entries
 through the *global* `UseEntryOptions`, discarding whatever the endpoint declared. One refresh
