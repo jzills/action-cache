@@ -1,4 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
+using ActionCache.Common;
 using ActionCache.Common.Caching;
 using ActionCache.SqlServer.Concurrency.Locks;
 using ActionCache.Common.Serialization;
@@ -30,11 +31,18 @@ public class SqlServerActionCache : ActionCacheBase<SqlServerCacheLock>
     /// Creates the distributed cache entry options from the current <see cref="ActionCacheBase{TLock}.EntryOptions"/>.
     /// </summary>
     /// <returns>A <see cref="DistributedCacheEntryOptions"/> configured with the current sliding and absolute expiration values.</returns>
-    private DistributedCacheEntryOptions CreateEntryOptions() =>
-        new DistributedCacheEntryOptions
+    private DistributedCacheEntryOptions CreateEntryOptions() => CreateEntryOptions(EntryOptions);
+
+    /// <summary>
+    /// Creates the distributed cache entry options for the given expirations.
+    /// </summary>
+    /// <param name="options">The expirations to apply.</param>
+    /// <returns>The options to write the entry and its key-index record with.</returns>
+    private static DistributedCacheEntryOptions CreateEntryOptions(ActionCacheEntryOptions options) =>
+        new()
         {
-            SlidingExpiration = EntryOptions.SlidingExpiration,
-            AbsoluteExpiration = EntryOptions.GetAbsoluteExpirationFromUtcNow()
+            SlidingExpiration = options.SlidingExpiration,
+            AbsoluteExpiration = options.GetAbsoluteExpirationFromUtcNow()
         };
 
     /// <summary>
@@ -66,15 +74,19 @@ public class SqlServerActionCache : ActionCacheBase<SqlServerCacheLock>
     /// <typeparam name="TValue">The type of the value to set in the cache.</typeparam>
     /// <param name="key">The cache key to set the value for.</param>
     /// <param name="value">The value to set in the cache.</param>
+    /// <param name="entryOptions">The expirations to write with, or <see langword="null"/> for this cache's own.</param>
     /// <param name="cancellationToken">A token to observe while waiting for the operation to complete.</param>
-    public override async Task SetAsync<TValue>(string key, [AllowNull] TValue value, CancellationToken cancellationToken = default)
+    protected override async Task SetAsync<TValue>(string key, [AllowNull] TValue value, ActionCacheEntryOptions? entryOptions, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        var entryOptions = CreateEntryOptions();
-        await Cache.SetStringAsync(Namespace.Create(key), CacheJsonSerializer.Serialize(value), entryOptions, cancellationToken);
-        
-        await CacheLocker.WaitForLockThenAsync(Namespace, 
-            () => Cache.SetKeyAsync(Namespace, key, entryOptions));
+
+        // The key-index record takes the same expiration as the entry, so a refreshed entry
+        // and its index record continue to expire together.
+        var distributedOptions = CreateEntryOptions(EffectiveEntryOptions(entryOptions));
+        await Cache.SetStringAsync(Namespace.Create(key), CacheJsonSerializer.Serialize(value), distributedOptions, cancellationToken);
+
+        await CacheLocker.WaitForLockThenAsync(Namespace,
+            () => Cache.SetKeyAsync(Namespace, key, distributedOptions));
     }
 
     /// <summary>

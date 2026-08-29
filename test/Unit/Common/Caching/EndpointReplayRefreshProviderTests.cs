@@ -69,9 +69,9 @@ public class EndpointReplayRefreshProviderTests
         var replayed = await provider.ReplayAsync(new CachedRequest { Method = "GET", Path = "/users/me" });
 
         replayed.Should().NotBeNull();
-        replayed!.StatusCode.Should().Be(200);
-        replayed.ContentType.Should().Be("application/json");
-        replayed.Body.Should().Be("""{"name":"alice"}""");
+        replayed!.Response.StatusCode.Should().Be(200);
+        replayed.Response.ContentType.Should().Be("application/json");
+        replayed.Response.Body.Should().Be("""{"name":"alice"}""");
     }
 
     [Test]
@@ -164,6 +164,6 @@ public class EndpointReplayRefreshProviderTests
 
         var replayed = await provider.ReplayAsync(request);
 
-        replayed!.Request.Should().Be(request, "the refreshed entry must stay refreshable");
+        replayed!.Response.Request.Should().Be(request, "the refreshed entry must stay refreshable");
     }
 }

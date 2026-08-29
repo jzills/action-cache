@@ -92,12 +92,13 @@ public class AzureCosmosActionCache : ActionCacheBase<NullCacheLock>
     /// </summary>
     /// <param name="key">The cache key to set the value for.</param>
     /// <param name="value">The value to set in the cache.</param>
+    /// <param name="entryOptions">The expirations to write with, or <see langword="null"/> for this cache's own.</param>
     /// <param name="cancellationToken">A token to observe while waiting for the operation to complete.</param>
-    public override async Task SetAsync<TValue>(string key, [AllowNull] TValue value, CancellationToken cancellationToken = default)
+    protected override async Task SetAsync<TValue>(string key, [AllowNull] TValue value, ActionCacheEntryOptions? entryOptions, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
         var container = await Cache.Value;
-        var (absoluteExpiration, slidingExpiration, ttl) = EntryOptions;
+        var (absoluteExpiration, slidingExpiration, ttl) = EffectiveEntryOptions(entryOptions);
 
         await container.UpsertItemAsync(new AzureCosmosEntry
         {

@@ -80,14 +80,15 @@ public class RedisActionCache : ActionCacheBase<NullCacheLock>
     /// </summary>
     /// <param name="key">The key of the item to set in the cache.</param>
     /// <param name="value">The value of the item to set in the cache.</param>
+    /// <param name="entryOptions">The expirations to write with, or <see langword="null"/> for this cache's own.</param>
     /// <param name="cancellationToken">A token to observe while waiting for the operation to complete.</param>
-    public override async Task SetAsync<TValue>(string key, [AllowNull] TValue value, CancellationToken cancellationToken = default)
+    protected override async Task SetAsync<TValue>(string key, [AllowNull] TValue value, ActionCacheEntryOptions? entryOptions, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
         RedisValue redisValue = CacheJsonSerializer.Serialize(value);
 
-        var (absoluteExpiration, slidingExpiration, ttl) = EntryOptions;
-        
+        var (absoluteExpiration, slidingExpiration, ttl) = EffectiveEntryOptions(entryOptions);
+
         if (Assembly.TryGetResourceAsText(LuaResources.SetHash, out var script))
         {
             await Cache.ScriptEvaluateAsync(script,

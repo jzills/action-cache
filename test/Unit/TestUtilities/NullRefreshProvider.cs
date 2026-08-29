@@ -14,7 +14,7 @@ internal sealed class NullRefreshProvider : IActionCacheRefreshProvider
     {
     }
 
-    public Task<CachedResponse?> ReplayAsync(
+    public Task<ActionCacheReplayResult?> ReplayAsync(
         CachedRequest request,
-        CancellationToken cancellationToken = default) => Task.FromResult<CachedResponse?>(null);
+        CancellationToken cancellationToken = default) => Task.FromResult<ActionCacheReplayResult?>(null);
 }

@@ -14,8 +14,9 @@ public interface IActionCacheRefreshProvider
     /// <param name="request">The request line recorded when the entry was cached.</param>
     /// <param name="cancellationToken">A token to observe while waiting for the operation to complete.</param>
     /// <returns>
-    /// The response the replayed request produced, or <see langword="null"/> when it could
-    /// not be replayed — no endpoint matched, or the response was not cacheable.
+    /// The response the replayed request produced and the expirations to rewrite the entry
+    /// with, or <see langword="null"/> when it could not be replayed — no endpoint matched, or
+    /// the response was not cacheable.
     /// </returns>
-    Task<CachedResponse?> ReplayAsync(CachedRequest request, CancellationToken cancellationToken = default);
+    Task<ActionCacheReplayResult?> ReplayAsync(CachedRequest request, CancellationToken cancellationToken = default);
 }

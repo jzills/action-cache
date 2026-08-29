@@ -60,7 +60,16 @@ public static class RouteHandlerBuilderExtensions
         var options = new ActionCacheEndpointOptions();
         configure(options);
 
-        return builder.WithMetadata(new ActionCacheAttribute { Namespace = @namespace })
+        // The expirations are recorded on the metadata as well as on the filter. Refresh reads
+        // them back from the endpoint to rewrite an entry with the expiration its own endpoint
+        // declared -- a refresh filter has none of its own, and one namespace can hold entries
+        // from several endpoints with different ones.
+        return builder.WithMetadata(new ActionCacheAttribute
+            {
+                Namespace = @namespace,
+                AbsoluteExpiration = ToMilliseconds(options.AbsoluteExpiration),
+                SlidingExpiration = ToMilliseconds(options.SlidingExpiration)
+            })
             .AddEndpointFilter((context, next) =>
             {
                 var endpointFilterFactory = new ActionCacheEndpointFilterFactory

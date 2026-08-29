@@ -22,7 +22,7 @@ public class ActionCacheRefreshResilienceTests
 
         internal List<string> Replayed { get; } = [];
 
-        public Task<CachedResponse?> ReplayAsync(
+        public Task<ActionCacheReplayResult?> ReplayAsync(
             CachedRequest request,
             CancellationToken cancellationToken = default)
         {
@@ -33,13 +33,15 @@ public class ActionCacheRefreshResilienceTests
                 throw new InvalidOperationException("the action threw during replay");
             }
 
-            return Task.FromResult<CachedResponse?>(new CachedResponse
-            {
-                StatusCode = 200,
-                ContentType = "application/json",
-                Body = $"\"refreshed {request.Path}\"",
-                Request = request
-            });
+            return Task.FromResult<ActionCacheReplayResult?>(new ActionCacheReplayResult(
+                new CachedResponse
+                {
+                    StatusCode = 200,
+                    ContentType = "application/json",
+                    Body = $"\"refreshed {request.Path}\"",
+                    Request = request
+                },
+                EntryOptions: null));
         }
     }
 
@@ -51,14 +53,14 @@ public class ActionCacheRefreshResilienceTests
 
         internal int Calls { get; private set; }
 
-        public Task<CachedResponse?> ReplayAsync(
+        public Task<ActionCacheReplayResult?> ReplayAsync(
             CachedRequest request,
             CancellationToken cancellationToken = default)
         {
             Calls++;
             _source.Cancel();
             cancellationToken.ThrowIfCancellationRequested();
-            return Task.FromResult<CachedResponse?>(null);
+            return Task.FromResult<ActionCacheReplayResult?>(null);
         }
     }
 

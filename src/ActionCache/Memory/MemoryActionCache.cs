@@ -1,4 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
+using ActionCache.Common;
 using ActionCache.Common.Caching;
 using ActionCache.Common.Concurrency.Locks;
 using ActionCache.Memory.Extensions.Internal;
@@ -53,13 +54,14 @@ public class MemoryActionCache : ActionCacheBase<SemaphoreSlimLock>
     /// <summary>
     /// Creates the entry options for memory cache.
     /// </summary>
-    /// <value>The cache entry options applied to new entries.</value>
-    private MemoryCacheEntryOptions CreateEntryOptions() =>
+    /// <param name="options">The expirations to apply to the entry.</param>
+    /// <returns>The cache entry options applied to new entries.</returns>
+    private MemoryCacheEntryOptions CreateEntryOptions(ActionCacheEntryOptions options) =>
         new MemoryCacheEntryOptions
         {
             Size = 1,
-            SlidingExpiration = EntryOptions.SlidingExpiration,
-            AbsoluteExpiration = EntryOptions.GetAbsoluteExpirationFromUtcNow()
+            SlidingExpiration = options.SlidingExpiration,
+            AbsoluteExpiration = options.GetAbsoluteExpirationFromUtcNow()
         }.AddExpirationToken(CreateExpirationToken());
 
     /// <summary>
@@ -91,16 +93,19 @@ public class MemoryActionCache : ActionCacheBase<SemaphoreSlimLock>
     /// </summary>
     /// <param name="key">The cache key to set the value for.</param>
     /// <param name="value">The value to set in the cache.</param>
+    /// <param name="entryOptions">The expirations to write with, or <see langword="null"/> for this cache's own.</param>
     /// <param name="cancellationToken">A token to observe while waiting for the operation to complete.</param>
-    public override Task SetAsync<TValue>(string key, [AllowNull] TValue value, CancellationToken cancellationToken = default)
+    protected override Task SetAsync<TValue>(string key, [AllowNull] TValue value, ActionCacheEntryOptions? entryOptions, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        var entryOptions = CreateEntryOptions();
-        Cache.Set(Namespace.Create(key), value, entryOptions);
+        var effective = EffectiveEntryOptions(entryOptions);
+        Cache.Set(Namespace.Create(key), value, CreateEntryOptions(effective));
 
+        // The key index carries the same absolute expiration as the entry, so a refreshed
+        // entry and its index record continue to expire together.
         return CacheLocker.WaitForLockThenAsync(Namespace,
-            () => Cache.SetKey(Namespace, key, EntryOptions.GetAbsoluteExpirationFromUtcNow(), CreateIndexOptions()));
+            () => Cache.SetKey(Namespace, key, effective.GetAbsoluteExpirationFromUtcNow(), CreateIndexOptions()));
     }
 
     /// <summary>
