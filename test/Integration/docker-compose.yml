@@ -36,8 +36,16 @@ services:
     environment:
       PROTOCOL: https
     healthcheck:
-      test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/localhost/8081' 2>/dev/null || exit 1"]
+      # An HTTP probe, not a port probe. The emulator opens 8081 well before it can serve:
+      # a TCP check reports healthy while requests still 404, so `up --wait` returns and the
+      # suite starts against an emulator that is not ready.
+      #
+      # It also degrades in place. An emulator left running for days keeps the port open and
+      # answers every write with a 500, which a port check cannot see -- three expiration
+      # tests failed for days and read as flakes because the container still said "healthy".
+      # Fetching a real endpoint fails in both cases.
+      test: ["CMD-SHELL", "curl -skf https://localhost:8081/_explorer/emulator.pem > /dev/null || exit 1"]
       interval: 10s
-      timeout: 5s
-      retries: 20
+      timeout: 10s
+      retries: 30
       start_period: 60s

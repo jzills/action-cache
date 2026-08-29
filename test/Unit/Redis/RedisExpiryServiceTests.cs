@@ -47,15 +47,24 @@ public class RedisExpiryServiceTests
     [Test]
     public async Task StartAsync_Always_SubscribesToKeyExpiryChannel()
     {
+        // Waited for rather than assumed. BackgroundService.StartAsync does not await
+        // ExecuteAsync, so verifying straight after it only works while the first await in
+        // ExecuteAsync happens to land after the SubscribeAsync call. An await introduced
+        // ahead of it -- a guard, a delay, a config read -- would make this intermittent, and
+        // an intermittent failure here reads as a Moq quirk rather than a race. The other
+        // tests in this fixture already wait this way.
+        var subscribed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         _subscriberMock
             .Setup(subscriber => subscriber.SubscribeAsync(
                 It.IsAny<RedisChannel>(),
                 It.IsAny<Action<RedisChannel, RedisValue>>(),
                 It.IsAny<CommandFlags>()))
+            .Callback(() => subscribed.TrySetResult())
             .Returns(Task.CompletedTask);
 
         using var cts = new CancellationTokenSource();
         await _sut.StartAsync(cts.Token);
+        await subscribed.Task.WaitAsync(TimeSpan.FromSeconds(5));
 
         _subscriberMock.Verify(subscriber => subscriber.SubscribeAsync(
             It.Is<RedisChannel>(channel => channel == RedisChannel.Literal("__keyevent@0__:expired")),
@@ -67,15 +76,19 @@ public class RedisExpiryServiceTests
     public async Task StartAsync_WhenConnectionUsesNonZeroDatabase_SubscribesToThatDatabasesChannel()
     {
         _databaseMock.Setup(database => database.Database).Returns(3);
+
+        var subscribed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         _subscriberMock
             .Setup(subscriber => subscriber.SubscribeAsync(
                 It.IsAny<RedisChannel>(),
                 It.IsAny<Action<RedisChannel, RedisValue>>(),
                 It.IsAny<CommandFlags>()))
+            .Callback(() => subscribed.TrySetResult())
             .Returns(Task.CompletedTask);
 
         using var cts = new CancellationTokenSource();
         await _sut.StartAsync(cts.Token);
+        await subscribed.Task.WaitAsync(TimeSpan.FromSeconds(5));
 
         _subscriberMock.Verify(subscriber => subscriber.SubscribeAsync(
             It.Is<RedisChannel>(channel => channel == RedisChannel.Literal("__keyevent@3__:expired")),
