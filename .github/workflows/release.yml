@@ -43,6 +43,11 @@ jobs:
     needs: test
     outputs:
       version: ${{ steps.version.outputs.value }}
+    # id-token lets the runner mint the OIDC token NuGet/login exchanges for an API key.
+    # Without it the login step fails before anything is packed.
+    permissions:
+      id-token: write
+      contents: read
     steps:
       - uses: actions/checkout@v7
         with:
@@ -75,9 +80,22 @@ jobs:
       # fails partway the packages already published should still resolve: Abstractions
       # before the core that depends on it, core before the backends that depend on it.
       # Each push also uploads the matching .snupkg automatically.
+      # nuget.org publishes these packages through *trusted publishing*, not a static key:
+      # the policy names this repository and this workflow file, and issues a short-lived
+      # key in exchange for the run's OIDC token. There is no secret to rotate, and a key
+      # leaked from a log expires within the hour rather than living until someone notices.
+      #
+      # This step must stay after the pack steps and before the push: the key is
+      # short-lived, so minting it early only burns part of its life on the build.
+      - name: Exchange the OIDC token for a NuGet API key
+        id: login
+        uses: NuGet/login@v1
+        with:
+          user: jzills
+
       - name: Push to NuGet
         env:
-          NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
+          NUGET_API_KEY: ${{ steps.login.outputs.NUGET_API_KEY }}
           VERSION: ${{ steps.version.outputs.value }}
         run: |
           set -euo pipefail
