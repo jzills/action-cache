@@ -26,6 +26,10 @@
     <PackageIcon>Icon.jpg</PackageIcon>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageProjectUrl>https://github.com/jzills/action-cache</PackageProjectUrl>
+    <!-- Points at the changelog rather than restating it: the notes are baked into the
+         nuspec at pack time, so anything written here is frozen at the version it shipped
+         with, while the link keeps working. -->
+    <PackageReleaseNotes>See https://github.com/jzills/action-cache/blob/main/CHANGELOG.md</PackageReleaseNotes>
     <RepositoryUrl>https://github.com/jzills/action-cache.git</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
   </PropertyGroup>
@@ -66,6 +70,22 @@
   <ItemGroup Condition="'$(IsPackable)' != 'false'">
     <None Include="$(MSBuildThisFileDirectory)resources/Icon.jpg" Pack="true" PackagePath="" Visible="false" />
     <PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0" PrivateAssets="All" />
+  </ItemGroup>
+
+  <!--
+    A package with no readme renders an empty tab on nuget.org, which is the first thing a
+    prospective consumer sees. Each backend keeps its own README.md next to its csproj and
+    it is packed from here, so a new backend gets a landing page by adding the file.
+
+    ActionCache is the exception: it packs the repository root README instead, declared in
+    its own csproj. It has no README.md of its own, so this condition passes it by.
+  -->
+  <PropertyGroup Condition="Exists('$(MSBuildProjectDirectory)/README.md')">
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+  </PropertyGroup>
+
+  <ItemGroup Condition="Exists('$(MSBuildProjectDirectory)/README.md')">
+    <None Include="README.md" Pack="true" PackagePath="" />
   </ItemGroup>
 
 </Project>

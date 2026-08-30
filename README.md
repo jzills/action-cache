@@ -125,4 +125,5 @@ observability.
 ## Resources
 
 - [Documentation](https://jzills.github.io/action-cache/)
+- [Changelog](./CHANGELOG.md)
 - [Samples](./samples/)
