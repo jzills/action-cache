@@ -52,6 +52,36 @@ a `using`.
 `AddActionCache` detects whether the application uses MVC or Minimal APIs and registers the
 matching filter and descriptor providers, so nothing further is needed for either style.
 
+## Upgrading from 0.0.9
+
+`0.0.9` shipped as a single package containing every backend. `0.1.0` is the first release
+split across several, so an existing application needs the package for each backend it
+registers:
+
+```bash
+dotnet add package ActionCache.Redis        # if you call UseRedisCache
+dotnet add package ActionCache.SqlServer    # if you call UseSqlServerCache
+dotnet add package ActionCache.AzureCosmos  # if you call UseAzureCosmosCache
+```
+
+**No code changes.** The `Use…Cache` extensions still live in
+`ActionCache.Common.Extensions`, so no call site and no `using` moves. `ActionCache` on its
+own still covers `UseMemoryCache`.
+
+Three things to know before deploying:
+
+- **`net9.0` is no longer targeted.** `0.0.9` shipped `net8.0` and `net9.0`; this release
+  ships `net8.0` and `net10.0`.
+- **Expect a cold cache.** Both the key format and the stored payload changed, so entries
+  left in a distributed backend by `0.0.9` are ignored and rewritten as they are re-cached.
+  A drop in hit rate on first deploy is expected; nothing errors.
+- **Responses now vary by the authenticated user by default.** Two users on one
+  `[Authorize]` endpoint no longer share an entry — see [Vary-by](../../caching/vary-by).
+  Set `VaryByUser = VaryByUserMode.Never` to keep one shared entry.
+
+The [changelog](https://github.com/jzills/action-cache/blob/main/CHANGELOG.md) lists every
+breaking change.
+
 ## Next
 
 {{< cards >}}

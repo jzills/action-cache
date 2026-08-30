@@ -96,6 +96,30 @@ See [Resilience](../../reliability/resilience).
 
 `[ActionCacheEviction]` and `[ActionCacheRefresh]` take `Namespace` only.
 
+## ActionCacheEndpointOptions
+
+The Minimal API equivalent, configured through `WithActionCache(ns, options => ...)`.
+
+| Property | Type | Default |
+|---|---|---|
+| `AbsoluteExpiration` | `TimeSpan?` | `null` — none |
+| `SlidingExpiration` | `TimeSpan?` | `null` — none |
+| `VaryByUser` | `VaryByUserMode` | `Auto` |
+| `VaryByHeader` | `string?` | `null` |
+| `VaryByQuery` | `string?` | `null` |
+| `VaryByClaim` | `string?` | `null` |
+| `SingleFlight` | `bool` | `true` |
+
+The expirations are `TimeSpan?` where the attribute takes `long` milliseconds: an attribute
+argument must be a compile-time constant, and a builder argument need not be.
+
+The delegate runs **once at registration**, not per request — the options describe the
+endpoint, so re-running caller code on every request would only make an expensive lambda an
+expensive endpoint.
+
+`WithActionCacheEviction` and `WithActionCacheRefresh` take a namespace only, matching their
+attributes. See [Attributes](../../caching/attributes#minimal-apis).
+
 ## Key contributors
 
 ```csharp
