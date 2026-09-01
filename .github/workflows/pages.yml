@@ -1,0 +1,149 @@
+name: Pages
+
+# The documentation site under site/, built on every push to develop and on pull
+# requests, but only published from develop. A PR that breaks the build fails here
+# rather than at deploy time.
+#
+# Publishing requires Pages to be enabled on the repository with "GitHub Actions" as
+# the source. Until it is, the deploy job is the only thing that fails and the build
+# job still guards the site.
+on:
+  push:
+    branches: [develop]
+    paths:
+      - "site/**"
+      - ".github/workflows/pages.yml"
+  pull_request:
+    paths:
+      - "site/**"
+      - ".github/workflows/pages.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+env:
+  # Hextra requires the extended build; see site/hugo.toml.
+  HUGO_VERSION: 0.165.0
+  # The FlexSearch major the theme's index code is written against. The vendored
+  # bundle must match: the theme configures its Document with the 0.8 tag syntax,
+  # which a 0.7 bundle does not understand — it builds, publishes, and then
+  # returns no results for any query. See site/hugo.toml.
+  FLEXSEARCH_VERSION: 0.8.143
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      # The theme is a Hugo module, which is a Go module, so resolving it needs the go
+      # command. site/go.mod is the only Go module in this repository.
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: site/go.mod
+
+      - name: Install Hugo extended
+        run: |
+          curl -sSL -o hugo.tar.gz \
+            "https://github.com/gohugoio/hugo/releases/download/v${HUGO_VERSION}/hugo_extended_${HUGO_VERSION}_linux-amd64.tar.gz"
+          tar xzf hugo.tar.gz hugo
+          sudo install hugo /usr/local/bin/hugo
+          hugo version
+
+      - name: Build
+        working-directory: site
+        # --gc prunes stale cache entries; --minify is what the published site should be
+        # measured as, so PR builds exercise the same path. baseURL comes from
+        # site/hugo.toml, so a custom domain is one edit there.
+        run: hugo --gc --minify
+
+      # Hugo resolves the theme's stylesheet through resources.Get, which returns nothing
+      # when the module's assets are missing — and the build still succeeds, publishing an
+      # unstyled site. Asserted rather than assumed.
+      - name: Check the theme's CSS was built
+        working-directory: site
+        run: |
+          shopt -s nullglob
+          compiled=(public/css/compiled/*.css)
+          if [ ${#compiled[@]} -eq 0 ]; then
+            echo "::error::no compiled stylesheet in public/css/compiled — the site would publish unstyled"
+            exit 1
+          fi
+          for sheet in "${compiled[@]}"; do
+            size=$(wc -c < "$sheet")
+            echo "$sheet: $size bytes"
+            [ "$size" -gt 10000 ] || { echo "::error::$sheet is suspiciously small"; exit 1; }
+          done
+
+      # The search bundle is vendored under site/assets rather than fetched from a CDN at
+      # build time. If it goes missing the build still succeeds and publishes a site whose
+      # search box does nothing, so the index and the bundle are both asserted — and so is
+      # the bundle's version, because a major that the theme's index code does not match
+      # fails in exactly the same silent way.
+      - name: Check search was built
+        working-directory: site
+        run: |
+          test -s public/en.search-data.json || {
+            echo "::error::the search index is missing or empty"; exit 1; }
+          test -n "$(ls public/vendor/flexsearch/*.js 2>/dev/null)" || {
+            echo "::error::the vendored flexsearch bundle was not published"; exit 1; }
+
+          bundle=assets/vendor/flexsearch/flexsearch.bundle.min.js
+          if ! grep -q "FlexSearch.js v${FLEXSEARCH_VERSION}" "$bundle"; then
+            echo "::error::$bundle is not FlexSearch ${FLEXSEARCH_VERSION} — search will return no results"
+            head -3 "$bundle"
+            exit 1
+          fi
+
+      # The marks are generated from the banner art; a change to the generator that is not
+      # regenerated ships the old geometry. Same contract as any other committed artefact.
+      - name: Check the generated marks are current
+        working-directory: site
+        run: |
+          python3 -m pip install --quiet cairosvg
+          python3 tools/gen-marks.py
+          # Only the vector output is compared. The PNGs and the .ico are rasterised by
+          # cairosvg, whose bytes are not stable across versions, so diffing them would
+          # fail on a runner image bump rather than on a stale artefact. They are derived
+          # from the same geometry as favicon.svg, so a change that matters shows up there.
+          generated="assets/ac-wordmark.svg assets/ac-mark.svg static/favicon.svg"
+          if ! git diff --quiet -- $generated; then
+            echo "::error::the marks or icons are stale — run 'python3 site/tools/gen-marks.py' and commit the result"
+            git diff --stat -- $generated
+            exit 1
+          fi
+          git checkout -- static/ 2>/dev/null || true
+
+      # Every card, callout and cross-reference on the site is hand-written, so a renamed
+      # page silently becomes a 404. This resolves every internal link against the built
+      # output and fails on the first one that does not exist.
+      - name: Check internal links resolve
+        working-directory: site
+        run: python3 ../.github/scripts/check-site-links.py public /action-cache/
+
+      - name: Upload artifact
+        if: github.ref == 'refs/heads/develop' && github.event_name != 'pull_request'
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: site/public
+
+  deploy:
+    name: Deploy
+    needs: build
+    if: github.ref == 'refs/heads/develop' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5

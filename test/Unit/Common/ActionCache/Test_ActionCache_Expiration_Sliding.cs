@@ -1,45 +1,55 @@
 using ActionCache;
-using Microsoft.Extensions.DependencyInjection;
-using Unit.TestUtiltiies.Data;
+using Unit.TestUtilities;
+using Unit.TestUtilities.Builders;
 
 namespace Unit.Common;
 
 [TestFixture]
-public class Test_ActionCache_Expiration_Sliding
+public class ActionCacheSlidingExpirationTests
 {
-    IActionCache Cache;
-    
-    [Test]
-    [TestCaseSource(typeof(TestData), nameof(TestData.GetServiceProviders))]
-    public async Task Test_GetAsync_Expires(IServiceProvider serviceProvider)
-    {
-        var cacheFactory = serviceProvider.GetRequiredService<IActionCacheFactory>();
-        Cache = cacheFactory.Create(nameof(Test_GetAsync_Expires), slidingExpiration: TimeSpan.FromSeconds(11));
-    
-        await Cache.SetAsync("Key_Expiration_1", "Value_1");
-        var result = await Cache.GetAsync<string?>("Key_Expiration_1");
-        var keys = await Cache.GetKeysAsync();
+    private IActionCache _cache = null!;
+    private IActionCacheFactory _factory;
 
-        Assert.That(result, Is.EqualTo("Value_1"));
-        Assert.That(keys.Count(), Is.EqualTo(1));
-
-        Thread.Sleep(10000);
-
-        result = await Cache.GetAsync<string?>("Key_Expiration_1");
-        keys = await Cache.GetKeysAsync();
-
-        Thread.Sleep(10000);
-
-        result = await Cache.GetAsync<string?>("Key_Expiration_1");
-        keys = await Cache.GetKeysAsync();
-        
-        Assert.That(result, Is.Not.Null);
-        Assert.That(keys.Count(), Is.EqualTo(1));
-    }
+    [SetUp]
+    public void SetUp() => _factory = MemoryActionCacheFactoryBuilder.Build();
 
     [TearDown]
-    public async Task TearDown()
+    public async Task TearDown() => await _cache.RemoveAsync();
+
+    [Test]
+    public async Task GetAsync_WhenSlidingWindowRefreshed_ReturnsCachedValue()
     {
-        await Cache.RemoveAsync();
+        _cache = _factory.Create(nameof(GetAsync_WhenSlidingWindowRefreshed_ReturnsCachedValue), slidingExpiration: TimeSpan.FromSeconds(15))!;
+
+        await _cache.SetAsync("Key_Expiration_1", "Value_1");
+
+        var resultBefore = await _cache.GetAsync<string?>("Key_Expiration_1");
+        var keysBefore = await _cache.GetKeysAsync();
+
+        resultBefore.Should().Be("Value_1");
+        keysBefore.Should().HaveCount(1);
+
+        // Clock deadlines rather than Task.Delay: this test only means something if ten
+        // seconds of *wall* clock really pass before the touch, and the host clock does not
+        // always agree with an interval. See WallClock.
+        await WallClock.WaitUntilPast(DateTimeOffset.UtcNow.AddSeconds(10));
+
+        // Access within the sliding window resets the expiry
+        await _cache.GetAsync<string?>("Key_Expiration_1");
+        await _cache.GetKeysAsync();
+
+        var touchedAt = DateTimeOffset.UtcNow;
+        await WallClock.WaitUntilPast(touchedAt.AddSeconds(10));
+
+        var resultAfter = await _cache.GetAsync<string?>("Key_Expiration_1");
+        var keysAfter = await _cache.GetKeysAsync();
+
+        // If the clock jumped forward past the whole window the entry expired legitimately
+        // and the failure is the environment's, not the cache's — say which.
+        (DateTimeOffset.UtcNow - touchedAt).Should().BeLessThan(TimeSpan.FromSeconds(15),
+            "the wall clock must stay inside the sliding window for this assertion to mean anything");
+
+        resultAfter.Should().NotBeNull();
+        keysAfter.Should().HaveCount(1);
     }
 }

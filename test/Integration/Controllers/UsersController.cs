@@ -28,6 +28,77 @@ public class UsersController : Controller
             new { Id = 4, Name = "Vanessa" }
         });
 
+    /// <summary>
+    /// Counts how many times <see cref="GetSingleFlight"/> actually ran, so a test can
+    /// assert that concurrent requests coalesced onto one execution.
+    /// </summary>
+    public static int SingleFlightInvocations;
+
+    [HttpGet("single-flight")]
+    [ActionCache(Namespace = "SingleFlight")]
+    public async Task<IActionResult> GetSingleFlight()
+    {
+        Interlocked.Increment(ref SingleFlightInvocations);
+
+        // A little latency widens the window every concurrent request would otherwise
+        // race through, which is what makes the stampede observable.
+        await Task.Delay(50);
+
+        return Ok(new { Value = "single-flight" });
+    }
+
+    /// <summary>
+    /// Source data a refresh test mutates between requests, so a stale cache entry and a
+    /// refreshed one are distinguishable.
+    /// </summary>
+    public static string RefreshableValue = "original";
+
+    [HttpGet("refreshable")]
+    [ActionCache(Namespace = "Replay")]
+    public IActionResult GetRefreshable() => Ok(new { Value = RefreshableValue });
+
+    [HttpPost("refreshable")]
+    [ActionCacheRefresh(Namespace = "Replay")]
+    public IActionResult RefreshRefreshable() => Ok();
+
+    [HttpGet("me")]
+    [ActionCache(Namespace = "VaryByUser")]
+    public IActionResult GetMe() =>
+        Ok(new { Name = User.Identity?.Name ?? "anonymous" });
+
+    /// <summary>
+    /// A body-bearing cached action whose response tracks mutable source data, so a test
+    /// can tell a genuinely refreshed entry from one that was merely left alone.
+    /// </summary>
+    public static string RefreshableBodyValue = "original";
+
+    [HttpPost("query-refreshable")]
+    [ActionCache(Namespace = "BodyReplay")]
+    public IActionResult GetRefreshableWithBody([FromBody] Query query) =>
+        Ok(new { Value = RefreshableBodyValue, ShowAll = query.ShowAll });
+
+    [HttpPost("query-refreshable/refresh")]
+    [ActionCacheRefresh(Namespace = "BodyReplay")]
+    public IActionResult RefreshBodyReplay() => Ok();
+
+    /// <summary>
+    /// The same arrangement as above but declaring a vendor JSON media type, the shape a
+    /// versioned API takes. Refresh replays the recorded body as JSON; [Consumes] rejects
+    /// anything but this exact type, so the replay only binds if the recorded content type
+    /// was preserved rather than flattened to "application/json".
+    /// </summary>
+    public static string RefreshableVendorValue = "original";
+
+    [HttpPost("query-vendor")]
+    [Consumes("application/vnd.example.v1+json")]
+    [ActionCache(Namespace = "VendorReplay")]
+    public IActionResult GetRefreshableWithVendorBody([FromBody] Query query) =>
+        Ok(new { Value = RefreshableVendorValue, ShowAll = query.ShowAll });
+
+    [HttpPost("query-vendor/refresh")]
+    [ActionCacheRefresh(Namespace = "VendorReplay")]
+    public IActionResult RefreshVendorReplay() => Ok();
+
     [HttpPost("")]
     [ActionCacheRefresh(Namespace = "Users")]
     public IActionResult Post() => Ok();
@@ -39,25 +110,25 @@ public class UsersController : Controller
 
 public class Query
 {
-    public Guid[] IncludeIds { get; set; }
+    public Guid[]? IncludeIds { get; set; }
     public bool ShowAll { get; set; }
-    public SubQuery[] SubQueries { get; set; }
+    public SubQuery[]? SubQueries { get; set; }
 }
 
 public class SubQuery
 {
-    public string Contains { get; set; }
+    public string? Contains { get; set; }
 }
 
 public class User
 {
     public Guid Id { get; set; }
-    public string Name { get; set; }
-    public ContactInfo ContactInfo { get; set; }
+    public string? Name { get; set; }
+    public ContactInfo? ContactInfo { get; set; }
 }
 
 public class ContactInfo
 {
-    public string Email { get; set; }
-    public string PhoneNumber { get; set; }
+    public string? Email { get; set; }
+    public string? PhoneNumber { get; set; }
 }

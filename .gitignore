@@ -6,5 +6,7 @@ obj
 
 test/Unit/appsettings.json
 
-ActionCache.sln
 TODO.txt
+
+# Local process artifacts (specs/plans) — not part of the codebase
+docs/superpowers/

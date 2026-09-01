@@ -34,7 +34,7 @@ public static class ControllerExtensions
         {
             ParameterDescriptor = new ControllerParameterDescriptor
             {
-                Name = parameter.Name,
+                Name = parameter.Name!,
                 ParameterInfo = parameter,
                 ParameterType = parameter.ParameterType
             },

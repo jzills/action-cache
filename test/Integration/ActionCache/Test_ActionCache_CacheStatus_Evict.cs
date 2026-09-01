@@ -1,64 +1,65 @@
+using System.Reflection;
 using ActionCache;
 using ActionCache.Common.Enums;
 using ActionCache.Common.Extensions;
 using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 
 [TestFixture]
 public class Test_ActionCache_Eviction
 {
-    TestServer Server;
+    WebApplication App;
     HttpClient Client;
 
     [SetUp]
-    public void Setup()
+    public async Task Setup()
     {
-        var builder = new WebHostBuilder()
-            .ConfigureServices(services => 
-            {
-                services.AddMvc();
-                services.AddActionCache(options => options.UseRedisCache("127.0.0.1:6379"));
-            })
-            .Configure(app =>
-            {
-                app.UseHttpsRedirection();
-                app.UseRouting();
+        var builder = WebApplication.CreateBuilder();
+        builder.WebHost.UseTestServer();
+        builder.Services.AddMvc()
+            .AddApplicationPart(Assembly.GetExecutingAssembly());
+        builder.Services.AddActionCache(options => options.UseRedisCache("127.0.0.1:6379"));
 
-                app.UseEndpoints(options => options.MapControllers());
-            });
+        App = builder.Build();
+        App.UseHttpsRedirection();
+        App.UseRouting();
+        App.MapControllers();
 
-        Server = new TestServer(builder);
-        Client = Server.CreateClient();
+        await App.StartAsync();
+        Client = App.GetTestServer().CreateClient();
     }
 
     [Test]
-    public async Task Test()
+    public async Task Eviction_RemovesTheEntry_SoTheNextRequestRepopulatesIt()
     {
-        var response = await Client.GetAsync("/users");
-        response.EnsureSuccessStatusCode();
+        var first = await Client.GetAsync("/users");
+        first.EnsureSuccessStatusCode();
+        var originalBody = await first.Content.ReadAsStringAsync();
 
-        // Cache hit
-        response = await Client.GetAsync("/users");
-        response.EnsureSuccessStatusCode();
+        var hit = await Client.GetAsync("/users");
+        hit.EnsureSuccessStatusCode();
+        Assert.That(hit.Headers.GetValues(CacheHeaders.CacheStatus).First(), Is.EqualTo(nameof(CacheStatus.Hit)));
 
-        Assert.That(response.Headers.Contains(CacheHeaders.CacheStatus));
-        Assert.That(response.Headers.GetValues(CacheHeaders.CacheStatus).First(), Is.EqualTo(Enum.GetName(CacheStatus.Hit)));
+        var eviction = await Client.DeleteAsync("/users");
+        eviction.EnsureSuccessStatusCode();
+        Assert.That(eviction.Headers.GetValues(CacheHeaders.CacheStatus).First(), Is.EqualTo(nameof(CacheStatus.Evict)));
 
-        // Cache eviction
-        response = await Client.DeleteAsync("/users");
-        response.EnsureSuccessStatusCode();
-
-        Assert.That(response.Headers.Contains(CacheHeaders.CacheStatus));
-        Assert.That(response.Headers.GetValues(CacheHeaders.CacheStatus).First(), Is.EqualTo(Enum.GetName(CacheStatus.Evict)));
+        // The header only says eviction ran. This says the entry is gone: a repopulating
+        // request reports Add, not Hit.
+        var afterEviction = await Client.GetAsync("/users");
+        afterEviction.EnsureSuccessStatusCode();
+        Assert.That(afterEviction.Headers.GetValues(CacheHeaders.CacheStatus).First(),
+            Is.EqualTo(nameof(CacheStatus.Add)), "the evicted entry must no longer be served from cache");
+        Assert.That(await afterEviction.Content.ReadAsStringAsync(), Is.EqualTo(originalBody));
     }
 
     [TearDown]
     public async Task TearDown()
     {
-        var cacheFactory = Server.Services.GetRequiredService<IActionCacheFactory>();
+        var cacheFactory = App.Services.GetRequiredService<IActionCacheFactory>();
         var cache = cacheFactory.Create("Users");
         await cache!.RemoveAsync();
+        await App.StopAsync();
     }
 }

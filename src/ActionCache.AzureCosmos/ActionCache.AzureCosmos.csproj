@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <PackageId>ActionCache.AzureCosmos</PackageId>
+    <Description>Azure Cosmos DB backend for ActionCache, with TTL-based expiry and lazy container initialization.</Description>
+    <PackageTags>cache;cosmos;azure;aspnetcore;distributed-cache</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Azure.Cosmos" Version="3.62.1" />
+    <!--
+      Required by Microsoft.Azure.Cosmos, which hard-fails the build without an explicit
+      reference and serializes its documents with it. No ActionCache code uses Newtonsoft.
+      Confining it to this package is a large part of why the split was worth doing:
+      before it, every consumer inherited this dependency.
+    -->
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../ActionCache/ActionCache.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Unit" />
+  </ItemGroup>
+
+</Project>

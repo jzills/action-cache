@@ -7,17 +7,31 @@ using Microsoft.AspNetCore.Mvc.Abstractions;
 using ActionCache.Attributes;
 using ActionCache.Filters;
 using ActionCache;
-using Unit.TestUtiltiies.Data;
 using Microsoft.AspNetCore.Routing.Template;
+using Unit.TestUtilities.Builders;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Unit.Common;
 
 [TestFixture]
-public class Test_ActionCacheFilter_Eviction_CacheEntry_Removed
+public class ActionCacheEvictionFilterTests
 {
+    private IActionCacheFactory _factory = null!;
+    private TemplateBinderFactory _binderFactory;
+
+    [SetUp]
+    public void SetUp()
+    {
+        _factory = MemoryActionCacheFactoryBuilder.Build();
+        _binderFactory = new ServiceCollection()
+            .AddLogging()
+            .AddRouting()
+            .BuildServiceProvider()
+            .GetRequiredService<TemplateBinderFactory>();
+    }
+
     [Test]
-    [TestCaseSource(typeof(TestData), nameof(TestData.GetServiceProviders))]
-    public async Task Test(IServiceProvider serviceProvider)
+    public async Task OnActionExecutionAsync_Always_RemovesCacheEntry()
     {
         var @namespace = "Test";
         var routeValues = new RouteValueDictionary
@@ -26,44 +40,35 @@ public class Test_ActionCacheFilter_Eviction_CacheEntry_Removed
             { "controller", "someController" },
             { "action", "someAction" }
         };
-        
         var metadata = new List<IFilterMetadata> { new ActionCacheAttribute { Namespace = @namespace } };
         var actionContext = new ActionContext(
             httpContext: new DefaultHttpContext(),
             routeData: new RouteData(routeValues),
             actionDescriptor: new ActionDescriptor()
         );
-        
         var actionExecutingContext = new ActionExecutingContext(
             actionContext,
             metadata,
-            new Dictionary<string, object>(),
-            null);
-
-        ActionExecutionDelegate next = () => {
-            var context = new ActionExecutedContext(
-                actionExecutingContext,
-                metadata,
-                null
-            )
+            new Dictionary<string, object?>(),
+            controller: new object());
+        ActionExecutionDelegate next = () =>
+        {
+            var context = new ActionExecutedContext(actionExecutingContext, metadata, controller: new object())
             {
                 Result = new OkObjectResult("Foo")
             };
-
             return Task.FromResult(context);
         };
 
-        var binderFactory = serviceProvider.GetRequiredService<TemplateBinderFactory>();
-        var cacheFactory = serviceProvider.GetRequiredService<IActionCacheFactory>();
-        var cache = cacheFactory.Create(@namespace)!;
+        var cache = _factory.Create(@namespace)!;
 
         await cache.SetAsync("someArea:someController:someAction", "Foo");
 
-        var filter = new ActionCacheEvictionFilter(cache, binderFactory);
-
+        var filter = new ActionCacheEvictionFilter(cache, _binderFactory, NullLogger.Instance);
         await filter.OnActionExecutionAsync(actionExecutingContext, next);
-  
-        var cacheResult = await cache.GetAsync<string>("someArea:someController:someAction");
-        Assert.That(cacheResult, Is.Null);
+
+        var result = await cache.GetAsync<string>("someArea:someController:someAction");
+
+        result.Should().BeNull();
     }
 }

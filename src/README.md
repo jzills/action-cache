@@ -3,123 +3,68 @@
 
 [![NuGet Version](https://img.shields.io/nuget/v/ActionCache.svg)](https://www.nuget.org/packages/ActionCache/) [![NuGet Downloads](https://img.shields.io/nuget/dt/ActionCache.svg)](https://www.nuget.org/packages/ActionCache/)
 
-- [Quickstart](#quickstart)
-    * [Register with MemoryCache](#register-with-imemorycache)
-    * [Register with Redis](#register-with-redis)
-    * [Register with SqlServer](#register-with-sqlserver)
-    * [Register with Azure Cosmos](#register-with-azure-cosmos)
-    * [Register Multiple Cache Stores](#register-multiple-cache-stores)
-    * [Basic Usage](#basic-usage)
-    * [Cache Key Creation](#cache-key-creation)
-    * [Cache Eviction](#cache-eviction)
-    * [Cache Refresh](#cache-refresh)
-    * [Route Templates for Namespaces](#route-templates-for-namespaces)
+Namespaced response caching for ASP.NET Core — Memory, Redis, SQL Server, and Azure Cosmos DB.
 
-## Register with MemoryCache
+**📖 Full documentation: <https://jzills.github.io/action-cache/>**
 
-Use the `AddActionCache` extension method to register `IMemoryCache` as a cache store. The configuration for `MemoryCacheOptions` is exposed as a parameter to `UseMemoryCache`.
+## Install
 
-    builder.Services.AddActionCache(options => 
-    {
-        options.UseMemoryCache(...);
-    });
+```bash
+dotnet add package ActionCache                 # core + in-memory caching
+dotnet add package ActionCache.Redis           # add for Redis
+dotnet add package ActionCache.SqlServer       # add for SQL Server
+dotnet add package ActionCache.AzureCosmos     # add for Azure Cosmos DB
+```
 
-## Register with Redis
+Targets **.NET 8** and **.NET 10**.
 
-Use the `AddActionCache` extension method to register `RedisCache` as a cache store. The configuration for `RedisCacheOptions` is exposed as a parameter to `UseRedisCache`.
+## Quickstart
 
-    builder.Services.AddActionCache(options => 
-    {
-        options.UseRedisCache(...);
-    });
+Register a backend:
 
-## Register with SqlServer
+```csharp
+using ActionCache.Common.Extensions;
 
-Use the `AddActionCache` extension method to register `SqlServerCache` as a cache store. The configuration for `SqlServerCacheOptions` is exposed as a parameter to `UseSqlServerCache`.
+builder.Services.AddActionCache(options =>
+{
+    options.UseMemoryCache(memory => memory.SizeLimit = 10_000);
+});
+```
 
-    builder.Services.AddActionCache(options => 
-    {
-        options.UseSqlServerCache(...);
-    });
+Cache a read, evict on write:
 
-## Register with Azure Cosmos
+```csharp
+using ActionCache.Attributes;
 
-Use the `AddActionCache` extension method to register `CosmosClient` as a cache store. The configuration for `AzureCosmosCacheOptions` is exposed as a parameter to `UseAzureCosmosCache`.
+[HttpGet("forecasts")]
+[ActionCache(Namespace = "Forecasts")]
+public IActionResult Get() => Ok(_repository.All());
 
-    builder.Services.AddActionCache(options => 
-    {
-        options.UseAzureCosmosCache(options =>
-        {
-            options.DatabaseId = "MyDatabase";
-            options.ConnectionString =
-                configuration.GetValue<string>("CosmosDb:ConnectionString");
-        });
-    });
+[HttpPost("forecasts")]
+[ActionCacheEviction(Namespace = "Forecasts")]
+public IActionResult Create(Forecast forecast) => Ok(_repository.Add(forecast));
+```
 
-> [!NOTE]
-> Both a *DatabaseId* and *ConnectionString* are required. The only requirement within Azure is to create an Azure Cosmos DB account and use that primary connection string in the above configuration. A database and container will be created automatically if they don't already exist.
+Entries are grouped under a **namespace**, which is what makes eviction and refresh
+possible without tracking keys. A namespace can embed route tokens — `Account:{id}` gives
+every account its own group.
 
-## Register Multiple Cache Stores
+## What you get without asking
 
-Two or more cache stores can be combined. 
+- **Per-user keys** on authenticated endpoints, so one caller is never served another's response.
+- **Stampede protection** — concurrent misses for one key are coalesced and the action runs once.
+- **Fail-open** — a backend outage degrades to a cache miss and the request still succeeds.
+- **Hashed keys** — SHA-256, so nothing readable is left in the store.
 
-    builder.Services.AddActionCache(options => 
-    {
-        options.UseMemoryCache(...);
-        options.UseRedisCache(...);
-        options.UseSqlServerCache(...);
-    });
+## Documentation
 
-## Basic Usage
-
-Add an `ActionCacheAttribute` to any controller actions that should be cached. There is a mandatory parameter for the cache namespace which will prefix all entries with whatever is specified.
-
-    [HttpPost]
-    [Route("/")]
-    [ActionCache(Namespace = "MyNamespace")]
-    public IActionResult Post() 
-    {
-    }
-
-## Cache Key Creation
-
-Both the route values and the action arguments are serialized then encoded to generate the cache key suffix. This suffix is appended to the string "ActionCache:{Namespace}".
-
-> [!NOTE]
-> Any route data from the request, i.e. the area, controller and action names as well as parameters are also added to the key. This is to support automatic cache refreshing.
-
-## Cache Eviction
-
-An `ActionCacheEvictionAttribute` can be applied to a controller action. A cache eviction occurs at the namespace level. One or more namespaces can be used separated by a comma. In the example below, both *MyNamespace* and *MyOtherNamespace* would have their entries evicted on a successful execution of the action.
-
-    [HttpDelete]
-    [Route("/")]
-    [ActionCacheEviction(Namespace = "MyNamespace, MyOtherNamespace")]
-    public IActionResult Delete()
-    {
-    }
-
-## Cache Refresh
-
-An `ActionCacheRefreshAttribute` can be applied to a controller action. A cache refresh occurs at the namespace level. Any entries currently in the cache will be refetched by executing their corresponding controller action and repopulating the cache. This is done automatically because all of the route details are persisted into the cache key.
-
-    [HttpPut]
-    [Route("/")]
-    [ActionCacheRefresh(Namespace = "MyNamespace")]
-    public IActionResult Put()
-    {
-    }
-
-## Route Templates for Namespaces
-
-A namespace, i.e. a cache key, can contain route template parameters. In the case below, cache namespaces will vary on the route parameter of *id*. This means that each unique *Account* will have it's own namespace where differing values of *offset* will be stored in their corresponding cache namespace. 
-
-    [HttpGet]
-    [Route("{id}")]
-    [ActionCache(Namespace = "Account:{id}")]
-    public async Task<IActionResult> Get(Guid id, DateTime offset)
-    {
-    }
-
-> [!NOTE]
-> This is beneficial because actions like evicting or refreshing cache entries can be done at the namespace level.
+| | |
+|---|---|
+| [Getting started](https://jzills.github.io/action-cache/docs/getting-started/installation/) | Packages and registration |
+| [Backends](https://jzills.github.io/action-cache/docs/backends/) | Memory, Redis, SQL Server, Cosmos |
+| [Attributes](https://jzills.github.io/action-cache/docs/caching/attributes/) | Every option on the three attributes |
+| [Vary-by](https://jzills.github.io/action-cache/docs/caching/vary-by/) | Who a cached response belongs to |
+| [Eviction](https://jzills.github.io/action-cache/docs/operations/eviction/) · [Refresh](https://jzills.github.io/action-cache/docs/operations/refresh/) · [Layering](https://jzills.github.io/action-cache/docs/operations/layering/) | Operations |
+| [Resilience](https://jzills.github.io/action-cache/docs/reliability/resilience/) · [Stampede](https://jzills.github.io/action-cache/docs/reliability/stampede/) | Reliability |
+| [Observability](https://jzills.github.io/action-cache/docs/observability/) | Metrics and traces |
+| [Configuration reference](https://jzills.github.io/action-cache/docs/reference/configuration/) | Every option in one table |

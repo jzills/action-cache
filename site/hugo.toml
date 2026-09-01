@@ -1,0 +1,121 @@
+# Hugo configuration for the ActionCache documentation site.
+#
+# A landing page at / and the documentation under /docs/. The docs layout is
+# Hextra's own — adding content/docs/ is what turns on the sidebar, the
+# right-hand table of contents and the search below.
+baseURL = "https://jzills.github.io/action-cache/"
+
+# The name, not the tagline. This is both the navbar text and the browser tab's,
+# and the tagline set here rendered in the navbar directly above a hero saying the
+# same thing. Hextra titles the home page with this alone and every other page as
+# "Page – this", so the name is what distinguishes a tab among many.
+title = "ActionCache"
+
+[languages.en]
+  label = "English"
+
+# The site is its own Hugo module so Hextra never enters the library's build.
+# There is no other Go module in this repository, which is why the Pages
+# workflow points setup-go at site/go.mod.
+[module]
+  [[module.imports]]
+    path = "github.com/imfing/hextra"
+
+  [[module.mounts]]
+    source = "assets"
+    target = "assets"
+  [[module.mounts]]
+    source = "static"
+    target = "static"
+
+[markup]
+  [markup.highlight]
+    # Class-based highlighting rather than inline styles, so the code blocks
+    # follow the light/dark switch instead of being painted once at build time.
+    noClasses = false
+  [markup.goldmark.renderer]
+    # The landing page is hand-written HTML in a markdown file: hero, install
+    # cards, feature grid. Goldmark drops raw HTML unless told otherwise.
+    unsafe = true
+
+  # The typographer stays on for quotes, but its dash substitutions are
+  # neutralised: it rewrites "--" as an en dash, which would turn every CLI
+  # flag and every C# "--" in prose into a dash character that cannot be
+  # copied and run.
+  [markup.goldmark.extensions.typographer]
+    enDash = "--"
+    emDash = "---"
+
+[params]
+  description = "Namespaced response caching for ASP.NET Core — Memory, Redis, SQL Server, and Azure Cosmos DB."
+
+  # Both off: layouts/_partials/navbar-title.html draws the mark itself, inlined
+  # so it takes its colour from the page rather than being two fixed images.
+  [params.navbar]
+    displayTitle = false
+    displayLogo = false
+
+  [params.footer]
+    enable = true
+    displayCopyright = true
+    displayPoweredBy = false
+
+  [params.search]
+    enable = true
+    type = "flexsearch"
+
+    [params.search.flexsearch]
+      # Vendored rather than fetched. Hextra's default pulls the bundle from
+      # jsDelivr with resources.GetRemote and republishes it locally, so the
+      # published page is self-hosted either way — but the *build* then needs
+      # the network, and a jsDelivr blip would fail a deploy that has nothing
+      # to do with jsDelivr.
+      #
+      # The vendored copy must stay on the major the theme's index code is
+      # written against. Its Document config uses the 0.8 tag syntax
+      # (tag: [{ field }]), which 0.7 does not understand — pairing it with a
+      # 0.7 bundle builds and publishes cleanly and then returns no results for
+      # any query. .github/workflows/pages.yml pins the expected version.
+      js = "vendor/flexsearch/flexsearch.bundle.min.js"
+
+  # Hextra's stock light/dark switch.
+  [params.theme]
+    default = "system"
+    displayToggle = true
+
+[menu]
+  # Docs first: every other landing entry below is a fragment on the home page,
+  # so without this a reader on a docs page has no navbar route back into the
+  # documentation -- all four would throw them out to the landing page.
+  [[menu.main]]
+    name = "Docs"
+    pageRef = "/docs"
+    weight = 1
+  [[menu.main]]
+    name = "Install"
+    pageRef = "/#install"
+    weight = 2
+  [[menu.main]]
+    name = "Usage"
+    pageRef = "/#usage"
+    weight = 3
+  [[menu.main]]
+    name = "Features"
+    pageRef = "/#features"
+    weight = 4
+  [[menu.main]]
+    name = "Backends"
+    pageRef = "/#backends"
+    weight = 5
+  [[menu.main]]
+    name = "Search"
+    weight = 6
+    [menu.main.params]
+      type = "search"
+  [[menu.main]]
+    identifier = "github"
+    name = "GitHub"
+    url = "https://github.com/jzills/action-cache"
+    weight = 7
+    [menu.main.params]
+      icon = "github"

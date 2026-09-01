@@ -3,12 +3,15 @@
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
     <Nullable>enable</Nullable>
+
+    <!-- Inherited from the root Directory.Build.props, which targets shipping packages. -->
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <IsPackable>false</IsPackable>
     <ImplicitUsings>enable</ImplicitUsings>
     <InvariantGlobalization>true</InvariantGlobalization>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.AspNet.WebApi" Version="5.3.0" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="8.0.1" />
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.10" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="8.0.10" />
@@ -16,7 +19,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\ActionCache.csproj" />
+    <ProjectReference Include="..\..\src\ActionCache\ActionCache.csproj" />
+    <ProjectReference Include="..\..\src\ActionCache.Redis\ActionCache.Redis.csproj" />
   </ItemGroup>
 
 </Project>

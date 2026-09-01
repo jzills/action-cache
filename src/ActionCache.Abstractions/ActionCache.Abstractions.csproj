@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <PackageId>ActionCache.Abstractions</PackageId>
+    <Description>Core contracts and primitives for ActionCache: the IActionCache abstraction, cache contexts, entry options and locking primitives. Reference this to implement a custom cache backend.</Description>
+    <PackageTags>cache;abstractions;aspnetcore</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!--
+      The sibling packages ship from this repository and version in lockstep, so they use
+      a handful of internals (CacheJsonSerializer, ActionCacheLog) rather than forcing
+      those into the public API. This is a build-time convenience between co-released
+      assemblies, not an extensibility contract — a third-party backend gets the public
+      surface only.
+    -->
+    <InternalsVisibleTo Include="ActionCache" />
+    <InternalsVisibleTo Include="ActionCache.Redis" />
+    <InternalsVisibleTo Include="ActionCache.SqlServer" />
+    <InternalsVisibleTo Include="ActionCache.AzureCosmos" />
+    <InternalsVisibleTo Include="Unit" />
+  </ItemGroup>
+
+</Project>

@@ -1,71 +1,62 @@
+using System.Reflection;
 using ActionCache;
 using ActionCache.Common.Enums;
 using ActionCache.Common.Extensions;
 using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 
 [TestFixture]
 public class Test_ActionCache_CacheStatus_Add
 {
-    TestServer Server;
+    WebApplication App;
     HttpClient Client;
 
     [SetUp]
-    public void Setup()
+    public async Task Setup()
     {
-        var builder = new WebHostBuilder()
-            .ConfigureServices(services => 
-            {
-                services.AddMvc();
-                services.AddActionCache(options => options.UseRedisCache("127.0.0.1:6379"));
-            })
-            .Configure(app =>
-            {
-                app.UseHttpsRedirection();
-                app.UseRouting();
+        var builder = WebApplication.CreateBuilder();
+        builder.WebHost.UseTestServer();
+        builder.Services.AddMvc()
+            .AddApplicationPart(Assembly.GetExecutingAssembly());
+        builder.Services.AddActionCache(options => options.UseRedisCache("127.0.0.1:6379"));
 
-                app.UseEndpoints(options => options.MapControllers());
-            });
+        App = builder.Build();
+        App.UseHttpsRedirection();
+        App.UseRouting();
+        App.MapControllers();
 
-        Server = new TestServer(builder);
-        Client = Server.CreateClient();
+        await App.StartAsync();
+        Client = App.GetTestServer().CreateClient();
     }
 
     [Test]
-    public async Task Test()
+    public async Task FirstRequest_ReportsAdd_AndPopulatesTheCache()
     {
-        var response = await Client.GetAsync("/users");
-        response.EnsureSuccessStatusCode();
+        var first = await Client.GetAsync("/users");
+        first.EnsureSuccessStatusCode();
 
-        // Cache hit
-        response = await Client.GetAsync("/users");
-        response.EnsureSuccessStatusCode();
+        Assert.That(first.Headers.GetValues(CacheHeaders.CacheStatus).First(),
+            Is.EqualTo(nameof(CacheStatus.Add)), "an uncached request stores the response");
 
-        Assert.That(response.Headers.Contains(CacheHeaders.CacheStatus));
-        Assert.That(response.Headers.GetValues(CacheHeaders.CacheStatus).First(), Is.EqualTo(Enum.GetName(CacheStatus.Hit)));
+        // Populating is the claim worth checking — the entry has to be readable afterwards.
+        var cacheFactory = App.Services.GetRequiredService<IActionCacheFactory>();
+        var keys = await cacheFactory.Create("Users")!.GetKeysAsync();
 
-        // Cache eviction
-        response = await Client.DeleteAsync("/users");
-        response.EnsureSuccessStatusCode();
+        Assert.That(keys.Count(), Is.EqualTo(1));
 
-        Assert.That(response.Headers.Contains(CacheHeaders.CacheStatus));
-        Assert.That(response.Headers.GetValues(CacheHeaders.CacheStatus).First(), Is.EqualTo(Enum.GetName(CacheStatus.Evict)));
-
-        // Cache miss
-        response = await Client.GetAsync("/users");
-        response.EnsureSuccessStatusCode();
-
-        Assert.That(response.Headers.Contains(CacheHeaders.CacheStatus));
-        Assert.That(response.Headers.GetValues(CacheHeaders.CacheStatus).First(), Is.EqualTo(Enum.GetName(CacheStatus.Add)));
+        var second = await Client.GetAsync("/users");
+        second.EnsureSuccessStatusCode();
+        Assert.That(second.Headers.GetValues(CacheHeaders.CacheStatus).First(), Is.EqualTo(nameof(CacheStatus.Hit)));
+        Assert.That(await second.Content.ReadAsStringAsync(), Is.EqualTo(await first.Content.ReadAsStringAsync()));
     }
 
     [TearDown]
     public async Task TearDown()
     {
-        var cacheFactory = Server.Services.GetRequiredService<IActionCacheFactory>();
+        var cacheFactory = App.Services.GetRequiredService<IActionCacheFactory>();
         var cache = cacheFactory.Create("Users");
         await cache!.RemoveAsync();
+        await App.StopAsync();
     }
 }

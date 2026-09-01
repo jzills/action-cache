@@ -1,0 +1,139 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - 'release/**'
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: |
+            8.0.x
+            10.0.x
+
+      - name: Run unit tests
+        run: dotnet test test/Unit/Unit.csproj --verbosity normal
+
+      # The same compose file pr.yml uses. This job previously started Redis alone, but the
+      # integration suite is parameterized over every backend — SQL Server on 1433 and
+      # Cosmos on 8081 as well — and nothing in it skips a backend that is absent. Every
+      # SQL Server and Cosmos case therefore failed, so no push to release/** could ever
+      # reach the publish job.
+      - name: Start services
+        run: docker compose -f test/Integration/docker-compose.yml up -d --wait
+
+      # Sequential per framework — see the note in pr.yml.
+      - name: Run integration tests (net8.0)
+        run: dotnet test test/Integration/Integration.csproj -f net8.0 --verbosity normal
+
+      - name: Run integration tests (net10.0)
+        run: dotnet test test/Integration/Integration.csproj -f net10.0 --verbosity normal
+
+  publish:
+    name: Pack and Publish
+    runs-on: ubuntu-latest
+    needs: test
+    outputs:
+      version: ${{ steps.version.outputs.value }}
+    # id-token lets the runner mint the OIDC token NuGet/login exchanges for an API key.
+    # Without it the login step fails before anything is packed.
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Extract version from branch name
+        id: version
+        run: |
+          VERSION=$(bash .github/scripts/extract-version.sh "${GITHUB_REF#refs/heads/}")
+          echo "value=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: |
+            8.0.x
+            10.0.x
+
+      - name: Pack
+        run: >
+          dotnet pack ActionCache.slnx
+          --configuration Release
+          -p:Version=${{ steps.version.outputs.value }}
+          --output ./nupkg
+
+      - name: Assert the core package carries no backend dependencies
+        run: bash .github/scripts/verify-package-dependencies.sh ./nupkg
+
+      # Dependency order, not glob order. NuGet pushes are not transactional, so if one
+      # fails partway the packages already published should still resolve: Abstractions
+      # before the core that depends on it, core before the backends that depend on it.
+      # Each push also uploads the matching .snupkg automatically.
+      # nuget.org publishes these packages through *trusted publishing*, not a static key:
+      # the policy names this repository and this workflow file, and issues a short-lived
+      # key in exchange for the run's OIDC token. There is no secret to rotate, and a key
+      # leaked from a log expires within the hour rather than living until someone notices.
+      #
+      # This step must stay after the pack steps and before the push: the key is
+      # short-lived, so minting it early only burns part of its life on the build.
+      - name: Exchange the OIDC token for a NuGet API key
+        id: login
+        uses: NuGet/login@v1
+        with:
+          user: jzills
+
+      - name: Push to NuGet
+        env:
+          NUGET_API_KEY: ${{ steps.login.outputs.NUGET_API_KEY }}
+          VERSION: ${{ steps.version.outputs.value }}
+        run: |
+          set -euo pipefail
+          packages=(ActionCache.Abstractions ActionCache ActionCache.Redis ActionCache.SqlServer ActionCache.AzureCosmos)
+
+          # The list is explicit for ordering, so it can silently fall behind the solution:
+          # a package added later would pack, never publish, and the release would stay
+          # green. Fail the release instead of shipping a partial one.
+          packed=$(find ./nupkg -maxdepth 1 -name '*.nupkg' | wc -l)
+          if [ "$packed" -ne "${#packages[@]}" ]; then
+            echo "::error::Packed $packed package(s) but the push list names ${#packages[@]}." >&2
+            find ./nupkg -maxdepth 1 -name '*.nupkg' -printf '  %f\n' >&2
+            exit 1
+          fi
+
+          for package in "${packages[@]}"; do
+            echo "Pushing $package.$VERSION"
+            dotnet nuget push "./nupkg/$package.$VERSION.nupkg" \
+              --api-key "$NUGET_API_KEY" \
+              --source https://api.nuget.org/v3/index.json \
+              --skip-duplicate
+          done
+
+  merge:
+    name: Open PR to Main
+    runs-on: ubuntu-latest
+    needs: publish
+    permissions:
+      pull-requests: write
+    steps:
+      - name: Create PR and enable auto-merge
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          PR_URL=$(gh pr create \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "Release v${{ needs.publish.outputs.version }}" \
+            --body "Automated release PR for v${{ needs.publish.outputs.version }}. Package published to NuGet successfully." \
+            --base main \
+            --head "${{ github.ref_name }}")
+          gh pr merge "$PR_URL" --merge --auto

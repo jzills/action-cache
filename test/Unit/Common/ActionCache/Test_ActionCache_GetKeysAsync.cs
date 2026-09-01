@@ -1,31 +1,48 @@
 using ActionCache;
-using Microsoft.Extensions.DependencyInjection;
-using Unit.TestUtiltiies.Data;
+using Unit.TestUtilities.Builders;
 
 namespace Unit.Common;
 
 [TestFixture]
-public class Test_ActionCache_GetKeysAsync
+public class ActionCacheGetKeysAsyncTests
 {
-    IActionCache Cache;
+    private IActionCache _cache = null!;
+    private IActionCacheFactory _factory;
 
-    [Test]
-    [TestCaseSource(typeof(TestData), nameof(TestData.GetServiceProviders))]
-    public async Task Test(IServiceProvider serviceProvider)
-    {
-        var cacheFactory = serviceProvider.GetRequiredService<IActionCacheFactory>();
-        Cache = cacheFactory.Create(nameof(Test_ActionCache_GetKeysAsync))!;
-
-        await Cache.SetAsync("Foo", "Bar");
-        await Cache.SetAsync("Biz", "Baz");
-
-        var result = await Cache.GetKeysAsync();
-        Assert.That(result.Count(), Is.EqualTo(2));
-    }
+    [SetUp]
+    public void SetUp() => _factory = MemoryActionCacheFactoryBuilder.Build();
 
     [TearDown]
-    public async Task TearDown()
+    public async Task TearDown() => await _cache.RemoveAsync();
+
+    [Test]
+    public async Task SetAsync_WhenCalledConcurrently_RetainsEveryKeyInTheIndex()
     {
-        await Cache.RemoveAsync();
+        // Regression: the namespace key index was read-modify-written without a lock, so
+        // concurrent writers each built an index and one overwrote the other's keys.
+        // Each writer creates its own cache instance, mirroring the per-request creation
+        // done by the filter factory — that is what makes a shared locker necessary.
+        var @namespace = nameof(SetAsync_WhenCalledConcurrently_RetainsEveryKeyInTheIndex);
+        _cache = _factory.Create(@namespace)!;
+
+        await Task.WhenAll(Enumerable.Range(0, 200).Select(index =>
+            Task.Run(() => _factory.Create(@namespace)!.SetAsync($"Key:{index}", index))));
+
+        var result = await _cache.GetKeysAsync();
+
+        result.Should().HaveCount(200);
+    }
+
+    [Test]
+    public async Task GetKeysAsync_WhenMultipleKeysExist_ReturnsAllKeys()
+    {
+        _cache = _factory.Create(nameof(GetKeysAsync_WhenMultipleKeysExist_ReturnsAllKeys))!;
+
+        await _cache.SetAsync("Foo", "Bar");
+        await _cache.SetAsync("Biz", "Baz");
+
+        var result = await _cache.GetKeysAsync();
+
+        result.Should().HaveCount(2);
     }
 }

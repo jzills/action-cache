@@ -1,0 +1,72 @@
+using ActionCache.Common;
+using ActionCache.Common.Caching;
+using ActionCache.Common.Concurrency;
+using ActionCache.Common.Concurrency.Locks;
+using ActionCache.Utilities;
+using Microsoft.Azure.Cosmos;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+
+namespace ActionCache.AzureCosmos;
+
+/// <summary>
+/// Represents a factory for creating Azure Cosmos Db action caches.
+/// </summary>
+public class AzureCosmosActionCacheFactory : ActionCacheFactoryBase
+{
+    /// <summary>
+    /// The lazily-initialized Azure Cosmos DB container shared by created cache instances.
+    /// </summary>
+    protected readonly AsyncLazy<Container> Cache;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AzureCosmosActionCacheFactory"/> class.
+    /// </summary>
+    /// <param name="cache">The lazily-initialized Azure Cosmos Db container to use.</param>
+    /// <param name="entryOptions">The global entry options used for creation when expiration times are not supplied.</param>
+    /// <param name="refreshProvider">The refresh provider responsible for invoking cached controller actions.</param>
+    /// <param name="loggerFactory">The factory used to create the logger for this cache factory.</param>
+    public AzureCosmosActionCacheFactory(
+        AsyncLazy<Container> cache,
+        IOptions<ActionCacheEntryOptions> entryOptions,
+        IActionCacheRefreshProvider refreshProvider,
+        ILoggerFactory loggerFactory
+    ) : base(entryOptions, refreshProvider, loggerFactory)
+    {
+        Cache = cache;
+    }
+
+    /// <inheritdoc/>
+    public override IActionCache? Create(Namespace @namespace)
+    {
+        var context = new ActionCacheContext<NullCacheLock>
+        {
+            Namespace = @namespace,
+            EntryOptions = EntryOptions,
+            RefreshProvider = RefreshProvider,
+                Logger = Logger,
+            CacheLocker = new NullCacheLocker()
+        };
+
+        return new AzureCosmosActionCache(Cache, context);
+    }
+
+    /// <inheritdoc/>
+    public override IActionCache? Create(Namespace @namespace, TimeSpan? absoluteExpiration = null, TimeSpan? slidingExpiration = null)
+    {
+        var context = new ActionCacheContext<NullCacheLock>
+        {
+            Namespace = @namespace,
+            EntryOptions = new ActionCacheEntryOptions
+            {
+                AbsoluteExpiration = absoluteExpiration,
+                SlidingExpiration = slidingExpiration
+            },
+            RefreshProvider = RefreshProvider,
+                Logger = Logger,
+            CacheLocker = new NullCacheLocker()
+        };
+
+        return new AzureCosmosActionCache(Cache, context);
+    }
+}

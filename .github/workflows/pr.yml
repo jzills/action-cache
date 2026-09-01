@@ -1,0 +1,106 @@
+name: PR Validation
+
+on:
+  pull_request:
+    branches: [ "main", "develop" ]
+
+jobs:
+  unit-tests:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: |
+            8.0.x
+            10.0.x
+
+      - name: Restore
+        run: dotnet restore ActionCache.slnx
+
+      - name: Build
+        run: dotnet build ActionCache.slnx --no-restore
+
+      - name: Test
+        run: dotnet test test/Unit/Unit.csproj --no-build --verbosity normal
+
+  samples:
+    name: Samples
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: |
+            8.0.x
+            10.0.x
+
+      # The samples are the library's worked examples, but they are deliberately outside
+      # ActionCache.slnx, so nothing else here compiles them. That is how they came to
+      # reference src/ActionCache.csproj for several releases after the package split moved
+      # it — broken in the one place a new user looks first, with every check green.
+      - name: Build samples
+        run: |
+          set -euo pipefail
+          for sample in samples/*/*.csproj; do
+            echo "Building $sample"
+            dotnet build "$sample" --verbosity minimal
+          done
+
+  integration-tests:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: |
+            8.0.x
+            10.0.x
+
+      - name: Start services
+        run: docker compose -f test/Integration/docker-compose.yml up -d --wait
+
+      - name: Restore
+        run: dotnet restore ActionCache.slnx
+
+      - name: Build
+        run: dotnet build ActionCache.slnx --no-restore
+
+      # One framework at a time, explicitly. The suite is multi-targeted and both
+      # frameworks run the same fixtures against the same Redis, SQL Server and Cosmos
+      # containers using the same namespaces, so overlapping runs let one fixture's
+      # TearDown eviction wipe the other's entries mid-test. That surfaced as intermittent
+      # expiration and key-count failures that always passed on a single-framework re-run.
+      # -p:TestTfmsInParallel=false did not reliably serialize them; separate invocations do.
+      - name: Test (net8.0)
+        run: dotnet test test/Integration/Integration.csproj -f net8.0 --no-build --verbosity normal
+
+      - name: Test (net10.0)
+        run: dotnet test test/Integration/Integration.csproj -f net10.0 --no-build --verbosity normal
+
+  package-dependencies:
+    name: Package Dependencies
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: |
+            8.0.x
+            10.0.x
+
+      - name: Pack
+        run: dotnet pack ActionCache.slnx --configuration Release --output ./nupkg
+
+      - name: Assert the core package carries no backend dependencies
+        run: bash .github/scripts/verify-package-dependencies.sh ./nupkg

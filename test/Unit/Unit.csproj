@@ -1,37 +1,42 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>net8.0;net9.0</TargetFrameworks>
+    <TargetFrameworks>net8.0;net10.0</TargetFrameworks>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+
+    <!-- Inherited from the root Directory.Build.props, which targets shipping packages. -->
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <IsPackable>false</IsPackable>
 
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
   </PropertyGroup>
 
-  <ItemGroup>
-    <None Update="appsettings.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-  </ItemGroup>
+  <PropertyGroup>
+    <_TargetVersion Condition="'$(TargetFramework)' == 'net8.0'">8.0.1</_TargetVersion>
+    <_TargetVersion Condition="'$(TargetFramework)' == 'net10.0'">10.0.0</_TargetVersion>
+  </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="8.0.1" />
-    <PackageReference Include="Microsoft.Extensions.Caching.SqlServer" Version="8.0.1" />
-    <PackageReference Include="Microsoft.Extensions.Caching.StackExchangeRedis" Version="8.0.1" />
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.0" />
-    <PackageReference Include="Microsoft.Extensions.Logging" Version="8.0.0" />
-    <PackageReference Include="Microsoft.AspNetCore.TestHost" Version="8.0.8" />
+    <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="$(_TargetVersion)" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="$(_TargetVersion)" />
+    <PackageReference Include="Microsoft.Extensions.Logging" Version="$(_TargetVersion)" />
+    <PackageReference Include="Microsoft.AspNetCore.TestHost" Version="$(_TargetVersion)" />
+    <PackageReference Include="FluentAssertions" Version="6.*" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.6.0" />
     <PackageReference Include="Moq" Version="4.20.72" />
-    <PackageReference Include="NUnit" Version="3.13.3" />
-    <PackageReference Include="NUnit3TestAdapter" Version="4.2.1" />
-    <PackageReference Include="NUnit.Analyzers" Version="3.6.1" />
+    <PackageReference Include="NUnit" Version="4.*" />
+    <PackageReference Include="NUnit3TestAdapter" Version="4.*" />
+    <PackageReference Include="NUnit.Analyzers" Version="4.*" />
     <PackageReference Include="coverlet.collector" Version="6.0.0" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\ActionCache.csproj" />
+    <ProjectReference Include="..\..\src\ActionCache\ActionCache.csproj" />
+    <ProjectReference Include="..\..\src\ActionCache.Redis\ActionCache.Redis.csproj" />
+    <ProjectReference Include="..\..\src\ActionCache.SqlServer\ActionCache.SqlServer.csproj" />
+    <ProjectReference Include="..\..\src\ActionCache.AzureCosmos\ActionCache.AzureCosmos.csproj" />
   </ItemGroup>
 
 </Project>

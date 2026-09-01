@@ -1,0 +1,91 @@
+<Project>
+
+  <!-- Shared by every ActionCache package. Per-package identity lives in its own csproj. -->
+  <PropertyGroup>
+    <TargetFrameworks>net8.0;net10.0</TargetFrameworks>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <EnableNETAnalyzers>true</EnableNETAnalyzers>
+    <AnalysisLevel>latest</AnalysisLevel>
+    <!--
+      Every project, not only the packable ones. A warning that reaches a released package
+      is a defect nobody sees, and one in a test or benchmark is the same defect caught
+      earlier. This lived in Directory.Build.targets to condition on IsPackable, which is
+      set inside each csproj — but it never carried that condition, so the import ordering
+      bought nothing.
+    -->
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <Authors>Joshua Zillwood</Authors>
+    <Copyright>Copyright © Joshua Zillwood</Copyright>
+    <PackageIcon>Icon.jpg</PackageIcon>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/jzills/action-cache</PackageProjectUrl>
+    <!-- Points at the changelog rather than restating it: the notes are baked into the
+         nuspec at pack time, so anything written here is frozen at the version it shipped
+         with, while the link keeps working. -->
+    <PackageReleaseNotes>See https://github.com/jzills/action-cache/blob/main/CHANGELOG.md</PackageReleaseNotes>
+    <RepositoryUrl>https://github.com/jzills/action-cache.git</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+  </PropertyGroup>
+
+  <!-- Step-into debugging and symbols on nuget.org. -->
+  <PropertyGroup>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <ContinuousIntegrationBuild Condition="'$(CI)' == 'true'">true</ContinuousIntegrationBuild>
+  </PropertyGroup>
+
+  <!-- The version floors for framework-shipped packages, keyed off the target. -->
+  <PropertyGroup>
+    <_TargetVersion Condition="'$(TargetFramework)' == 'net8.0'">8.0.0</_TargetVersion>
+    <_TargetVersion Condition="'$(TargetFramework)' == 'net10.0'">10.0.0</_TargetVersion>
+  </PropertyGroup>
+
+  <!--
+    Pin dependencies between ActionCache packages to an exact version.
+
+    A ProjectReference packs as version="1.0.0", which NuGet reads as ">= 1.0.0" — so a
+    consumer could resolve ActionCache.Redis 1.0.0 against ActionCache 1.2.0. These
+    assemblies share internals via InternalsVisibleTo and are released in lockstep, so a
+    mismatched pair is not merely untested: it can fail at runtime with a
+    MissingMethodException rather than at build time. Exact ranges make the lockstep the
+    package graph already assumes explicit.
+  -->
+  <Target Name="PinInternalPackageDependencies" AfterTargets="_GetProjectReferenceVersions">
+    <ItemGroup>
+      <_ProjectReferencesWithVersions Condition="$([System.String]::Copy('%(Filename)').StartsWith('ActionCache'))">
+        <ProjectVersion>[%(ProjectVersion)]</ProjectVersion>
+      </_ProjectReferencesWithVersions>
+    </ItemGroup>
+  </Target>
+
+  <ItemGroup Condition="'$(IsPackable)' != 'false'">
+    <None Include="$(MSBuildThisFileDirectory)resources/Icon.jpg" Pack="true" PackagePath="" Visible="false" />
+    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0" PrivateAssets="All" />
+  </ItemGroup>
+
+  <!--
+    A package with no readme renders an empty tab on nuget.org, which is the first thing a
+    prospective consumer sees. Each backend keeps its own README.md next to its csproj and
+    it is packed from here, so a new backend gets a landing page by adding the file.
+
+    ActionCache is the exception: it packs the repository root README instead, declared in
+    its own csproj. It has no README.md of its own, so this condition passes it by.
+  -->
+  <PropertyGroup Condition="Exists('$(MSBuildProjectDirectory)/README.md')">
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+  </PropertyGroup>
+
+  <ItemGroup Condition="Exists('$(MSBuildProjectDirectory)/README.md')">
+    <None Include="README.md" Pack="true" PackagePath="" />
+  </ItemGroup>
+
+</Project>

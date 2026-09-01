@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 384" role="img" aria-label="ActionCache">
+  <title>ActionCache</title>
+  <style>
+    text {
+      font-family: 'Courier New', 'Cascadia Mono', 'DejaVu Sans Mono', monospace;
+      font-size: 26px;
+      fill: #a371f7;
+      white-space: pre;
+    }
+  </style>
+  <text x="33.4" y="52" xml:space="preserve"> █████╗  ██████╗████████╗██╗ ██████╗ ███╗   ██╗</text>
+  <text x="33.4" y="78" xml:space="preserve">██╔══██╗██╔════╝╚══██╔══╝██║██╔═══██╗████╗  ██║</text>
+  <text x="33.4" y="104" xml:space="preserve">███████║██║        ██║   ██║██║   ██║██╔██╗ ██║</text>
+  <text x="33.4" y="130" xml:space="preserve">██╔══██║██║        ██║   ██║██║   ██║██║╚██╗██║</text>
+  <text x="33.4" y="156" xml:space="preserve">██║  ██║╚██████╗   ██║   ██║╚██████╔╝██║ ╚████║</text>
+  <text x="33.4" y="182" xml:space="preserve">╚═╝  ╚═╝ ╚═════╝   ╚═╝   ╚═╝ ╚═════╝ ╚═╝  ╚═══╝</text>
+  <text x="88.0" y="222" xml:space="preserve"> ██████╗ █████╗  ██████╗██╗  ██╗███████╗</text>
+  <text x="88.0" y="248" xml:space="preserve">██╔════╝██╔══██╗██╔════╝██║  ██║██╔════╝</text>
+  <text x="88.0" y="274" xml:space="preserve">██║     ███████║██║     ███████║█████╗  </text>
+  <text x="88.0" y="300" xml:space="preserve">██║     ██╔══██║██║     ██╔══██║██╔══╝  </text>
+  <text x="88.0" y="326" xml:space="preserve">╚██████╗██║  ██║╚██████╗██║  ██║███████╗</text>
+  <text x="88.0" y="352" xml:space="preserve"> ╚═════╝╚═╝  ╚═╝ ╚═════╝╚═╝  ╚═╝╚══════╝</text>
+</svg>
