@@ -14,13 +14,6 @@
 
 </div>
 
-- [Summary](#summary)
-- [Features](#features)
-- [Installation](#installation)
-- [Quickstart](#quickstart)
-- [Documentation](https://jzills.github.io/action-cache/)
-- [Resources](#resources)
-
 ## Summary
 
 ActionCache adds a caching layer to ASP.NET Core by annotating your endpoints. Cache a
