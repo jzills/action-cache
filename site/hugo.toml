@@ -3,13 +3,21 @@
 # A landing page at / and the documentation under /docs/. The docs layout is
 # Hextra's own — adding content/docs/ is what turns on the sidebar, the
 # right-hand table of contents and the search below.
-baseURL = "https://jzills.github.io/action-cache/"
+# j.zills.io is the custom domain on the owner's user site, which GitHub Pages
+# applies to this project site too; jzills.github.io/action-cache/ answers
+# with a 301 to it, so it is not the canonical URL.
+baseURL = "https://j.zills.io/action-cache/"
 
 # The name, not the tagline. This is both the navbar text and the browser tab's,
 # and the tagline set here rendered in the navbar directly above a hero saying the
 # same thing. Hextra titles the home page with this alone and every other page as
 # "Page – this", so the name is what distinguishes a tab among many.
 title = "ActionCache"
+
+# No tag or category pages: no page has either, so Hugo's default /tags/ and
+# /categories/ were empty, and listed in the sitemap they were indexed as thin
+# pages.
+disableKinds = ["taxonomy", "term"]
 
 [languages.en]
   label = "English"
@@ -54,11 +62,20 @@ title = "ActionCache"
   [params.navbar]
     displayTitle = false
     displayLogo = false
+    width = "normal"
 
+  # The footer is layouts/_partials/custom/footer.html, filled from
+  # [params.oss] below; the theme's copyright and "Powered by" rows are off.
   [params.footer]
     enable = true
-    displayCopyright = true
+    displayCopyright = false
     displayPoweredBy = false
+    width = "normal"
+
+  # The page, navbar and footer widths, stated on every project docs site so
+  # their columns line up when you move from one to the next.
+  [params.page]
+    width = "normal"
 
   [params.search]
     enable = true
@@ -78,44 +95,94 @@ title = "ActionCache"
       # any query. .github/workflows/pages.yml pins the expected version.
       js = "vendor/flexsearch/flexsearch.bundle.min.js"
 
-  # Hextra's stock light/dark switch.
+  # Hextra's stock light/dark switch, in the navbar (the Theme menu entry
+  # below). displayToggle governs a second copy, in a sticky bar at the foot
+  # of the docs sidebar, doing what the navbar's already does.
   [params.theme]
     default = "system"
-    displayToggle = true
+    displayToggle = false
 
+# The footer, shared by every project docs site: the markup is
+# layouts/_partials/custom/footer.html and the install command is
+# layouts/_partials/oss/footer-command.html. Keys are lowercase, as Hugo
+# stores them. A link is a site `path`, an absolute `url`, or kind = "bug",
+# which opens a new issue with `bug` as its body.
+[params.oss]
+  name = "ActionCache"
+  mark = "ac-mark.svg"
+  showname = false
+  tagline = "Namespaced response caching for ASP.NET Core. Cache an action with one attribute, and evict whole namespaces without knowing a single key."
+  repo = "https://github.com/jzills/action-cache"
+  bug = """**What happened**
+
+
+**What you expected**
+
+
+**Steps to reproduce**
+
+
+**Versions**
+
+The ActionCache package and backend you use, and your .NET version (`dotnet --version`).
+"""
+
+  [[params.oss.columns]]
+    heading = "Get started"
+    links = [
+      { label = "Install", path = "docs/getting-started/installation/" },
+      { label = "Quickstart", path = "docs/getting-started/quickstart/" },
+      { label = "Configuration", path = "docs/reference/configuration/" },
+    ]
+  [[params.oss.columns]]
+    heading = "Learn"
+    links = [
+      { label = "Caching", path = "docs/caching/" },
+      { label = "Backends", path = "docs/backends/" },
+      { label = "Reliability", path = "docs/reliability/" },
+      { label = "Observability", path = "docs/observability/" },
+    ]
+  [[params.oss.columns]]
+    heading = "Project"
+    links = [
+      { label = "GitHub", url = "https://github.com/jzills/action-cache" },
+      { label = "Changelog", url = "https://github.com/jzills/action-cache/blob/HEAD/CHANGELOG.md" },
+      { label = "Report a bug", kind = "bug" },
+      { label = "MIT license", url = "https://github.com/jzills/action-cache/blob/HEAD/LICENSE" },
+    ]
+
+# The bar holds a first visitor's top tasks, the same on each of the project
+# sites: Documentation, Quickstart, Releases, Search, GitHub and the
+# light/dark button. The landing page's own sections are a scroll away, and a
+# menu of them read as its table of contents. Releases is the changelog: the
+# package ships to NuGet without GitHub releases.
 [menu]
-  # Docs first: every other landing entry below is a fragment on the home page,
-  # so without this a reader on a docs page has no navbar route back into the
-  # documentation -- all four would throw them out to the landing page.
   [[menu.main]]
-    name = "Docs"
+    name = "Documentation"
     pageRef = "/docs"
     weight = 1
   [[menu.main]]
-    name = "Install"
-    pageRef = "/#install"
+    name = "Quickstart"
+    pageRef = "/docs/getting-started/quickstart"
     weight = 2
   [[menu.main]]
-    name = "Usage"
-    pageRef = "/#usage"
+    name = "Releases"
+    url = "https://github.com/jzills/action-cache/blob/HEAD/CHANGELOG.md"
     weight = 3
   [[menu.main]]
-    name = "Features"
-    pageRef = "/#features"
-    weight = 4
-  [[menu.main]]
-    name = "Backends"
-    pageRef = "/#backends"
-    weight = 5
-  [[menu.main]]
     name = "Search"
-    weight = 6
+    weight = 4
     [menu.main.params]
       type = "search"
   [[menu.main]]
     identifier = "github"
     name = "GitHub"
     url = "https://github.com/jzills/action-cache"
-    weight = 7
+    weight = 5
     [menu.main.params]
       icon = "github"
+  [[menu.main]]
+    name = "Theme"
+    weight = 6
+    [menu.main.params]
+      type = "theme-toggle"
