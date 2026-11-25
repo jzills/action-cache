@@ -114,7 +114,8 @@ disableKinds = ["taxonomy", "term"]
   name = "ActionCache"
   mark = "ac-mark.svg"
   showname = false
-  tagline = "Namespaced response caching for ASP.NET Core. Cache an action with one attribute, and evict whole namespaces without knowing a single key."
+  tagline = "Namespaced response caching for ASP.NET Core. Cache an action with one attribute."
+  command = "dotnet add package ActionCache"
   repo = "https://github.com/jzills/action-cache"
   bug = """**What happened**
 
@@ -130,18 +131,22 @@ disableKinds = ["taxonomy", "term"]
 The ActionCache package and backend you use, and your .NET version (`dotnet --version`).
 """
 
+  # Four links per column, labels of 19 characters or fewer, and a tagline
+  # of two lines on every project docs site, so the footers are the same
+  # height wherever a reader is.
   [[params.oss.columns]]
     heading = "Get started"
     links = [
       { label = "Install", path = "docs/getting-started/installation/" },
       { label = "Quickstart", path = "docs/getting-started/quickstart/" },
       { label = "Configuration", path = "docs/reference/configuration/" },
+      { label = "Backends", path = "docs/backends/" },
     ]
   [[params.oss.columns]]
     heading = "Learn"
     links = [
       { label = "Caching", path = "docs/caching/" },
-      { label = "Backends", path = "docs/backends/" },
+      { label = "Operations", path = "docs/operations/" },
       { label = "Reliability", path = "docs/reliability/" },
       { label = "Observability", path = "docs/observability/" },
     ]
