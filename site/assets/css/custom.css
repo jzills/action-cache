@@ -130,8 +130,9 @@ html {
 .ac-navbar-mark svg {
   /* Six rows of a character grid, so it needs the height a wordmark would not.
      Below about 30px the outline strokes fall under a pixel and the letters
-     silt up. */
-  height: 2rem;
+     silt up. The same height as kx's navbar mark, the other pixel wordmark
+     among the project docs sites, so the two bars read alike. */
+  height: 2.1rem;
   width: auto;
 }
 
@@ -302,7 +303,7 @@ a.ac-card:hover {
   border: 1px solid var(--ac-border);
   border-radius: 0.375rem;
   background: var(--ac-code-bg);
-  font-family: var(--font-mono, ui-monospace, SFMono-Regular, monospace);
+  font-family: var(--oss-font-mono);
   font-size: 0.75rem;
   line-height: 1.55;
   color: var(--ac-code-fg);
@@ -346,11 +347,11 @@ a.ac-card:hover {
 
 /* -------------------------------------------------------------- footer --- */
 
-/* The footer is shared by every project docs site: its markup is
- * layouts/_partials/custom/footer.html, its styles assets/css/oss-footer.css.
- * These map it onto this site's colours, and Hextra's own for the text and the
+/* The footer and the light/dark button are shared by every project docs
+ * site: their styles are assets/css/oss-footer.css and oss-chrome.css. These
+ * map them onto this site's colours, and Hextra's own for the text and the
  * page, which this file otherwise leaves to the theme. */
-.hextra-footer {
+:root {
   --oss-text: var(--color-gray-900, #111827);
   --oss-muted: var(--ac-muted);
   --oss-accent: var(--ac-brand);
@@ -359,7 +360,7 @@ a.ac-card:hover {
   --oss-page: #ffffff;
 }
 
-.dark .hextra-footer {
+.dark {
   --oss-text: var(--color-gray-100, #f3f4f6);
   --oss-page: var(--color-dark, #111111);
 }
