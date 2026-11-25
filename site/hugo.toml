@@ -95,9 +95,12 @@ disableKinds = ["taxonomy", "term"]
       # any query. .github/workflows/pages.yml pins the expected version.
       js = "vendor/flexsearch/flexsearch.bundle.min.js"
 
-  # Hextra's stock light/dark switch, in the navbar (the Theme menu entry
-  # below). displayToggle governs a second copy, in a sticky bar at the foot
-  # of the docs sidebar, doing what the navbar's already does.
+  # The light/dark button is the navbar's Theme entry below. It renders
+  # layouts/_partials/theme-toggle.html, one sun/moon button shared with the
+  # other project docs sites, in place of Hextra's light/dark/system menu.
+  # With nothing stored, the reader's system setting picks light or dark.
+  # displayToggle governs a second copy, in a sticky bar at the foot of the
+  # docs sidebar, doing what the navbar's already does.
   [params.theme]
     default = "system"
     displayToggle = false
