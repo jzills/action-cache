@@ -57,33 +57,37 @@ html {
  * viewBox keeps the ratio. */
 .ac-hero__logo {
   margin: 0;
-  width: min(30rem, 82vw);
   color: var(--ac-brand);
   line-height: 0;
 }
 
+/* As tall as kx's hero logo (--oss-hero-mark); the viewBox sets the width. */
 .ac-hero__logo svg {
   display: block;
-  width: 100%;
-  height: auto;
+  height: var(--oss-hero-mark);
+  width: auto;
 }
 
 /* The headline text the wordmark replaced. It still has to be said — the mark
  * spells the name, not what the thing does. */
+/* The hero's title, at kx's size and weight (--oss-type-hero): the
+   wordmark above it is the h1, as kx's logo sits above its title. */
 .ac-hero__tagline {
   margin: 0;
-  font-size: clamp(1.15rem, 2.6vw, 1.6rem);
-  font-weight: 600;
   letter-spacing: -0.02em;
-  line-height: 1.25;
+  font-size: var(--oss-type-hero);
+  font-weight: 750;
+  line-height: 1.05;
+  max-width: 22ch;
+  text-wrap: balance;
 }
 
 .ac-hero__blurb {
   max-width: 44rem;
   margin: 0;
-  font-size: clamp(1rem, 2vw, 1.2rem);
-  line-height: 1.6;
   color: var(--ac-muted);
+  font-size: var(--oss-type-lede);
+  line-height: var(--oss-leading-prose);
 }
 
 .ac-hero__actions {
@@ -215,13 +219,13 @@ html {
 .ac-section__title {
   margin: 0 0 0.4rem;
   text-align: center;
-  font-size: 1.6rem;
-  font-weight: 700;
   letter-spacing: -0.02em;
   /* The theme underlines every h2 in .content with a full-width rule. Centred
      over a centred heading it reads as a divider belonging to nothing. */
   border-bottom: 0;
   padding-bottom: 0;
+  font-size: var(--oss-type-section);
+  font-weight: 700;
 }
 
 .ac-section__title::after {
@@ -240,7 +244,7 @@ html {
   margin: 0 auto 1.75rem;
   text-align: center;
   color: var(--ac-muted);
-  line-height: 1.6;
+  line-height: var(--oss-leading-prose);
 }
 
 /* --------------------------------------------------------------- cards --- */
@@ -274,8 +278,9 @@ a.ac-card:hover {
 }
 
 .ac-card__title {
-  font-weight: 650;
   letter-spacing: -0.01em;
+  font-size: var(--oss-type-card-title);
+  font-weight: 600;
 }
 
 .ac-card__title code {
@@ -283,9 +288,9 @@ a.ac-card:hover {
 }
 
 .ac-card__body {
-  font-size: 0.9rem;
-  line-height: 1.55;
   color: var(--ac-muted);
+  font-size: var(--oss-type-card-body);
+  line-height: var(--oss-leading-prose);
 }
 
 /* The install command, as a terminal line rather than a run of monospace text.
