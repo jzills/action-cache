@@ -361,7 +361,6 @@ a.ac-card:hover {
   --oss-muted: var(--ac-muted);
   --oss-accent: var(--ac-brand);
   --oss-border: var(--ac-border);
-  --oss-surface: var(--ac-code-bg);
   --oss-page: #ffffff;
 }
 

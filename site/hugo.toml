@@ -106,16 +106,14 @@ disableKinds = ["taxonomy", "term"]
     displayToggle = false
 
 # The footer, shared by every project docs site: the markup is
-# layouts/_partials/custom/footer.html and the install command is
-# layouts/_partials/oss/footer-command.html. Keys are lowercase, as Hugo
-# stores them. A link is a site `path`, an absolute `url`, or kind = "bug",
+# layouts/_partials/custom/footer.html. Keys are lowercase, as Hugo stores
+# them. A link is a site `path`, an absolute `url`, or kind = "bug",
 # which opens a new issue with `bug` as its body.
 [params.oss]
   name = "ActionCache"
   mark = "ac-mark.svg"
   showname = false
   tagline = "Namespaced response caching for ASP.NET Core. Cache an action with one attribute."
-  command = "dotnet add package ActionCache"
   repo = "https://github.com/jzills/action-cache"
   bug = """**What happened**
 
