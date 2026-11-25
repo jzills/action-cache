@@ -11,11 +11,10 @@
  */
 
 html {
-  /* Most of the navbar is fragments on the landing page -- Install, Usage,
-     Features, Backends -- and the docs pages have a table of contents that is
-     nothing but fragments. Without this the browser teleports, and a reader who
-     clicks "Backends" arrives with no idea whether the page moved a screen or
-     ten; the animation is what says how far. .ac-section's scroll-margin-top is
+  /* The docs pages have a table of contents that is nothing but fragments,
+     and the landing page's sections can be linked to by fragment. Without
+     this the browser teleports, and a reader arrives with no idea whether the
+     page moved a screen or ten; the animation is what says how far. .ac-section's scroll-margin-top is
      the other half, keeping the landing point clear of the sticky navbar.
 
      No reduced-motion guard here: Hextra's reset already forces
@@ -343,4 +342,24 @@ a.ac-card:hover {
   margin: 3rem 0 1rem;
   text-align: center;
   color: var(--ac-muted);
+}
+
+/* -------------------------------------------------------------- footer --- */
+
+/* The footer is shared by every project docs site: its markup is
+ * layouts/_partials/custom/footer.html, its styles assets/css/oss-footer.css.
+ * These map it onto this site's colours, and Hextra's own for the text and the
+ * page, which this file otherwise leaves to the theme. */
+.hextra-footer {
+  --oss-text: var(--color-gray-900, #111827);
+  --oss-muted: var(--ac-muted);
+  --oss-accent: var(--ac-brand);
+  --oss-border: var(--ac-border);
+  --oss-surface: var(--ac-code-bg);
+  --oss-page: #ffffff;
+}
+
+.dark .hextra-footer {
+  --oss-text: var(--color-gray-100, #f3f4f6);
+  --oss-page: var(--color-dark, #111111);
 }
